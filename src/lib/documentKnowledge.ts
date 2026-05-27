@@ -132,7 +132,7 @@ export function mergeDocumentContextIntoFallback(baseReply: string, matches: Doc
     .join("\n");
 
   return baseReply.replace(
-    "Checks Required:\n",
-    `Checks Required:\nUploaded Knowledge Reference:\n${references}\n`
+    "Step-by-Step Guide:\n",
+    `Step-by-Step Guide:\nUploaded Training Module Reference:\n${references}\n`
   );
 }
