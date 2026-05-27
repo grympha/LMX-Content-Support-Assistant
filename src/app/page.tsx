@@ -59,7 +59,7 @@ const responseSections = [
 ];
 
 const welcomeMessage =
-  "Overview:\nI can train users on LMX Content CMS using the uploaded LMX Content Training Module.\n\nWhen to Use:\n- Learning CMS setup\n- Creating networks, locations, playlists, layouts, and devices\n- Scheduling and publishing content\n- Checking playlogs, storage, installations, and device requirements\n\nStep-by-Step Guide:\n- Select a training topic from the left panel\n- Add any network, location, device, or campaign context if relevant\n- Ask what you want to learn\n- Follow the step-by-step guide\n\nImportant Notes:\n- For publishing, Default Playlist must include at least one scheduled image and one scheduled video\n- Verification codes for device pairing are one-time use only\n\nCommon Mistakes:\n- Skipping the default playlist setup\n- Creating devices before network and location are ready\n- Scheduling content in the wrong timezone or playlist\n\nNext Step:\nChoose a quick lesson or ask a training question such as \"How do I create a location?\"";
+  "Overview:\nI can train users on LMX Content CMS using the uploaded LMX Content Training Module.\n\nWhen to Use:\n- Learning CMS setup\n- Creating networks, locations, playlists, layouts, and devices\n- Scheduling and publishing content\n- Checking playlogs, storage, installations, and device requirements\n\nStep-by-Step Guide:\n- Enter the learner full name\n- Select the training topic\n- Ask what you want to learn\n- Follow the step-by-step guide\n\nImportant Notes:\n- For publishing, Default Playlist must include at least one scheduled image and one scheduled video\n- Verification codes for device pairing are one-time use only\n\nCommon Mistakes:\n- Skipping the default playlist setup\n- Creating devices before network and location are ready\n- Scheduling content in the wrong timezone or playlist\n\nNext Step:\nChoose a quick lesson or ask a training question such as \"How do I create a location?\"";
 
 export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -86,8 +86,8 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const contextCompleteness = useMemo(() => {
-    const required: Array<keyof IssueIntake> = ["issueCategory", "description"];
+  const learnerCompleteness = useMemo(() => {
+    const required: Array<keyof IssueIntake> = ["clientTenant", "issueCategory"];
     const completed = required.filter((field) => Boolean(intake[field])).length;
     return Math.round((completed / required.length) * 100);
   }, [intake]);
@@ -244,20 +244,16 @@ export default function Home() {
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-ink">Training Context</h2>
-                <p className="text-sm text-slate-600">Optional details for tailored guidance</p>
+                <h2 className="font-semibold text-ink">Learner</h2>
+                <p className="text-sm text-slate-600">Used for training personalization</p>
               </div>
               <div className="min-w-14 rounded-md bg-mist px-2 py-1 text-center text-sm font-semibold text-slate-700">
-                {contextCompleteness}%
+                {learnerCompleteness}%
               </div>
             </div>
 
             <div className="grid gap-3">
-              <Input label="Tenant / Workspace" value={intake.clientTenant} onChange={(value) => updateIntake("clientTenant", value)} />
-              <Input label="Network" value={intake.network} onChange={(value) => updateIntake("network", value)} />
-              <Input label="Location" value={intake.location} onChange={(value) => updateIntake("location", value)} />
-              <Input label="Device Name" value={intake.deviceName} onChange={(value) => updateIntake("deviceName", value)} />
-              <Input label="Device / Platform" value={intake.deviceOs} onChange={(value) => updateIntake("deviceOs", value)} placeholder="Android, Windows, LG webOS..." />
+              <Input label="Full Name" value={intake.clientTenant} onChange={(value) => updateIntake("clientTenant", value)} placeholder="Person taking this training" />
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">Training Topic</span>
                 <select
@@ -272,19 +268,6 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <Input label="Content / Campaign" value={intake.contentCampaign} onChange={(value) => updateIntake("contentCampaign", value)} />
-              <Input label="Schedule / Timezone" value={intake.startTime} onChange={(value) => updateIntake("startTime", value)} placeholder="Start date, time, timezone" />
-              <Input label="Screenshot / Reference Link" value={intake.mediaLink} onChange={(value) => updateIntake("mediaLink", value)} />
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-700">Current Step / Goal</span>
-                <textarea
-                  value={intake.description}
-                  onChange={(event) => updateIntake("description", event.target.value)}
-                  rows={4}
-                  className="w-full resize-none rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                  placeholder="What are you trying to learn or complete?"
-                />
               </label>
             </div>
           </section>
