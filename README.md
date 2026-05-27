@@ -9,7 +9,7 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
 - Uploaded training module search with local training fallback
-- Training context form for tenant, network, location, device, schedule, and current goal
+- Learner name and training topic selection for more accurate retrieval
 - Quick lessons for networks, locations, playlists, devices, default playlist, scheduling, publishing, playlogs, and VAST
 - Response cards with copy and clear actions
 - Render.com deployment configuration
@@ -50,7 +50,7 @@ Open `http://localhost:3000`.
 
 ## Knowledge Base
 
-The assistant searches `knowledge/lmx-content-training-module.md`, which was extracted from the LMX Content Training Module PDF.
+The assistant searches topic files in `knowledge/topics/`. These topic files were created from the LMX Content Training Module so the assistant can retrieve the correct lesson more reliably.
 
 Training coverage includes:
 
@@ -67,7 +67,9 @@ Training coverage includes:
 - Android, Windows, Linux, LG webOS, and BrightSign requirements
 - URL, Google IMA/VAST, Hivestack, and programmatic guidance
 
-When users ask questions, `/api/chat` searches the uploaded training module first, then falls back to structured local training rules in `src/lib/lmxKnowledge.ts`.
+When users select a training topic, `/api/chat` searches the matching file in `knowledge/topics/` first. If no topic is selected, it searches all topic files and then falls back to structured local training rules in `src/lib/lmxKnowledge.ts`.
+
+Future training tracking can add learner score, quiz results, and a summary of each person's platform understanding.
 
 ## Render Deployment
 
