@@ -65,117 +65,46 @@ export const issueCategories: IssueCategory[] = [
   "Other"
 ];
 
+function lesson(
+  category: IssueCategory,
+  keywords: string[],
+  overview: string,
+  steps: string[],
+  notes: string[],
+  mistakes: string[],
+  nextStep: string
+): KnowledgeEntry {
+  return {
+    category,
+    keywords,
+    overview,
+    whenToUse: [`Training users on ${category}`, "Guiding new CMS users", "Confirming the correct CMS workflow"],
+    steps,
+    importantNotes: notes,
+    commonMistakes: mistakes,
+    nextStep
+  };
+}
+
 export const lmxKnowledge: KnowledgeEntry[] = [
-  {
-    category: "Dashboard Overview",
-    keywords: ["dashboard", "online", "offline", "storage", "status", "overview"],
-    overview: "The Dashboard is the first place users review device health, online/offline status, storage usage, notifications, and release information.",
-    whenToUse: ["Daily monitoring", "Checking device status", "Reviewing storage usage", "Finding pending or placeholder content"],
-    steps: ["Open the LMX Content CMS Dashboard", "Review Online, Offline, and Unpaired device counters", "Check Storage Usage for capacity issues", "Open notifications for pending or placeholder content", "Review Release Information for current CMS and player versions"],
-    importantNotes: ["Offline devices should be investigated from Device Manager", "Placeholder or pending content should be resolved before publishing workflows", "Storage usage should be monitored before large uploads"],
-    commonMistakes: ["Ignoring offline or unpaired devices", "Uploading content without checking storage", "Missing release/version information before training or setup review"],
-    nextStep: "After reviewing the Dashboard, continue with Network, Location, Playlist, Device, or Schedule setup depending on the task."
-  },
-  {
-    category: "Create Network",
-    keywords: ["network", "create network", "playlog interval", "background download"],
-    overview: "A Network organizes devices, users, content rules, playback hours, playlog settings, and reporting behavior.",
-    whenToUse: ["Creating a new client, tenant, region, or business unit", "Separating content schedules", "Separating user permissions", "Managing different playback hours"],
-    steps: ["Go to the Network section in CMS", "Click Create", "Enter Network Name and optional Description", "Set Start Time and End Time", "Configure tags, playlog interval, background download, volume, and brightness where needed", "Keep Status enabled", "Click Add or Save"],
-    importantNotes: ["Use clear naming conventions", "Keep Play Log enabled for reporting", "Enable Background Download when devices should cache content", "Create separate networks when schedules or permissions differ"],
-    commonMistakes: ["Using one network for unrelated clients", "Wrong playback hours", "Play Log disabled", "Forgetting to enable Status"],
-    nextStep: "Create Locations under the Network before adding devices or assigning playlists."
-  },
-  {
-    category: "Create Location",
-    keywords: ["location", "create location", "timezone", "zone", "subzone"],
-    overview: "A Location represents where screens are deployed and helps organize scheduling, reporting, and device management.",
-    whenToUse: ["Adding a new site, branch, floor, zone, or screen group", "Grouping devices that share content", "Ensuring schedules use the correct timezone"],
-    steps: ["Go to Setup > Location", "Click Create", "Enter Location Name", "Select Country, Region, and Time Zone", "Enter Zone Name and Subzone Name", "Add tags or description if helpful", "Keep Status enabled", "Click Add or Save"],
-    importantNotes: ["Timezone affects scheduling accuracy", "Locations are linked under Networks", "Use consistent naming such as COUNTRY_REGION_ZONE_SUBZONE"],
-    commonMistakes: ["Wrong timezone", "Unclear location naming", "Creating devices before the location structure is ready"],
-    nextStep: "Create playlists and devices for the location."
-  },
-  {
-    category: "Create Playlist",
-    keywords: ["playlist", "create playlist", "normal", "fixed", "prime", "dependent"],
-    overview: "A Playlist controls the sequence, duration, and type of media playback for a location.",
-    whenToUse: ["Creating a content loop", "Preparing a playlist for scheduling", "Separating normal, prime-time, fixed, or dependent content"],
-    steps: ["Go to Setup > Playlist", "Click Create Playlist", "Enter Playlist Name", "Set Duration in seconds", "Select playlist Type", "Assign Location", "Keep Play Type as Timer unless another trigger is needed", "Add tags or description if helpful", "Keep Status enabled", "Click Save"],
-    importantNotes: ["Playlist duration should match the intended content loop", "Prime playlists are useful for day-part campaigns", "A Default Playlist should exist as backup"],
-    commonMistakes: ["Playlist duration does not match content", "Playlist assigned to wrong location", "Status disabled", "No default playlist prepared"],
-    nextStep: "Add content to the playlist or create a schedule using the playlist."
-  },
-  {
-    category: "Create Layout",
-    keywords: ["layout", "screen layout", "tag", "zone", "split screen"],
-    overview: "A Layout divides a screen into content zones, with each tag linked to a playlist.",
-    whenToUse: ["Building split-screen displays", "Showing multiple playlists on one screen", "Creating default visual templates for a location"],
-    steps: ["Go to Setup > Layout", "Click Create Layout", "Enter Layout Name", "Assign Location", "Choose Percentage or Pixel scale type", "Select Screen Type or resolution", "Add tags with playlist, position, width, and height", "Save the layout"],
-    importantNotes: ["Each tag must be linked to a playlist", "Percentage layouts are better for mixed screen sizes", "Keep layouts visually simple for readability"],
-    commonMistakes: ["Tags without playlists", "Too many zones", "Wrong resolution", "No default layout for the location"],
-    nextStep: "Use the layout when assigning or scheduling multi-zone content."
-  },
-  {
-    category: "Create Device",
-    keywords: ["device", "create device", "device manager", "verification code"],
-    overview: "A Device is the registered physical player or screen that receives scheduled content.",
-    whenToUse: ["Adding a new player", "Generating a verification code", "Linking a screen to a location and network"],
-    steps: ["Go to Device Manager", "Click Add Device", "Enter Device Name", "Assign Location", "Confirm Network, Start Time, End Time, Screen Type, and Status", "Save the device", "Copy the generated verification code"],
-    importantNotes: ["The verification code is used by the player app", "The device must be assigned to the correct location", "Status should remain enabled for active devices"],
-    commonMistakes: ["Wrong location assignment", "Verification code reused after pairing", "Device name not unique", "Status disabled"],
-    nextStep: "Install or open the player app and pair it using the verification code."
-  },
-  {
-    category: "Device Pairing",
-    keywords: ["pair", "pairing", "verification", "code", "register"],
-    overview: "Device pairing links the physical player app to the CMS device record using a one-time verification code.",
-    whenToUse: ["New player installation", "Factory reset", "Replacing a device", "Completing device registration"],
-    steps: ["Create the device in CMS", "Copy the generated verification code", "Open the MW Content player app on the device", "Choose Login with Verification Code", "Enter the verification code", "Confirm the device appears online or syncing in CMS"],
-    importantNotes: ["Verification codes are one-time use only", "The device needs internet access", "Pairing should match the intended tenant, network, and location"],
-    commonMistakes: ["Using expired or already-used code", "Pairing under the wrong tenant", "Device has no internet", "Wrong player app version"],
-    nextStep: "After pairing, publish or sync content to validate playback."
-  },
-  {
-    category: "Default Playlist",
-    keywords: ["default playlist", "fallback", "image", "video", "publish error"],
-    overview: "Default Playlist is required fallback content and is needed before scheduling and publishing workflows can proceed.",
-    whenToUse: ["Preparing a new setup", "Fixing publish error about default playlist", "Ensuring fallback content exists"],
-    steps: ["Go to Setup > Default Playlist", "Click Create or add content", "Select one image creative", "Create schedule with duration, start/end date, daypart or spot", "Save and approve", "Repeat for one video creative", "Confirm both image and video are scheduled"],
-    importantNotes: ["At least one image and one video should be scheduled", "Uploading alone is not enough", "Content must be saved and approved"],
-    commonMistakes: ["Only uploading default content", "Missing image or video schedule", "Forgetting approval", "Unsupported file format"],
-    nextStep: "Once Default Playlist is ready, continue with content scheduling and publishing."
-  },
-  {
-    category: "Schedule Content",
-    keywords: ["schedule", "scheduling", "campaign", "daypart", "spot", "publish"],
-    overview: "Scheduling content assigns media or campaigns to the correct playlist, location, time, and playback rules.",
-    whenToUse: ["Publishing a campaign", "Setting start/end dates", "Assigning content to playlist", "Creating daypart or spot playback"],
-    steps: ["Confirm Network and Location are ready", "Confirm Playlist exists", "Upload or select supported content", "Create the schedule", "Set duration, start date, end date, daypart or spot", "Save the schedule", "Approve if required", "Publish to the assigned playlist/devices"],
-    importantNotes: ["Timezone must match the location", "Default Playlist must contain required image/video schedules", "The device must sync after publish", "Use supported file formats"],
-    commonMistakes: ["Wrong playlist or location", "Schedule outside active time", "Not approving content", "Publishing before Default Playlist is prepared"],
-    nextStep: "Check the device sync/playback status and validate with playlist metrics or playlogs."
-  },
-  {
-    category: "Publish Content",
-    keywords: ["publish", "publishing", "unable to publish", "error"],
-    overview: "Publishing sends approved schedules and playlist changes to the relevant devices.",
-    whenToUse: ["After scheduling content", "After changing playlist content", "When CMS shows a publish requirement or error"],
-    steps: ["Confirm schedule setup is complete", "Confirm Default Playlist has at least one image and one video scheduled", "Confirm content uses valid formats such as MP4, JPG, or PNG", "Save and approve content where required", "Click Publish", "Wait for device sync"],
-    importantNotes: ["A common publish error means Default Playlist does not have required scheduled image/video content", "Uploaded content must be scheduled, not only stored", "Device sync may take time"],
-    commonMistakes: ["Default Playlist missing image or video", "Unsupported file type", "Schedule saved but not approved", "Wrong target playlist"],
-    nextStep: "Validate playback on the device and check playlogs or playlist metrics."
-  },
-  {
-    category: "Programmatic / VAST",
-    keywords: ["programmatic", "vast", "url", "ima", "hivestack", "dv360", "ad"],
-    overview: "Programmatic and VAST content require correct ad configuration, fallback content, supported device platform, WebView/browser compatibility, and stable internet.",
-    whenToUse: ["Scheduling Google IMA/VAST", "Scheduling URL content", "Setting up Hivestack or DV360", "Testing programmatic playback"],
-    steps: ["Confirm device platform supports the format", "Check WebView/browser requirements", "Create the URL, VAST, or programmatic schedule", "Set ad slot duration", "Add filler/fallback content", "Enter required API key, organization ID, screen ID, or ad unit ID", "Save and publish", "Validate playback"],
-    importantNotes: ["Windows and Android 11+ are preferred for programmatic-heavy networks", "Android WebView should be modern", "Fallback content should be configured for no-fill or ad failures"],
-    commonMistakes: ["No filler content", "Wrong ad unit or screen ID", "Unsupported OS/WebView", "Network blocks ad endpoints"],
-    nextStep: "Test with a known working device and collect configuration details if playback fails."
-  }
+  lesson("Dashboard Overview", ["dashboard", "online", "offline", "storage", "status"], "Use the Dashboard to review device health, storage usage, notifications, and CMS/player release information.", ["Open Dashboard", "Review Online, Offline, and Unpaired counters", "Check Storage Usage", "Open notifications", "Review release/player version information"], ["Investigate offline or unpaired devices from Device Manager", "Resolve pending or placeholder content early"], ["Ignoring offline devices", "Missing storage warnings"], "Continue with Network, Location, Playlist, Device, or Schedule setup."),
+  lesson("Create Network", ["network", "playlog interval", "background download"], "A Network organizes devices, users, playback hours, reporting, and content rules.", ["Go to Network", "Click Create", "Enter Network Name", "Set Start Time and End Time", "Configure tags, playlog interval, background download, volume, and brightness if needed", "Keep Status enabled", "Save"], ["Keep Play Log enabled", "Use clear naming", "Use separate networks when schedules or access differ"], ["Wrong playback hours", "Play Log disabled", "Status disabled"], "Create Locations under the Network."),
+  lesson("Create Location", ["location", "timezone", "zone", "subzone"], "A Location represents where screens are deployed and controls schedule timezone context.", ["Go to Setup > Location", "Click Create", "Enter Location Name", "Select Country, Region, and Time Zone", "Enter Zone and Subzone", "Keep Status enabled", "Save"], ["Timezone affects scheduling accuracy", "Use consistent location naming"], ["Wrong timezone", "Unclear naming", "Creating devices before locations are ready"], "Create playlists and devices for the location."),
+  lesson("Create Playlist", ["playlist", "normal", "fixed", "prime", "dependent"], "A Playlist controls the media sequence, duration, and playback type for a location.", ["Go to Setup > Playlist", "Click Create Playlist", "Enter Playlist Name", "Set Duration", "Select Type", "Assign Location", "Keep Play Type as Timer unless needed", "Keep Status enabled", "Save"], ["Match playlist duration to the content loop", "Use Prime for day-part campaigns"], ["Wrong location", "Duration mismatch", "Status disabled"], "Add content or create a schedule using the playlist."),
+  lesson("Create Layout", ["layout", "tag", "zone", "split screen"], "A Layout divides a screen into zones, with each tag linked to a playlist.", ["Go to Setup > Layout", "Click Create Layout", "Enter Layout Name", "Assign Location", "Choose Percentage or Pixel scale", "Select Screen Type", "Add tags with playlist and dimensions", "Save"], ["Every tag needs a playlist", "Use percentage scaling for mixed screen sizes"], ["Tags without playlists", "Too many zones", "Wrong resolution"], "Use the layout for multi-zone content playback."),
+  lesson("Create Device", ["device", "device manager", "verification code"], "A Device is the CMS record for the physical player or screen.", ["Go to Device Manager", "Click Add Device", "Enter Device Name", "Assign Location", "Confirm Network, playback time, screen type, and Status", "Save", "Copy verification code"], ["Device must be in the correct location", "Status should be enabled"], ["Wrong location", "Non-unique device name", "Status disabled"], "Open the player app and pair with the verification code."),
+  lesson("Device Pairing", ["pair", "pairing", "verification", "code"], "Pairing links the physical player app to the CMS device record.", ["Create the device in CMS", "Copy the verification code", "Open the player app", "Choose Login with Verification Code", "Enter the code", "Confirm device sync"], ["Verification codes are one-time use only", "Device needs internet access"], ["Expired code", "Wrong tenant or location", "No internet"], "Publish test content and validate playback."),
+  lesson("Storage Management", ["storage", "upload", "media", "folder"], "Storage is used to upload, organize, manage, and clean up media files.", ["Open Storage", "Check available capacity", "Upload supported files", "Organize folders", "Use assets in playlists or schedules", "Remove unused files carefully"], ["Deleting content can affect active playlists", "Check supported formats"], ["Deleting scheduled content", "Ignoring capacity"], "Add uploaded content to a playlist or schedule."),
+  lesson("Default Playlist", ["default playlist", "fallback", "image", "video"], "Default Playlist is required fallback content and must be prepared before scheduling and publishing.", ["Go to Setup > Default Playlist", "Add one image creative", "Create schedule and save", "Approve it", "Add one video creative", "Create schedule and save", "Approve it"], ["At least one scheduled image and one scheduled video are required", "Uploading alone is not enough"], ["Missing image or video schedule", "Forgetting approval"], "Continue with scheduling and publishing."),
+  lesson("Schedule Content", ["schedule", "scheduling", "campaign", "daypart", "spot"], "Scheduling assigns content to the correct playlist, location, time, and playback rules.", ["Confirm Network and Location", "Confirm Playlist", "Upload or select supported content", "Create schedule", "Set duration, dates, daypart or spot", "Save", "Approve if required", "Publish"], ["Timezone must match location", "Default Playlist must be ready", "Device must sync after publish"], ["Wrong playlist", "Schedule outside active time", "Not approving content"], "Validate playback with device status, metrics, or playlogs."),
+  lesson("Bundle Scheduling", ["bundle", "bundle schedule"], "Bundle scheduling manages grouped schedules or related content together.", ["Confirm target network and location", "Prepare playlist and content", "Create or select bundle schedule", "Set active dates and timing", "Save and approve", "Publish", "Validate playback"], ["Default Playlist requirements still apply", "Device sync is still required"], ["Wrong target playlist", "Missing approval"], "Check metrics or playlogs."),
+  lesson("Publish Content", ["publish", "publishing", "unable to publish", "error"], "Publishing sends approved schedules and playlist changes to devices.", ["Confirm schedule setup", "Confirm Default Playlist has scheduled image and video", "Confirm valid formats", "Save and approve content", "Click Publish", "Wait for device sync"], ["A common publish error means Default Playlist requirements are not met"], ["Uploading but not scheduling", "Unsupported format", "Wrong target playlist"], "Validate playback and check playlogs."),
+  lesson("Playlogs", ["playlog", "playlogs", "report", "proof of play"], "Playlogs confirm what content played on devices for reporting and validation.", ["Open Playlogs or reports", "Select date range", "Filter by network, location, device, campaign, or content", "Review records", "Export if needed"], ["Play Log should be enabled", "Offline devices may upload later"], ["Wrong date range", "Checking before upload", "Expecting logs for content that did not play"], "Compare playlogs with schedule and device status."),
+  lesson("User Management", ["user", "roles", "permissions"], "User Management controls who can access CMS modules, networks, and functions.", ["Open user management", "Create or invite user", "Enter details", "Assign role", "Assign network/module access", "Save", "Ask user to confirm access"], ["Use minimum required permission", "Match access to responsibility"], ["Too much access", "Wrong network assignment"], "Confirm the user can access the needed CMS area."),
+  lesson("Android Installation", ["android", "install", "installation", "verification code"], "Android installation sets up the MW Content player and pairs it to CMS.", ["Create device in CMS", "Copy verification code", "Download Android app", "Install app", "Allow permissions", "Choose Login with Verification Code", "Enter code", "Confirm sync"], ["Android 11+ is recommended", "Verification codes are one-time use only"], ["Skipping permissions", "Expired code", "Wrong device record"], "Publish test content."),
+  lesson("Windows Installation", ["windows", "install", "administrator"], "Windows installation sets up the MW Content player on a Windows device.", ["Create device in CMS", "Download installer", "Right click installer", "Run as Administrator", "Choose Run Anyway if prompted", "Enter verification code", "Confirm sync"], ["Windows 10 and 11 are supported", "Keep drivers and codecs updated"], ["Not running as administrator", "Wrong verification code"], "Publish test content."),
+  lesson("Device Requirements", ["requirements", "spec", "webview", "ram", "storage", "android 11"], "Device requirements confirm whether hardware, OS, storage, RAM, browser/WebView, and media support are suitable.", ["Identify platform", "Check OS version", "Check CPU, RAM, storage, and graphics", "Check WebView/browser", "Check supported media formats", "Compare with recommended devices"], ["Android should be Android 11+", "Modern WebView matters for VAST/HTML", "Windows is best for programmatic-heavy networks"], ["Approving weak hardware", "Ignoring WebView", "Using unsupported OS"], "Use requirements before approving deployment."),
+  lesson("Programmatic / VAST", ["programmatic", "vast", "url", "ima", "hivestack", "dv360"], "Programmatic and VAST need correct ad setup, fallback content, compatible platform, modern WebView/browser, and stable internet.", ["Confirm platform support", "Check WebView/browser requirements", "Create URL, VAST, or programmatic schedule", "Set ad slot duration", "Add filler content", "Enter required IDs or API keys", "Save and publish", "Validate playback"], ["Windows and Android 11+ are preferred", "Fallback content is important for no-fill"], ["No filler content", "Wrong screen ID", "Unsupported OS"], "Test on a known working device.")
 ];
 
 const formatList = (items: string[]) => items.map((item) => `- ${item}`).join("\n");
@@ -231,7 +160,7 @@ export function buildFallbackResponse(message: string, intake?: IssueIntake): st
 
 export const assistantSystemPrompt = `Act as a senior LMX Content CMS trainer.
 
-The assistant is now the LMX Content Training Assistant. Its purpose is to teach users how to use LMX Content CMS using the uploaded LMX Content Training Module.
+The assistant is the LMX Content Training Assistant. Its purpose is to teach users how to use LMX Content CMS using the uploaded LMX Content Training Module.
 
 Every response must follow this format:
 
