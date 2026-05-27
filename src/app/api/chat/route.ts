@@ -4,6 +4,11 @@ import {
   buildFallbackResponse,
   type IssueIntake
 } from "@/lib/lmxKnowledge";
+import {
+  buildDocumentContext,
+  mergeDocumentContextIntoFallback,
+  searchTrainingKnowledge
+} from "@/lib/documentKnowledge";
 
 const cookieName = "lmx-support-session";
 
@@ -44,10 +49,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
+  const documentMatches = searchTrainingKnowledge(message, body.intake);
+  const localReply = mergeDocumentContextIntoFallback(
+    buildFallbackResponse(message, body.intake),
+    documentMatches
+  );
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({
-      reply: buildFallbackResponse(message, body.intake),
-      source: "local"
+      reply: localReply,
+      source: documentMatches.length > 0 ? "knowledge" : "local"
     });
   }
 
@@ -64,8 +75,17 @@ export async function POST(request: Request) {
         messages: [
           { role: "system", content: assistantSystemPrompt },
           {
+            role: "system",
+            content:
+              "Use the uploaded LMX Content Training Module context when relevant. If the context does not contain the answer, say what information is missing and fall back to the general support rules."
+          },
+          {
             role: "user",
             content: `Issue intake JSON:\n${JSON.stringify(body.intake ?? {}, null, 2)}`
+          },
+          {
+            role: "user",
+            content: `Uploaded knowledge matches:\n${buildDocumentContext(documentMatches) || "No relevant uploaded knowledge match found."}`
           },
           ...(body.history ?? []).slice(-8),
           { role: "user", content: message }
@@ -83,14 +103,14 @@ export async function POST(request: Request) {
     const reply = data.choices?.[0]?.message?.content;
 
     return NextResponse.json({
-      reply: reply || buildFallbackResponse(message, body.intake),
-      source: reply ? "openai" : "local"
+      reply: reply || localReply,
+      source: reply ? "openai" : documentMatches.length > 0 ? "knowledge" : "local"
     });
   } catch (error) {
     console.error(error);
     return NextResponse.json({
-      reply: buildFallbackResponse(message, body.intake),
-      source: "local",
+      reply: localReply,
+      source: documentMatches.length > 0 ? "knowledge" : "local",
       warning: "OpenAI unavailable. Used local knowledge fallback."
     });
   }
