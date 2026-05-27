@@ -1,15 +1,16 @@
-# LMX Content Support Assistant
+# LMX Content Training Assistant
 
-Internal Level 1 support assistant for LMX Content CMS. The app gives support teammates a password-protected dashboard, issue intake form, and structured troubleshooting replies that follow a consistent senior-support format.
+Internal training assistant for LMX Content CMS. The app teaches users how to use LMX Content step by step, using the uploaded **LMX Content Training Module** as the main knowledge source.
 
 ## Features
 
 - Next.js, TypeScript, and Tailwind CSS
-- Password-protected assistant access with `APP_PASSWORD`
+- Password-protected access with `APP_PASSWORD`
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
-- Uploaded training module search plus local fallback knowledge when OpenAI is not configured
-- Issue intake form for LMX support context
+- Uploaded training module search with local training fallback
+- Training context form for tenant, network, location, device, schedule, and current goal
+- Quick lessons for networks, locations, playlists, devices, default playlist, scheduling, publishing, playlogs, and VAST
 - Response cards with copy and clear actions
 - Render.com deployment configuration
 
@@ -45,46 +46,57 @@ Open `http://localhost:3000`.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `APP_PASSWORD` | Yes | Password required before users can access the assistant. |
-| `OPENAI_API_KEY` | No | Enables OpenAI responses. When empty, the local LMX knowledge base is used. |
+| `OPENAI_API_KEY` | No | Enables OpenAI-assisted training responses. When empty, the app uses uploaded training knowledge plus local fallback. |
 
 ## Knowledge Base
 
-The assistant searches `knowledge/lmx-content-training-module.md`, which was extracted from the LMX Content Training Module PDF. Keep the Markdown file updated whenever the source PDF changes.
+The assistant searches `knowledge/lmx-content-training-module.md`, which was extracted from the LMX Content Training Module PDF.
 
-Recommended knowledge workflow:
+Training coverage includes:
 
-1. Store the original PDF in `knowledge/`.
-2. Extract or update the searchable Markdown file.
-3. Commit the Markdown file so Render can search it at runtime.
+- Dashboard overview
+- Create Network
+- Create Location
+- Create Playlist
+- Create Layout
+- Create Device
+- Device pairing
+- Default Playlist
+- Scheduling and publishing content
+- Playlogs and storage
+- Android, Windows, Linux, LG webOS, and BrightSign requirements
+- URL, Google IMA/VAST, Hivestack, and programmatic guidance
 
-When users ask questions, `/api/chat` searches the uploaded training module first, then falls back to the structured local support rules in `src/lib/lmxKnowledge.ts`.
+When users ask questions, `/api/chat` searches the uploaded training module first, then falls back to structured local training rules in `src/lib/lmxKnowledge.ts`.
 
 ## Render Deployment
 
 This repository includes `render.yaml`.
 
-1. Push the repository to GitHub.
-2. In Render, create a new Blueprint from the repository.
-3. Add `APP_PASSWORD` as a secret environment variable.
-4. Optionally add `OPENAI_API_KEY`.
-5. Deploy.
-
-Render uses:
+For manual Render Web Service setup:
 
 ```bash
 npm install && npm run build
 npm run start
 ```
 
+Add environment variables:
+
+```env
+APP_PASSWORD=your-secure-password
+NODE_VERSION=22
+OPENAI_API_KEY=
+```
+
+`OPENAI_API_KEY` is optional.
+
 ## GitHub Usage
 
 Commit the generated application files directly to the `main` branch or create a feature branch for review:
 
 ```bash
-git checkout -b codex/lmx-support-assistant
+git checkout -b codex/lmx-training-assistant
 git add .
-git commit -m "Build LMX Content Support Assistant MVP"
-git push origin codex/lmx-support-assistant
+git commit -m "Convert app to LMX Content Training Assistant"
+git push origin codex/lmx-training-assistant
 ```
-
-Then open a pull request into `main`.
