@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import type { IssueIntake } from "@/lib/lmxKnowledge";
+import type { IssueCategory, IssueIntake } from "@/lib/lmxKnowledge";
 
 export type DocumentKnowledgeMatch = {
   page: string;
@@ -9,7 +9,30 @@ export type DocumentKnowledgeMatch = {
   score: number;
 };
 
-const knowledgePath = path.join(process.cwd(), "knowledge", "lmx-content-training-module.md");
+const knowledgeRoot = path.join(process.cwd(), "knowledge");
+const topicRoot = path.join(knowledgeRoot, "topics");
+const fullModulePath = path.join(knowledgeRoot, "lmx-content-training-module.md");
+
+const topicFiles: Partial<Record<IssueCategory, string>> = {
+  "Dashboard Overview": "dashboard-overview.md",
+  "Create Network": "create-network.md",
+  "Create Location": "create-location.md",
+  "Create Playlist": "create-playlist.md",
+  "Create Layout": "create-layout.md",
+  "Create Device": "create-device.md",
+  "Device Pairing": "device-pairing.md",
+  "Storage Management": "storage-management.md",
+  "Default Playlist": "default-playlist.md",
+  "Schedule Content": "schedule-content.md",
+  "Bundle Scheduling": "bundle-scheduling.md",
+  "Publish Content": "publish-content.md",
+  Playlogs: "playlogs.md",
+  "User Management": "user-management.md",
+  "Android Installation": "android-installation.md",
+  "Windows Installation": "windows-installation.md",
+  "Device Requirements": "device-requirements.md",
+  "Programmatic / VAST": "programmatic-vast.md"
+};
 
 const stopWords = new Set([
   "the",
@@ -31,7 +54,7 @@ const stopWords = new Set([
   "lmx",
   "cms",
   "device",
-  "issue"
+  "training"
 ]);
 
 function normalize(value: string) {
@@ -39,13 +62,7 @@ function normalize(value: string) {
 }
 
 function keywordsFor(message: string, intake?: IssueIntake) {
-  const combined = [
-    message,
-    intake?.issueCategory,
-    intake?.description,
-    intake?.contentCampaign,
-    intake?.deviceOs
-  ]
+  const combined = [message, intake?.issueCategory, intake?.description, intake?.deviceOs]
     .filter(Boolean)
     .join(" ");
 
@@ -54,24 +71,54 @@ function keywordsFor(message: string, intake?: IssueIntake) {
     .slice(0, 24);
 }
 
-function getKnowledgeSections() {
+function readTopicDocuments(intake?: IssueIntake) {
+  const selectedTopic = intake?.issueCategory;
+  const selectedFile = selectedTopic ? topicFiles[selectedTopic as IssueCategory] : undefined;
+
+  if (selectedFile) {
+    const filePath = path.join(topicRoot, selectedFile);
+    if (existsSync(filePath)) {
+      return [
+        {
+          title: selectedTopic,
+          content: readFileSync(filePath, "utf8"),
+          selected: true
+        }
+      ];
+    }
+  }
+
   try {
-    const content = readFileSync(knowledgePath, "utf8");
-    return content
-      .split(/\n## Page /)
-      .slice(1)
-      .map((section) => {
-        const [pageLine = "", ...bodyLines] = section.split("\n");
-        const body = bodyLines.join(" ").replace(/\s+/g, " ").trim();
-        return {
-          page: pageLine.trim(),
-          body
-        };
-      })
-      .filter((section) => section.body.length > 0);
+    return readdirSync(topicRoot)
+      .filter((file) => file.endsWith(".md"))
+      .map((file) => ({
+        title: file.replace(/-/g, " ").replace(".md", ""),
+        content: readFileSync(path.join(topicRoot, file), "utf8"),
+        selected: false
+      }));
   } catch {
     return [];
   }
+}
+
+function readFullModuleFallback() {
+  if (!existsSync(fullModulePath)) {
+    return [];
+  }
+
+  const content = readFileSync(fullModulePath, "utf8");
+  return content
+    .split(/\n## /)
+    .slice(1)
+    .map((section) => {
+      const [heading = "Training Module", ...bodyLines] = section.split("\n");
+      return {
+        title: heading.trim(),
+        content: bodyLines.join(" ").replace(/\s+/g, " ").trim(),
+        selected: false
+      };
+    })
+    .filter((section) => section.content.length > 0);
 }
 
 function compactSnippet(body: string, terms: string[]) {
@@ -80,36 +127,37 @@ function compactSnippet(body: string, terms: string[]) {
     .map((term) => lowerBody.indexOf(term))
     .filter((index) => index >= 0)
     .sort((a, b) => a - b)[0];
-  const start = Math.max(0, (firstHit ?? 0) - 180);
-  const snippet = body.slice(start, start + 620).trim();
+  const start = Math.max(0, (firstHit ?? 0) - 160);
+  const snippet = body.slice(start, start + 720).trim();
   return snippet.length < body.length ? `${snippet}...` : snippet;
 }
 
 export function searchTrainingKnowledge(message: string, intake?: IssueIntake): DocumentKnowledgeMatch[] {
   const terms = keywordsFor(message, intake);
+  const topicDocuments = readTopicDocuments(intake);
+  const documents = topicDocuments.length > 0 ? topicDocuments : readFullModuleFallback();
 
-  if (terms.length === 0) {
+  if (documents.length === 0) {
     return [];
   }
 
-  return getKnowledgeSections()
-    .map((section) => {
-      const body = normalize(section.body);
-      const score = terms.reduce((total, term) => {
-        const occurrences = body.split(term).length - 1;
-        return total + occurrences;
-      }, 0);
+  return documents
+    .map((document) => {
+      const normalizedBody = normalize(document.content);
+      const score = document.selected
+        ? 1000
+        : terms.reduce((total, term) => total + (normalizedBody.split(term).length - 1), 0);
 
       return {
-        page: section.page,
-        title: `LMX Content Training Module, page ${section.page}`,
-        snippet: compactSnippet(section.body, terms),
+        page: document.title,
+        title: document.selected ? `Selected topic: ${document.title}` : `Training topic: ${document.title}`,
+        snippet: compactSnippet(document.content, terms),
         score
       };
     })
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+    .slice(0, intake?.issueCategory && intake.issueCategory !== "Other" ? 1 : 4);
 }
 
 export function buildDocumentContext(matches: DocumentKnowledgeMatch[]) {
@@ -117,9 +165,7 @@ export function buildDocumentContext(matches: DocumentKnowledgeMatch[]) {
     return "";
   }
 
-  return matches
-    .map((match) => `${match.title}\n${match.snippet}`)
-    .join("\n\n");
+  return matches.map((match) => `${match.title}\n${match.snippet}`).join("\n\n");
 }
 
 export function mergeDocumentContextIntoFallback(baseReply: string, matches: DocumentKnowledgeMatch[]) {
@@ -133,6 +179,6 @@ export function mergeDocumentContextIntoFallback(baseReply: string, matches: Doc
 
   return baseReply.replace(
     "Step-by-Step Guide:\n",
-    `Step-by-Step Guide:\nUploaded Training Module Reference:\n${references}\n`
+    `Step-by-Step Guide:\nUploaded Training Topic Reference:\n${references}\n`
   );
 }
