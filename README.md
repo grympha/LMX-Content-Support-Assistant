@@ -8,7 +8,7 @@ Internal Level 1 support assistant for LMX Content CMS. The app gives support te
 - Password-protected assistant access with `APP_PASSWORD`
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
-- Local fallback knowledge base when OpenAI is not configured
+- Uploaded training module search plus local fallback knowledge when OpenAI is not configured
 - Issue intake form for LMX support context
 - Response cards with copy and clear actions
 - Render.com deployment configuration
@@ -46,6 +46,18 @@ Open `http://localhost:3000`.
 | --- | --- | --- |
 | `APP_PASSWORD` | Yes | Password required before users can access the assistant. |
 | `OPENAI_API_KEY` | No | Enables OpenAI responses. When empty, the local LMX knowledge base is used. |
+
+## Knowledge Base
+
+The assistant searches `knowledge/lmx-content-training-module.md`, which was extracted from the LMX Content Training Module PDF. Keep the Markdown file updated whenever the source PDF changes.
+
+Recommended knowledge workflow:
+
+1. Store the original PDF in `knowledge/`.
+2. Extract or update the searchable Markdown file.
+3. Commit the Markdown file so Render can search it at runtime.
+
+When users ask questions, `/api/chat` searches the uploaded training module first, then falls back to the structured local support rules in `src/lib/lmxKnowledge.ts`.
 
 ## Render Deployment
 
