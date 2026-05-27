@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: lmx-content-support-assistant
+    name: lmx-content-training-assistant
     runtime: node
     plan: starter
     buildCommand: npm install && npm run build
