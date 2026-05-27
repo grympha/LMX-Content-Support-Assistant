@@ -77,11 +77,11 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              "Use the uploaded LMX Content Training Module context when relevant. If the context does not contain the answer, say what information is missing and fall back to the general support rules."
+              "Use the uploaded LMX Content Training Module context as the primary training source. If the context does not contain the answer, say what information is missing and fall back to the general LMX Content training rules."
           },
           {
             role: "user",
-            content: `Issue intake JSON:\n${JSON.stringify(body.intake ?? {}, null, 2)}`
+            content: `Training context JSON:\n${JSON.stringify(body.intake ?? {}, null, 2)}`
           },
           {
             role: "user",
