@@ -1,14 +1,22 @@
 export type IssueCategory =
-  | "Black Screen"
-  | "Device Offline"
-  | "Content Not Playing"
-  | "Content Not Syncing"
-  | "Default Playlist Showing"
-  | "Missing Playlog"
-  | "Device Pairing Issue"
-  | "Publishing Issue"
-  | "Android Compatibility"
-  | "Programmatic Issue"
+  | "Dashboard Overview"
+  | "Create Network"
+  | "Create Location"
+  | "Create Playlist"
+  | "Create Layout"
+  | "Create Device"
+  | "Device Pairing"
+  | "Storage Management"
+  | "Default Playlist"
+  | "Schedule Content"
+  | "Bundle Scheduling"
+  | "Publish Content"
+  | "Playlogs"
+  | "User Management"
+  | "Android Installation"
+  | "Windows Installation"
+  | "Device Requirements"
+  | "Programmatic / VAST"
   | "Other";
 
 export type IssueIntake = {
@@ -25,130 +33,148 @@ export type IssueIntake = {
 };
 
 export type KnowledgeEntry = {
-  category: IssueCategory | "Scheduling Content";
+  category: IssueCategory;
   keywords: string[];
-  summary: string;
-  possibleCause: string[];
-  checksRequired: string[];
-  recommendedAction: string[];
-  escalationNeeded: string;
-  clientReplyDraft: string;
+  overview: string;
+  whenToUse: string[];
+  steps: string[];
+  importantNotes: string[];
+  commonMistakes: string[];
+  nextStep: string;
 };
 
 export const issueCategories: IssueCategory[] = [
-  "Black Screen",
-  "Device Offline",
-  "Content Not Playing",
-  "Content Not Syncing",
-  "Default Playlist Showing",
-  "Missing Playlog",
-  "Device Pairing Issue",
-  "Publishing Issue",
-  "Android Compatibility",
-  "Programmatic Issue",
+  "Dashboard Overview",
+  "Create Network",
+  "Create Location",
+  "Create Playlist",
+  "Create Layout",
+  "Create Device",
+  "Device Pairing",
+  "Storage Management",
+  "Default Playlist",
+  "Schedule Content",
+  "Bundle Scheduling",
+  "Publish Content",
+  "Playlogs",
+  "User Management",
+  "Android Installation",
+  "Windows Installation",
+  "Device Requirements",
+  "Programmatic / VAST",
   "Other"
 ];
 
 export const lmxKnowledge: KnowledgeEntry[] = [
   {
-    category: "Scheduling Content",
-    keywords: ["schedule", "scheduling", "campaign time", "start date", "end date"],
-    summary: "Scheduling issues usually come from campaign timing, playlist assignment, publish status, timezone, or device sync delay.",
-    possibleCause: ["Incorrect start or end date", "Wrong timezone", "Content assigned to the wrong network, location, or device", "Campaign saved but not published", "Device has not synced after publish"],
-    checksRequired: ["Confirm campaign start and end time", "Confirm target network, location, device, and playlist", "Check publish status in CMS", "Check device online and last sync time", "Confirm content format is supported by the player"],
-    recommendedAction: ["Correct the schedule and targeting if needed", "Publish the campaign again", "Trigger or wait for device sync", "Ask for campaign name, device name, and screenshot if still not playing"],
-    escalationNeeded: "Escalate only if the campaign is correctly published, the device is syncing, and content still does not appear after normal sync time.",
-    clientReplyDraft: "We are checking the campaign schedule, target assignment, and publish status. We will also verify whether the device has synced after the latest publish."
+    category: "Dashboard Overview",
+    keywords: ["dashboard", "online", "offline", "storage", "status", "overview"],
+    overview: "The Dashboard is the first place users review device health, online/offline status, storage usage, notifications, and release information.",
+    whenToUse: ["Daily monitoring", "Checking device status", "Reviewing storage usage", "Finding pending or placeholder content"],
+    steps: ["Open the LMX Content CMS Dashboard", "Review Online, Offline, and Unpaired device counters", "Check Storage Usage for capacity issues", "Open notifications for pending or placeholder content", "Review Release Information for current CMS and player versions"],
+    importantNotes: ["Offline devices should be investigated from Device Manager", "Placeholder or pending content should be resolved before publishing workflows", "Storage usage should be monitored before large uploads"],
+    commonMistakes: ["Ignoring offline or unpaired devices", "Uploading content without checking storage", "Missing release/version information before training or setup review"],
+    nextStep: "After reviewing the Dashboard, continue with Network, Location, Playlist, Device, or Schedule setup depending on the task."
   },
   {
-    category: "Android Compatibility",
-    keywords: ["android", "compatibility", "device spec", "hardware", "webview", "ram", "storage"],
-    summary: "Android support should be checked against the official LMX baseline before confirming suitability.",
-    possibleCause: ["Android version below requirement", "Insufficient RAM", "Insufficient storage", "Weak CPU", "Outdated or incompatible Android WebView"],
-    checksRequired: ["Android 11 or newer", "Minimum 4GB RAM", "Minimum 32GB or 64GB storage", "Quad-core CPU", "Android WebView compatibility and update status"],
-    recommendedAction: ["Request full device model, Android version, RAM, storage, CPU, and WebView version", "Avoid confirming support until all required specs are verified", "Recommend a tested device if the model does not meet baseline requirements"],
-    escalationNeeded: "Escalate to engineering or product only when the device meets baseline requirements but still fails during player installation, playback, or WebView rendering.",
-    clientReplyDraft: "To confirm Android compatibility, please share the device model, Android version, RAM, storage capacity, CPU details, and WebView version. We will compare it against the LMX player requirements before confirming suitability."
+    category: "Create Network",
+    keywords: ["network", "create network", "playlog interval", "background download"],
+    overview: "A Network organizes devices, users, content rules, playback hours, playlog settings, and reporting behavior.",
+    whenToUse: ["Creating a new client, tenant, region, or business unit", "Separating content schedules", "Separating user permissions", "Managing different playback hours"],
+    steps: ["Go to the Network section in CMS", "Click Create", "Enter Network Name and optional Description", "Set Start Time and End Time", "Configure tags, playlog interval, background download, volume, and brightness where needed", "Keep Status enabled", "Click Add or Save"],
+    importantNotes: ["Use clear naming conventions", "Keep Play Log enabled for reporting", "Enable Background Download when devices should cache content", "Create separate networks when schedules or permissions differ"],
+    commonMistakes: ["Using one network for unrelated clients", "Wrong playback hours", "Play Log disabled", "Forgetting to enable Status"],
+    nextStep: "Create Locations under the Network before adding devices or assigning playlists."
   },
   {
-    category: "Black Screen",
-    keywords: ["black screen", "blank screen", "screen black", "no display"],
-    summary: "Black screen troubleshooting must cover the device, player app, storage, network, CMS publish status, content compatibility, display, and programmatic delivery where relevant.",
-    possibleCause: ["Player app crashed or not running", "Device storage is full", "Network interruption during content download", "No valid published content", "Unsupported or corrupted content", "Display input or HDMI issue", "Programmatic ad delivery returned no fill or failed to render"],
-    checksRequired: ["Device power and status", "Player app running state", "Available storage", "Network connectivity", "CMS publish status", "Content file type, resolution, and duration", "Screen input, cable, and display power", "Programmatic delivery logs if applicable"],
-    recommendedAction: ["Restart player app or device", "Clear storage only through approved support steps", "Republish known-good content", "Test with a simple image or video", "Confirm display input and cable", "Collect screenshot, device logs, and campaign details before escalation"],
-    escalationNeeded: "Escalate if device, player app, storage, network, CMS publish status, content compatibility, display, and programmatic delivery checks all pass but the screen remains black.",
-    clientReplyDraft: "We are checking the player status, device storage, network, published content, content compatibility, and screen connection. If programmatic content is involved, we will also review delivery behavior without assigning internal blame."
+    category: "Create Location",
+    keywords: ["location", "create location", "timezone", "zone", "subzone"],
+    overview: "A Location represents where screens are deployed and helps organize scheduling, reporting, and device management.",
+    whenToUse: ["Adding a new site, branch, floor, zone, or screen group", "Grouping devices that share content", "Ensuring schedules use the correct timezone"],
+    steps: ["Go to Setup > Location", "Click Create", "Enter Location Name", "Select Country, Region, and Time Zone", "Enter Zone Name and Subzone Name", "Add tags or description if helpful", "Keep Status enabled", "Click Add or Save"],
+    importantNotes: ["Timezone affects scheduling accuracy", "Locations are linked under Networks", "Use consistent naming such as COUNTRY_REGION_ZONE_SUBZONE"],
+    commonMistakes: ["Wrong timezone", "Unclear location naming", "Creating devices before the location structure is ready"],
+    nextStep: "Create playlists and devices for the location."
   },
   {
-    category: "Device Offline",
-    keywords: ["offline", "device offline", "heartbeat", "still playing", "online status"],
-    summary: "A device can show offline in CMS while still playing cached content locally.",
-    possibleCause: ["Heartbeat not reaching CMS", "Unstable network", "Firewall or DNS restriction", "Device sleep mode", "Player app crash", "Internet drop while cached playlist continues"],
-    checksRequired: ["Last heartbeat time", "Network connection and internet stability", "Sleep mode or power saving settings", "Firewall and DNS access", "Player app running state", "Whether cached content is still playing"],
-    recommendedAction: ["Ask onsite team to confirm internet access", "Restart network connection and player app", "Disable sleep or battery optimization", "Check firewall allowlist", "Collect last heartbeat and device logs if issue persists"],
-    escalationNeeded: "Escalate if network, firewall, sleep mode, and player app checks pass but the heartbeat still does not recover.",
-    clientReplyDraft: "The screen may continue playing cached content even if the CMS shows the device offline. We are checking the heartbeat, network stability, sleep settings, firewall access, and player app status."
+    category: "Create Playlist",
+    keywords: ["playlist", "create playlist", "normal", "fixed", "prime", "dependent"],
+    overview: "A Playlist controls the sequence, duration, and type of media playback for a location.",
+    whenToUse: ["Creating a content loop", "Preparing a playlist for scheduling", "Separating normal, prime-time, fixed, or dependent content"],
+    steps: ["Go to Setup > Playlist", "Click Create Playlist", "Enter Playlist Name", "Set Duration in seconds", "Select playlist Type", "Assign Location", "Keep Play Type as Timer unless another trigger is needed", "Add tags or description if helpful", "Keep Status enabled", "Click Save"],
+    importantNotes: ["Playlist duration should match the intended content loop", "Prime playlists are useful for day-part campaigns", "A Default Playlist should exist as backup"],
+    commonMistakes: ["Playlist duration does not match content", "Playlist assigned to wrong location", "Status disabled", "No default playlist prepared"],
+    nextStep: "Add content to the playlist or create a schedule using the playlist."
   },
   {
-    category: "Missing Playlog",
-    keywords: ["playlog", "missing log", "proof of play", "report missing"],
-    summary: "Missing playlog cases depend on whether the player was active, content actually played, the date range is valid, and the device could upload logs.",
-    possibleCause: ["Player was inactive", "Content did not actually play", "Selected date range is outside retention or reporting limits", "Device was offline and logs have not uploaded", "Playback event failed to sync"],
-    checksRequired: ["Player active state during the period", "Campaign and content playback confirmation", "Report date range", "Device connectivity during and after playback", "Any delayed upload behavior"],
-    recommendedAction: ["Confirm exact date, content, device, and campaign", "Check if device came online after playback", "Re-run report with the correct date range", "Collect playback evidence and device logs when needed"],
-    escalationNeeded: "Escalate if playback is confirmed, date range is valid, the device is online, and playlog still does not appear after expected upload time.",
-    clientReplyDraft: "We are verifying whether the player was active, the content actually played, the report date range is valid, and the device had connectivity to upload playlogs."
+    category: "Create Layout",
+    keywords: ["layout", "screen layout", "tag", "zone", "split screen"],
+    overview: "A Layout divides a screen into content zones, with each tag linked to a playlist.",
+    whenToUse: ["Building split-screen displays", "Showing multiple playlists on one screen", "Creating default visual templates for a location"],
+    steps: ["Go to Setup > Layout", "Click Create Layout", "Enter Layout Name", "Assign Location", "Choose Percentage or Pixel scale type", "Select Screen Type or resolution", "Add tags with playlist, position, width, and height", "Save the layout"],
+    importantNotes: ["Each tag must be linked to a playlist", "Percentage layouts are better for mixed screen sizes", "Keep layouts visually simple for readability"],
+    commonMistakes: ["Tags without playlists", "Too many zones", "Wrong resolution", "No default layout for the location"],
+    nextStep: "Use the layout when assigning or scheduling multi-zone content."
   },
   {
-    category: "Default Playlist Showing",
-    keywords: ["default playlist", "fallback playlist", "wrong playlist", "default content"],
-    summary: "Default playlist appears when the device has no valid higher-priority playable content or cannot sync the assigned content.",
-    possibleCause: ["Campaign not published", "Schedule not active", "Targeting mismatch", "Content download failed", "Assigned content unsupported", "Device has not synced"],
-    checksRequired: ["Current active campaign schedule", "Device and location targeting", "CMS publish status", "Playlist priority", "Device sync time", "Content compatibility and download status"],
-    recommendedAction: ["Correct targeting and active schedule", "Republish campaign", "Trigger device sync", "Test with a supported known-good asset", "Ask for device name and campaign if missing"],
-    escalationNeeded: "Escalate if targeting, schedule, publish, sync, and content compatibility all look correct but default playlist still overrides assigned content.",
-    clientReplyDraft: "The default playlist normally appears when no valid assigned content is available to the player. We are checking schedule, targeting, publish status, sync, and content compatibility."
+    category: "Create Device",
+    keywords: ["device", "create device", "device manager", "verification code"],
+    overview: "A Device is the registered physical player or screen that receives scheduled content.",
+    whenToUse: ["Adding a new player", "Generating a verification code", "Linking a screen to a location and network"],
+    steps: ["Go to Device Manager", "Click Add Device", "Enter Device Name", "Assign Location", "Confirm Network, Start Time, End Time, Screen Type, and Status", "Save the device", "Copy the generated verification code"],
+    importantNotes: ["The verification code is used by the player app", "The device must be assigned to the correct location", "Status should remain enabled for active devices"],
+    commonMistakes: ["Wrong location assignment", "Verification code reused after pairing", "Device name not unique", "Status disabled"],
+    nextStep: "Install or open the player app and pair it using the verification code."
   },
   {
-    category: "Publishing Issue",
-    keywords: ["publish", "publishing", "cannot publish", "publish failed"],
-    summary: "Publishing issues are usually caused by validation, targeting, content readiness, schedule conflicts, or CMS processing delay.",
-    possibleCause: ["Required fields missing", "Invalid targeting", "Unsupported content", "Schedule conflict", "Temporary CMS processing delay"],
-    checksRequired: ["CMS error message", "Campaign setup completeness", "Content processing status", "Target network, location, and devices", "Schedule validity"],
-    recommendedAction: ["Capture the exact error message", "Validate campaign fields and content status", "Save and publish again", "Try a known-good asset if content processing is suspected", "Escalate with campaign ID and screenshots if repeatable"],
-    escalationNeeded: "Escalate when the same publish action fails repeatedly with a valid campaign setup and clear reproduction details.",
-    clientReplyDraft: "We are reviewing the campaign setup, content readiness, schedule, and publish error message. Please share the exact error shown if the issue repeats."
+    category: "Device Pairing",
+    keywords: ["pair", "pairing", "verification", "code", "register"],
+    overview: "Device pairing links the physical player app to the CMS device record using a one-time verification code.",
+    whenToUse: ["New player installation", "Factory reset", "Replacing a device", "Completing device registration"],
+    steps: ["Create the device in CMS", "Copy the generated verification code", "Open the MW Content player app on the device", "Choose Login with Verification Code", "Enter the verification code", "Confirm the device appears online or syncing in CMS"],
+    importantNotes: ["Verification codes are one-time use only", "The device needs internet access", "Pairing should match the intended tenant, network, and location"],
+    commonMistakes: ["Using expired or already-used code", "Pairing under the wrong tenant", "Device has no internet", "Wrong player app version"],
+    nextStep: "After pairing, publish or sync content to validate playback."
   },
   {
-    category: "Device Pairing Issue",
-    keywords: ["pair", "pairing", "activation", "code", "device code"],
-    summary: "Pairing issues usually involve expired codes, wrong tenant, connectivity, duplicate registration, or player app setup.",
-    possibleCause: ["Expired pairing code", "Wrong tenant or network selected", "Device already paired elsewhere", "Network cannot reach CMS", "Player app version issue"],
-    checksRequired: ["Tenant and network", "Pairing code freshness", "Device internet access", "Existing device registration", "Player app version"],
-    recommendedAction: ["Generate a new pairing code", "Confirm tenant and network", "Remove duplicate or stale registration if approved", "Restart player app", "Collect code, device name, and screenshot if still failing"],
-    escalationNeeded: "Escalate if a fresh code, correct tenant, active network, and clean device registration still fail.",
-    clientReplyDraft: "We are checking the pairing code, tenant, network, device connectivity, and whether the device may already be registered."
+    category: "Default Playlist",
+    keywords: ["default playlist", "fallback", "image", "video", "publish error"],
+    overview: "Default Playlist is required fallback content and is needed before scheduling and publishing workflows can proceed.",
+    whenToUse: ["Preparing a new setup", "Fixing publish error about default playlist", "Ensuring fallback content exists"],
+    steps: ["Go to Setup > Default Playlist", "Click Create or add content", "Select one image creative", "Create schedule with duration, start/end date, daypart or spot", "Save and approve", "Repeat for one video creative", "Confirm both image and video are scheduled"],
+    importantNotes: ["At least one image and one video should be scheduled", "Uploading alone is not enough", "Content must be saved and approved"],
+    commonMistakes: ["Only uploading default content", "Missing image or video schedule", "Forgetting approval", "Unsupported file format"],
+    nextStep: "Once Default Playlist is ready, continue with content scheduling and publishing."
   },
   {
-    category: "Content Not Syncing",
-    keywords: ["sync", "not syncing", "download", "content missing", "stuck"],
-    summary: "Content sync issues need device connectivity, storage, publish status, content compatibility, and download state checks.",
-    possibleCause: ["Device offline", "Storage full", "Campaign not published", "Large file still downloading", "Unsupported file", "Network blocks download endpoint"],
-    checksRequired: ["Device online and last sync", "Storage availability", "CMS publish status", "File size and type", "Network stability", "Download or player logs"],
-    recommendedAction: ["Republish and trigger sync", "Free storage through approved steps", "Test with a smaller known-good file", "Verify firewall and internet access", "Collect logs if sync remains stuck"],
-    escalationNeeded: "Escalate when device connectivity, storage, publish status, and file compatibility are confirmed but sync still fails.",
-    clientReplyDraft: "We are checking whether the device is online, has enough storage, has received the latest publish, and can download the assigned content."
+    category: "Schedule Content",
+    keywords: ["schedule", "scheduling", "campaign", "daypart", "spot", "publish"],
+    overview: "Scheduling content assigns media or campaigns to the correct playlist, location, time, and playback rules.",
+    whenToUse: ["Publishing a campaign", "Setting start/end dates", "Assigning content to playlist", "Creating daypart or spot playback"],
+    steps: ["Confirm Network and Location are ready", "Confirm Playlist exists", "Upload or select supported content", "Create the schedule", "Set duration, start date, end date, daypart or spot", "Save the schedule", "Approve if required", "Publish to the assigned playlist/devices"],
+    importantNotes: ["Timezone must match the location", "Default Playlist must contain required image/video schedules", "The device must sync after publish", "Use supported file formats"],
+    commonMistakes: ["Wrong playlist or location", "Schedule outside active time", "Not approving content", "Publishing before Default Playlist is prepared"],
+    nextStep: "Check the device sync/playback status and validate with playlist metrics or playlogs."
   },
   {
-    category: "Programmatic Issue",
-    keywords: ["programmatic", "ad", "vast", "bid", "no fill", "delivery", "ad tag"],
-    summary: "Programmatic troubleshooting should separate CMS/player health from ad decisioning, creative delivery, and rendering.",
-    possibleCause: ["No fill from demand source", "Invalid or blocked ad tag", "Creative format not compatible", "Network blocks ad delivery", "Player cannot render returned creative"],
-    checksRequired: ["Campaign and device setup", "Ad tag or programmatic configuration", "Delivery response or no-fill behavior", "Creative format and duration", "Network access to ad endpoints", "Player logs around ad request time"],
-    recommendedAction: ["Confirm exact device, time, campaign, and ad configuration", "Test with a known-good non-programmatic asset", "Review delivery response if available", "Collect player logs and screenshot/video evidence"],
-    escalationNeeded: "Escalate when CMS setup and player health are confirmed and the issue points to delivery response, creative rendering, or platform integration behavior.",
-    clientReplyDraft: "We are checking the player and CMS setup first, then reviewing programmatic delivery behavior such as ad response, creative compatibility, and network access."
+    category: "Publish Content",
+    keywords: ["publish", "publishing", "unable to publish", "error"],
+    overview: "Publishing sends approved schedules and playlist changes to the relevant devices.",
+    whenToUse: ["After scheduling content", "After changing playlist content", "When CMS shows a publish requirement or error"],
+    steps: ["Confirm schedule setup is complete", "Confirm Default Playlist has at least one image and one video scheduled", "Confirm content uses valid formats such as MP4, JPG, or PNG", "Save and approve content where required", "Click Publish", "Wait for device sync"],
+    importantNotes: ["A common publish error means Default Playlist does not have required scheduled image/video content", "Uploaded content must be scheduled, not only stored", "Device sync may take time"],
+    commonMistakes: ["Default Playlist missing image or video", "Unsupported file type", "Schedule saved but not approved", "Wrong target playlist"],
+    nextStep: "Validate playback on the device and check playlogs or playlist metrics."
+  },
+  {
+    category: "Programmatic / VAST",
+    keywords: ["programmatic", "vast", "url", "ima", "hivestack", "dv360", "ad"],
+    overview: "Programmatic and VAST content require correct ad configuration, fallback content, supported device platform, WebView/browser compatibility, and stable internet.",
+    whenToUse: ["Scheduling Google IMA/VAST", "Scheduling URL content", "Setting up Hivestack or DV360", "Testing programmatic playback"],
+    steps: ["Confirm device platform supports the format", "Check WebView/browser requirements", "Create the URL, VAST, or programmatic schedule", "Set ad slot duration", "Add filler/fallback content", "Enter required API key, organization ID, screen ID, or ad unit ID", "Save and publish", "Validate playback"],
+    importantNotes: ["Windows and Android 11+ are preferred for programmatic-heavy networks", "Android WebView should be modern", "Fallback content should be configured for no-fill or ad failures"],
+    commonMistakes: ["No filler content", "Wrong ad unit or screen ID", "Unsupported OS/WebView", "Network blocks ad endpoints"],
+    nextStep: "Test with a known working device and collect configuration details if playback fails."
   }
 ];
 
@@ -156,8 +182,8 @@ const formatList = (items: string[]) => items.map((item) => `- ${item}`).join("\
 
 export function findKnowledgeEntry(message: string, intake?: IssueIntake): KnowledgeEntry {
   const haystack = `${message} ${intake?.issueCategory ?? ""} ${intake?.description ?? ""}`.toLowerCase();
-
   const exactCategory = lmxKnowledge.find((entry) => entry.category === intake?.issueCategory);
+
   if (exactCategory && intake?.issueCategory !== "Other") {
     return exactCategory;
   }
@@ -169,20 +195,17 @@ export function findKnowledgeEntry(message: string, intake?: IssueIntake): Knowl
     }))
     .sort((a, b) => b.score - a.score);
 
-  return scored[0]?.score > 0 ? scored[0].entry : lmxKnowledge.find((entry) => entry.category === "Publishing Issue") ?? lmxKnowledge[0];
+  return scored[0]?.score > 0 ? scored[0].entry : lmxKnowledge.find((entry) => entry.category === "Schedule Content") ?? lmxKnowledge[0];
 }
 
 export function missingIntakeFields(intake?: IssueIntake): string[] {
   if (!intake) {
-    return ["Client / Tenant", "Device Name", "Device OS", "Issue Category", "Description"];
+    return ["Training Topic", "Current Step / Goal"];
   }
 
   const checks: Array<[keyof IssueIntake, string]> = [
-    ["clientTenant", "Client / Tenant"],
-    ["deviceName", "Device Name"],
-    ["deviceOs", "Device OS"],
-    ["issueCategory", "Issue Category"],
-    ["description", "Description"]
+    ["issueCategory", "Training Topic"],
+    ["description", "Current Step / Goal"]
   ];
 
   return checks.filter(([key]) => !intake[key]).map(([, label]) => label);
@@ -191,37 +214,41 @@ export function missingIntakeFields(intake?: IssueIntake): string[] {
 export function buildFallbackResponse(message: string, intake?: IssueIntake): string {
   const entry = findKnowledgeEntry(message, intake);
   const missing = missingIntakeFields(intake);
-  const contextLine = intake?.clientTenant || intake?.deviceName
-    ? ` Case context: ${[intake?.clientTenant, intake?.network, intake?.location, intake?.deviceName].filter(Boolean).join(" / ")}.`
+  const contextLine = intake?.clientTenant || intake?.network || intake?.location
+    ? ` Training context: ${[intake?.clientTenant, intake?.network, intake?.location, intake?.contentCampaign].filter(Boolean).join(" / ")}.`
     : "";
-  const missingLine = missing.length > 0 ? ` Missing information to request: ${missing.join(", ")}.` : "";
+  const missingLine = missing.length > 0 ? ` Ask the user for: ${missing.join(", ")}.` : "";
 
   return [
-    `Summary:\n${entry.summary}${contextLine}${missingLine}`,
-    `Possible Cause:\n${formatList(entry.possibleCause)}`,
-    `Checks Required:\n${formatList(entry.checksRequired)}`,
-    `Recommended Action:\n${formatList(entry.recommendedAction)}`,
-    `Escalation Needed:\n${entry.escalationNeeded}`,
-    `Client Reply Draft:\n${entry.clientReplyDraft}`
+    `Overview:\n${entry.overview}${contextLine}${missingLine}`,
+    `When to Use:\n${formatList(entry.whenToUse)}`,
+    `Step-by-Step Guide:\n${formatList(entry.steps)}`,
+    `Important Notes:\n${formatList(entry.importantNotes)}`,
+    `Common Mistakes:\n${formatList(entry.commonMistakes)}`,
+    `Next Step:\n${entry.nextStep}`
   ].join("\n\n");
 }
 
-export const assistantSystemPrompt = `Act as a senior LMX Content CMS support engineer.
+export const assistantSystemPrompt = `Act as a senior LMX Content CMS trainer.
 
-Every response must follow exactly this format:
+The assistant is now the LMX Content Training Assistant. Its purpose is to teach users how to use LMX Content CMS using the uploaded LMX Content Training Module.
 
-Summary:
-Possible Cause:
-Checks Required:
-Recommended Action:
-Escalation Needed:
-Client Reply Draft:
+Every response must follow this format:
+
+Overview:
+When to Use:
+Step-by-Step Guide:
+Important Notes:
+Common Mistakes:
+Next Step:
 
 Rules:
-- Be clear, practical, professional, and troubleshooting focused.
-- Do not guess. Ask for missing information when needed.
-- Use neutral client communication and never expose internal blame.
-- For black screen cases, always check device, player app, storage, network, CMS publish status, content compatibility, screen/display, and programmatic delivery if relevant.
-- For Android compatibility, compare against official LMX requirements: Android 11+, 4GB RAM minimum, 32GB/64GB storage minimum, quad-core CPU, and WebView compatibility.
-- For device offline cases, check heartbeat, network, sleep mode, firewall, player crash, and internet stability.
-- For playlog cases, check player active state, whether content actually played, date limitations, and device connectivity.`;
+- Teach clearly and practically.
+- Give step-by-step instructions for CMS workflows.
+- Use the uploaded LMX Content Training Module as the primary source.
+- Do not guess if a step is not covered. Ask what screen, module, or workflow the user is currently on.
+- Focus on training users to create networks, locations, playlists, layouts, devices, default playlists, schedules, publishing flows, playlogs, storage, users, installations, and device requirements.
+- Keep wording professional and easy for non-technical users.
+- For scheduling or publishing, remind users that Default Playlist requires at least one scheduled image and one scheduled video.
+- For device setup, remind users that verification codes are one-time use only.
+- For programmatic/VAST, mention platform, WebView/browser support, stable internet, and fallback/filler content when relevant.`;
