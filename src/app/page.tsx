@@ -38,6 +38,8 @@ type CommonQuestion = {
   answer: string;
 };
 
+type KnowledgeTopic = (typeof lmxKnowledge)[number];
+
 const emptyIntake: IssueIntake = {
   clientTenant: "",
   network: "",
@@ -154,15 +156,6 @@ const commonQuestions: CommonQuestion[] = [
   }
 ];
 
-const responseSections = [
-  "Overview:",
-  "When to Use:",
-  "Step-by-Step Guide:",
-  "Important Notes:",
-  "Common Mistakes:",
-  "Next Step:"
-];
-
 export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -269,8 +262,7 @@ export default function Home() {
           id: crypto.randomUUID(),
           role: "assistant",
           source: "local",
-          content:
-            "Please refresh the page and ask the training question again. If it still fails, check the app server logs."
+          content: "Please refresh the page and ask the training question again. If it still fails, check the app server logs."
         }
       ]);
     } finally {
@@ -492,40 +484,8 @@ export default function Home() {
               ) : null}
               <div ref={messagesEndRef} />
             </div>
-          ) : selectedTopic?.category === "Dashboard Overview" ? (
-            <DashboardTrainingPage />
-          ) : selectedTopic?.category === "Create Network" ? (
-            <NetworkTrainingPage />
-          ) : selectedTopic?.category === "Create Location" ? (
-            <LocationTrainingPage />
-          ) : selectedTopic?.category === "Create Playlist" ? (
-            <PlaylistTrainingPage />
-          ) : selectedTopic?.category === "Create Layout" ? (
-            <LayoutTrainingPage />
-          ) : selectedTopic?.category === "Create Device" ? (
-            <DeviceTrainingPage />
-          ) : selectedTopic?.category === "Device Pairing" ? (
-            <DevicePairingTrainingPage />
-          ) : selectedTopic?.category === "Storage Management" ? (
-            <StorageManagementTrainingPage />
-          ) : selectedTopic?.category === "Default Playlist" ? (
-            <DefaultPlaylistTrainingPage />
-          ) : selectedTopic?.category === "Schedule Content" ? (
-            <ScheduleContentTrainingPage />
-          ) : selectedTopic?.category === "Bundle Scheduling" ? (
-            <BundleSchedulingTrainingPage />
-          ) : selectedTopic?.category === "Publish Content" ? (
-            <PublishContentTrainingPage />
-          ) : selectedTopic?.category === "Playlogs" ? (
-            <PlaylogTrainingPage />
-          ) : selectedTopic?.category === "User Management" ? (
-            <UserManagementTrainingPage />
-          ) : selectedTopic?.category === "Installation of LMX Content App" ? (
-            <AppInstallationTrainingPage />
-          ) : selectedTopic?.category === "Supported Operating Systems & Hardware" ? (
-            <SupportedHardwareTrainingPage />
           ) : (
-            <TrainingOverview selectedTopic={selectedTopic?.category} />
+            <TopicContent selectedTopic={selectedTopic} />
           )}
         </section>
       </div>
@@ -533,7 +493,68 @@ export default function Home() {
   );
 }
 
-function TrainingOverview({ selectedTopic }: { selectedTopic?: string }) {
+function TopicContent({ selectedTopic }: { selectedTopic?: KnowledgeTopic }) {
+  if (!selectedTopic) return <TrainingOverview />;
+  if (selectedTopic.category === "Dashboard Overview") return <DashboardTrainingPage />;
+  if (selectedTopic.category === "Create Network") return <NetworkTrainingPage />;
+  if (selectedTopic.category === "Create Location") return <LocationTrainingPage />;
+  if (selectedTopic.category === "Create Playlist") return <PlaylistTrainingPage />;
+  if (selectedTopic.category === "Create Layout") return <LayoutTrainingPage />;
+  if (selectedTopic.category === "Create Device") return <DeviceTrainingPage />;
+  if (selectedTopic.category === "Device Pairing") return <DevicePairingTrainingPage />;
+  if (selectedTopic.category === "Storage Management") return <StorageManagementTrainingPage />;
+  if (selectedTopic.category === "Default Playlist") return <DefaultPlaylistTrainingPage />;
+  if (selectedTopic.category === "Schedule Content") return <ScheduleContentTrainingPage />;
+  if (selectedTopic.category === "Bundle Scheduling") return <BundleSchedulingTrainingPage />;
+  if (selectedTopic.category === "Publish Content") return <PublishContentTrainingPage />;
+  if (selectedTopic.category === "Playlogs") return <PlaylogTrainingPage />;
+  if (selectedTopic.category === "User Management") return <UserManagementTrainingPage />;
+  if (selectedTopic.category === "Installation of LMX Content App") return <AppInstallationTrainingPage />;
+  if (selectedTopic.category === "Supported Operating Systems & Hardware") return <SupportedHardwareTrainingPage />;
+  return <GenericTopicTrainingPage topic={selectedTopic} />;
+}
+
+function GenericTopicTrainingPage({ topic }: { topic: KnowledgeTopic }) {
+  return (
+    <section className="space-y-4 text-sm leading-6 text-slate-700">
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h2 className="text-base font-semibold text-ink">{topic.category}</h2>
+        <p className="mt-3">{topic.overview}</p>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Key Steps</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {topic.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ul>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Important Notes</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {topic.importantNotes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Common Mistakes</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {topic.commonMistakes.map((mistake) => (
+            <li key={mistake}>{mistake}</li>
+          ))}
+        </ul>
+        <h3 className="mt-4 font-semibold text-ink">Next Step</h3>
+        <p className="mt-2">{topic.nextStep}</p>
+      </article>
+    </section>
+  );
+}
+
+function TrainingOverview() {
   return (
     <section className="rounded-lg border border-line bg-white p-4 text-sm leading-6 text-slate-700">
       <div className="mb-4">
@@ -579,10 +600,7 @@ function TrainingOverview({ selectedTopic }: { selectedTopic?: string }) {
         </ul>
       </div>
 
-      <p className="mt-4">
-        To begin the training, select a training topic from the available options and start asking your questions.
-        {selectedTopic ? ` Current topic: ${selectedTopic}.` : ""}
-      </p>
+      <p className="mt-4">To begin the training, select a training topic from the available options and start asking your questions.</p>
       <p className="mt-2">
         Knowledge source: uploaded LMX Content training modules, troubleshooting guides, and operational documentation. For more detailed training documentation, refer to{" "}
         <a className="font-semibold text-signal underline" href="https://movingwallshub.atlassian.net/wiki/x/mYCKCQ" target="_blank" rel="noreferrer">
@@ -593,7 +611,7 @@ function TrainingOverview({ selectedTopic }: { selectedTopic?: string }) {
   );
 }
 
-function TopicDetail({ topic }: { topic: (typeof lmxKnowledge)[number] }) {
+function TopicDetail({ topic }: { topic: KnowledgeTopic }) {
   return (
     <div className="rounded-md border border-line bg-mist p-3 text-sm text-slate-700">
       <h3 className="font-semibold text-ink">{topic.category}</h3>
@@ -625,30 +643,5 @@ function Input({ label, value, onChange, placeholder }: { label: string; value?:
 }
 
 function FormattedResponse({ content }: { content: string }) {
-  const sections = responseSections
-    .map((section, index) => {
-      const start = content.indexOf(section);
-      const nextStarts = responseSections
-        .slice(index + 1)
-        .map((next) => content.indexOf(next))
-        .filter((position) => position > start);
-      const end = nextStarts.length > 0 ? Math.min(...nextStarts) : content.length;
-      return start === -1 ? null : { title: section.replace(":", ""), body: content.slice(start + section.length, end).trim() };
-    })
-    .filter(Boolean) as Array<{ title: string; body: string }>;
-
-  if (sections.length === 0) {
-    return <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{content}</p>;
-  }
-
-  return (
-    <div className="grid gap-3">
-      {sections.map((section) => (
-        <div key={section.title} className="rounded-md border border-line bg-white p-3">
-          <h3 className="mb-1.5 text-sm font-semibold text-signal">{section.title}</h3>
-          <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{section.body}</p>
-        </div>
-      ))}
-    </div>
-  );
+  return <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{content}</p>;
 }
