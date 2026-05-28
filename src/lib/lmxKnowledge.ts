@@ -104,37 +104,8 @@ export const lmxKnowledge: KnowledgeEntry[] = [
   lesson("Programmatic / VAST", ["programmatic", "vast", "url", "ima", "hivestack", "dv360"], "Programmatic and VAST need correct ad setup, fallback content, compatible platform, modern WebView/browser, and stable internet.", ["Confirm platform support", "Check WebView or browser requirements", "Create URL, VAST, or programmatic schedule", "Set ad slot duration", "Add filler content", "Enter required IDs or API keys", "Save and publish", "Validate playback"], ["Windows and Android 11+ are preferred", "Fallback content is important for no-fill"], ["No filler content", "Wrong screen ID", "Unsupported OS"], "Test on a known working device.")
 ];
 
-function withPeriod(item: string) {
-  return /[.!?]$/.test(item) ? item : `${item}.`;
-}
-
-function formatNumbered(items: string[]) {
-  return items.map((item, index) => `${index + 1}. ${withPeriod(item)}`).join("\n");
-}
-
-function actionTitle(category: IssueCategory) {
-  const titles: Partial<Record<IssueCategory, string>> = {
-    "Dashboard Overview": "To Review the Dashboard:-",
-    "Create Network": "To Create a Network:-",
-    "Create Location": "To Create a Location:-",
-    "Create Playlist": "To Create a Playlist:-",
-    "Create Layout": "To Create a Layout:-",
-    "Create Device": "To Create a Device:-",
-    "Device Pairing": "To Pair a Device:-",
-    "Storage Management": "To Upload and Manage Storage:-",
-    "Default Playlist": "To Set Up the Default Playlist:-",
-    "Schedule Content": "To Schedule Content:-",
-    "Bundle Scheduling": "To Schedule a Bundle:-",
-    "Publish Content": "To Publish Content:-",
-    Playlogs: "To Check Playlogs:-",
-    "User Management": "To Create a User:-",
-    "Installation of LMX Content App": "To Install LMX Content App:-",
-    "Supported Operating Systems & Hardware": "To Check Supported Operating Systems & Hardware:-",
-    "Programmatic / VAST": "To Set Up Programmatic or VAST Content:-",
-    Other: "Recommended Steps:-"
-  };
-
-  return titles[category] ?? `${category}:-`;
+function formatBullets(items: string[]) {
+  return items.map((item) => `- ${item}`).join("\n");
 }
 
 export function findKnowledgeEntry(message: string, intake?: IssueIntake): KnowledgeEntry {
@@ -170,7 +141,7 @@ export function missingIntakeFields(intake?: IssueIntake): string[] {
 
 export function buildFallbackResponse(message: string, intake?: IssueIntake): string {
   const entry = findKnowledgeEntry(message, intake);
-  return `${actionTitle(entry.category)}\n${formatNumbered(entry.steps)}`;
+  return `${entry.category}\n\n${entry.overview}\n\nKey steps\n${formatBullets(entry.steps.slice(0, 6))}`;
 }
 
 export const assistantSystemPrompt = `Act as a senior LMX Content CMS trainer.
@@ -178,9 +149,17 @@ export const assistantSystemPrompt = `Act as a senior LMX Content CMS trainer.
 The assistant is the LMX Content Training Assistant. Its purpose is to teach users how to use LMX Content CMS using the uploaded LMX Content Training Module.
 
 Answer style:
+- Use this compact training-card template for normal answers:
+  [Training Topic]
+
+  [One short explanation paragraph]
+
+  Key steps
+  - [Step]
+  - [Step]
+  - [Step]
 - Keep answers short, direct, and easy to understand.
-- For how-to questions, start with: To [Action]:-
-- Use a numbered list of practical steps.
+- Use bullet points for key steps instead of long paragraphs.
 - Do not include Overview, When to Use, Important Notes, Common Mistakes, or long explanations unless the user asks for detail.
 - Search across all training topics and answer based on the best matching topic.
 
