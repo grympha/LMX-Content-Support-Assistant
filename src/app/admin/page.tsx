@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { BarChart3, Loader2, Lock, LogOut, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 
 type TrainingRecord = {
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
   );
 }
 
-function SummaryCard({ title, value, icon, small = false }: { title: string; value: string | number; icon: React.ReactNode; small?: boolean }) {
+function SummaryCard({ title, value, icon, small = false }: { title: string; value: string | number; icon: ReactNode; small?: boolean }) {
   return (
     <article className="rounded-lg border border-line bg-white p-4 shadow-panel">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-slatePanel text-white">{icon}</div>
