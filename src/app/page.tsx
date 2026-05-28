@@ -7,7 +7,6 @@ import {
   LogOut,
   Send,
   ShieldCheck,
-  Sparkles,
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -34,6 +33,11 @@ type ChatMessage = {
   source?: ChatSource;
 };
 
+type CommonQuestion = {
+  question: string;
+  answer: string;
+};
+
 const emptyIntake: IssueIntake = {
   clientTenant: "",
   network: "",
@@ -47,18 +51,107 @@ const emptyIntake: IssueIntake = {
   description: ""
 };
 
-const quickPrompts = [
-  "Train me how to create a network",
-  "Train me how to create a location",
-  "How do I create a playlist?",
-  "How do I create a layout?",
-  "How do I add and pair a device?",
-  "How do I set up the default playlist?",
-  "How do I schedule content?",
-  "How do I publish content?",
-  "How do I check playlogs?",
-  "What operating systems and hardware are supported?",
-  "How do I schedule URL or VAST content?"
+const commonQuestions: CommonQuestion[] = [
+  {
+    question: "How do I schedule content?",
+    answer:
+      "Schedule Content\n\nNavigate to Dashboard > Schedule Content. Select the Network, Location, and Playlist.\n\nKey steps\n- Configure date and time\n- Save the schedule\n- Approve content\n- Publish content\n- Remember: content will not play until it is published"
+  },
+  {
+    question: "Why is the Default Playlist showing?",
+    answer:
+      "Default Playlist Showing\n\nDefault Playlist appears when scheduled or targeted content is not available for playback.\n\nKey checks\n- Check if there is no active schedule\n- Check if the campaign expired\n- Check if content was published\n- Check if impression cap was reached\n- Check synchronization status\n- Check device online status"
+  },
+  {
+    question: "Client reports black screen. What should I check?",
+    answer:
+      "Black Screen\n\nBlack screen can come from device, CMS, content, storage, network, or display issues.\n\nKey checks\n- Check device online status\n- Check playlist assignment\n- Check publish status\n- Check HDMI/display connection\n- Check supported media format\n- Check device storage availability"
+  },
+  {
+    question: "What is the recommended Android specification?",
+    answer:
+      "Android Specification\n\nRecommended Android hardware improves playback stability, HTML rendering, and VAST support.\n\nRecommended\n- Android 11+\n- 8GB RAM / 128GB Storage\n- 64-bit\n- Quad-core CPU\n\nMinimum\n- 4GB RAM / 64GB Storage"
+  },
+  {
+    question: "Can 2GB RAM Android devices support LMX Content?",
+    answer:
+      "2GB Android Devices\n\n2GB RAM Android devices may support basic playback only, but they are not recommended for production use.\n\nLimitations\n- Unstable HTML rendering\n- VAST issues\n- Black screen risk\n- Slow synchronization\n- Not recommended for programmatic campaigns, heavy HTML, or split layouts"
+  },
+  {
+    question: "Why is old content still showing?",
+    answer:
+      "Old Content Still Showing\n\nOld content usually means the device has not received or applied the latest update.\n\nPossible causes\n- Device offline\n- Synchronization failed\n- Content not published\n- Cached content still active\n\nRecommended action\n- Republish content\n- Verify synchronization\n- Restart player if necessary"
+  },
+  {
+    question: "Why is the device offline?",
+    answer:
+      "Device Offline\n\nA device is offline when it is not communicating with CMS.\n\nPossible causes\n- Internet instability\n- Firewall restriction\n- Player stopped\n- Device powered off\n\nKey checks\n- Internet connection\n- Player application status\n- Firewall/network access"
+  },
+  {
+    question: "How do I pair a new device?",
+    answer:
+      "Device Pairing\n\nPairing links the physical player to the CMS device record.\n\nKey steps\n- Create Device\n- Install Player\n- Launch Player\n- Generate Verification Code\n- Pair Device\n- Remember: verification codes are one-time use only"
+  },
+  {
+    question: "Why is content uploaded but not playing?",
+    answer:
+      "Uploaded Content Not Playing\n\nUploaded content will not play until it is assigned, scheduled, approved, and published.\n\nPossible causes\n- Playlist not assigned\n- Schedule missing\n- Content not published\n- Unsupported format\n\nKey checks\n- Playlist\n- Schedule\n- Publish status\n- Media compatibility"
+  },
+  {
+    question: "What formats are supported?",
+    answer:
+      "Supported Formats\n\nOnly supported formats should be uploaded and scheduled for playback.\n\nSupported\n- MP4\n- PNG\n- JPEG\n- GIF\n- MP3\n- PDF\n- HTML5 ZIP\n\nUnsupported formats may fail playback."
+  },
+  {
+    question: "How do I generate Playlogs?",
+    answer:
+      "Generate Playlogs\n\nUse Playlog to export playback records for reporting and verification.\n\nKey steps\n- Go to Dashboard > Playlog\n- Select date range\n- Select device\n- Select content filter\n- Click Get Log"
+  },
+  {
+    question: "Why are Playlogs missing?",
+    answer:
+      "Missing Playlogs\n\nMissing playlogs usually mean playback did not happen, the device did not sync, or the report range is incorrect.\n\nPossible causes\n- Device offline\n- Playback not triggered\n- Synchronization delay\n- Player stopped\n\nImportant\n- General Playlog = 30 days limit"
+  },
+  {
+    question: "Why is VAST or URL content not playing?",
+    answer:
+      "VAST or URL Not Playing\n\nVAST and URL playback depend on platform support, WebView/browser compatibility, internet, and creative delivery.\n\nPossible causes\n- Outdated WebView\n- SSP no-fill\n- Unsupported creative\n- Unstable internet\n\nRecommended\n- Android 11+\n- WebView Version 100+"
+  },
+  {
+    question: "How do I update the player application?",
+    answer:
+      "Update Player Application\n\nInstall the new version directly without uninstalling the previous version.\n\nPurpose\n- Preserves device pairing\n- Preserves cache\n- Preserves configuration"
+  },
+  {
+    question: "Why can't a user access certain features?",
+    answer:
+      "User Feature Access\n\nFeature access depends on role, permissions, account status, and network restrictions.\n\nPossible causes\n- Incorrect role assignment\n- Insufficient permissions\n- Network restriction\n\nKey checks\n- User role\n- Assigned permissions\n- Account status"
+  },
+  {
+    question: "Why is content synchronization slow?",
+    answer:
+      "Slow Content Synchronization\n\nSlow sync can be caused by network, file size, storage, or device performance.\n\nPossible causes\n- Unstable internet\n- Oversized content\n- Storage limitation\n- Weak hardware\n\nRecommended\n- Optimize media files\n- Use stable internet\n- Verify storage availability"
+  },
+  {
+    question: "What causes black screen during HTML playback?",
+    answer:
+      "HTML Black Screen\n\nHTML playback needs enough device resources and an updated rendering engine.\n\nPossible causes\n- Low RAM device\n- Outdated WebView\n- Unsupported HTML\n- Oversized ZIP package\n\nRecommended\n- Android 11+\n- 4GB RAM minimum\n- Updated WebView"
+  },
+  {
+    question: "How do I restart Windows player pairing?",
+    answer:
+      "Restart Windows Player Pairing\n\nUse Ctrl + L on the Windows player.\n\nPurpose\n- Logs out the player\n- Resets pairing\n- Allows the device to be paired again"
+  },
+  {
+    question: "Why is the device online but not updating?",
+    answer:
+      "Device Online but Not Updating\n\nAn online device may still fail to update if sync, storage, publish, or internet stability has an issue.\n\nPossible causes\n- Synchronization failure\n- Storage full\n- Publish incomplete\n- Internet instability\n\nKey checks\n- Synchronization status\n- Publish status\n- Device storage"
+  },
+  {
+    question: "What is the purpose of Default Playlist?",
+    answer:
+      "Default Playlist Purpose\n\nDefault Playlist acts as fallback playback content.\n\nUsed when\n- No active campaign\n- Failed synchronization\n- No-fill programmatic response\n- Schedule expired"
+  }
 ];
 
 const responseSections = [
@@ -79,6 +172,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -142,6 +236,7 @@ export default function Home() {
       description: messageText
     };
 
+    setSelectedCommonQuestion("");
     setIntake(questionIntake);
     setMessages([{ id: crypto.randomUUID(), role: "user", content: messageText }]);
     setInput("");
@@ -185,7 +280,23 @@ export default function Home() {
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
     setMessages([]);
+    setSelectedCommonQuestion("");
     setIntake((current) => ({ ...current, [field]: value, description: field === "issueCategory" ? "" : current.description }));
+  }
+
+  function selectCommonQuestion(question: string) {
+    setSelectedCommonQuestion(question);
+
+    const selected = commonQuestions.find((item) => item.question === question);
+    if (!selected) {
+      return;
+    }
+
+    setIntake((current) => ({ ...current, issueCategory: "", description: selected.question }));
+    setMessages([
+      { id: crypto.randomUUID(), role: "user", content: selected.question },
+      { id: crypto.randomUUID(), role: "assistant", content: selected.answer, source: "local" }
+    ]);
   }
 
   if (!authChecked) {
@@ -293,7 +404,10 @@ export default function Home() {
               <h2 className="font-semibold text-ink">Ask Assistant</h2>
               <button
                 type="button"
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([]);
+                  setSelectedCommonQuestion("");
+                }}
                 className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
                 title="Clear answer"
               >
@@ -326,20 +440,22 @@ export default function Home() {
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <h2 className="mb-3 font-semibold text-ink">Quick Lessons</h2>
-            <div className="grid gap-2">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => sendMessage(prompt)}
-                  className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2 text-left text-sm text-slate-700 transition hover:border-signal hover:bg-teal-50"
-                >
-                  <span>{prompt}</span>
-                  <Sparkles className="h-4 w-4 shrink-0 text-signal" aria-hidden="true" />
-                </button>
-              ))}
-            </div>
+            <h2 className="mb-3 font-semibold text-ink">Common Questions & Quick Answers</h2>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Question</span>
+              <select
+                value={selectedCommonQuestion}
+                onChange={(event) => selectCommonQuestion(event.target.value)}
+                className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+              >
+                <option value="">Select a common question</option>
+                {commonQuestions.map((item, index) => (
+                  <option key={item.question} value={item.question}>
+                    {index + 1}. {item.question}
+                  </option>
+                ))}
+              </select>
+            </label>
           </section>
         </aside>
 
