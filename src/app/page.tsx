@@ -12,6 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
@@ -322,6 +323,8 @@ export default function Home() {
               <PlaylistTrainingPage />
             ) : selectedTopic?.category === "Create Layout" ? (
               <LayoutTrainingPage />
+            ) : selectedTopic?.category === "Create Device" ? (
+              <DeviceTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
