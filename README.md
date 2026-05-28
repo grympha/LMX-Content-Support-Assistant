@@ -13,6 +13,7 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 - Training progress panel with topic completion tracking
 - Optional Google Sheets progress logging through `GOOGLE_SHEETS_WEBHOOK_URL`
 - Malaysia time timestamps for training records
+- Ask Assistant file attachments for images, documents, CSV, and PDF
 - Common Questions & Quick Answers dropdown
 - Response cards with copy and clear actions
 - Render.com deployment configuration
@@ -66,6 +67,24 @@ The app records these training events when `GOOGLE_SHEETS_WEBHOOK_URL` is config
 Training records use Malaysia time: `Asia/Kuala_Lumpur`.
 
 Training progress is also saved in the user's browser local storage, so the progress panel still works if Google Sheets logging is not configured.
+
+## Ask Assistant Attachments
+
+Users can attach up to 3 files from the Ask Assistant panel.
+
+Supported attachment types:
+
+- Images: JPG, PNG, and other browser-supported image formats
+- Documents: PDF and DOCX
+- Data files: CSV, TXT, Markdown, and JSON
+
+Text, CSV, Markdown, and JSON files are read directly in the browser. PDF and DOCX text is extracted on the server. Image analysis requires `OPENAI_API_KEY` because the assistant needs a vision-capable model to understand screenshots or photos.
+
+Recommended usage:
+
+- Attach the file
+- Ask a specific question about the file
+- Keep files below 8 MB each
 
 ## Google Sheets CSV Record Setup
 
