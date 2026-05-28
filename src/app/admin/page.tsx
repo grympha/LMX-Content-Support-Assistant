@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
-import { BarChart3, Loader2, Lock, LogOut, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, Loader2, Lock, LogOut, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 
 type TrainingRecord = {
   timestamp: string;
@@ -17,12 +17,29 @@ type TrainingRecord = {
 };
 
 function unique(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean)));
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
 function progressNumber(value: string | number) {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function timestampValue(timestamp: string) {
+  const parsed = Date.parse(timestamp);
+
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+
+  const match = timestamp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+
+  if (!match) {
+    return 0;
+  }
+
+  const [, day, month, year, hour, minute, second = "0"] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
 }
 
 export default function AdminDashboard() {
@@ -35,6 +52,8 @@ export default function AdminDashboard() {
   const [loadError, setLoadError] = useState("");
   const [warning, setWarning] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(20);
 
   useEffect(() => {
     fetch("/api/admin/auth")
@@ -49,6 +68,10 @@ export default function AdminDashboard() {
       loadRecords();
     }
   }, [authenticated]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, recordsPerPage]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,6 +114,7 @@ export default function AdminDashboard() {
 
       setRecords(data.records ?? []);
       setWarning(data.warning ?? "");
+      setPage(1);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load records.");
     } finally {
@@ -98,38 +122,49 @@ export default function AdminDashboard() {
     }
   }
 
+  const sortedRecords = useMemo(
+    () => records.slice().sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp)),
+    [records]
+  );
+
   const summary = useMemo(() => {
-    const users = unique(records.map((record) => record.username));
-    const questions = records.filter((record) => record.eventType === "question_asked").length;
-    const completedTopics = records.filter((record) => record.eventType === "topic_completed").length;
-    const lastActivity = records[records.length - 1]?.timestamp || "No activity yet";
+    const users = unique(sortedRecords.map((record) => record.username));
+    const questions = sortedRecords.filter((record) => record.eventType === "question_asked").length;
+    const completedTopicKeys = unique(
+      sortedRecords
+        .filter((record) => record.eventType === "topic_completed")
+        .map((record) => `${record.username}:${record.topic}`)
+    );
+    const lastActivity = sortedRecords[0]?.timestamp || "No activity yet";
     const latestProgressByUser = users.map((user) => {
-      const userRecords = records.filter((record) => record.username === user);
+      const userRecords = sortedRecords.filter((record) => record.username === user);
       return Math.max(...userRecords.map((record) => progressNumber(record.progressPercent)), 0);
     });
     const averageProgress = latestProgressByUser.length
       ? Math.round(latestProgressByUser.reduce((total, value) => total + value, 0) / latestProgressByUser.length)
       : 0;
 
-    return { users: users.length, questions, completedTopics, lastActivity, averageProgress };
-  }, [records]);
+    return { users: users.length, questions, completedTopics: completedTopicKeys.length, lastActivity, averageProgress };
+  }, [sortedRecords]);
 
   const filteredRecords = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
 
     if (!normalizedSearch) {
-      return records.slice().reverse();
+      return sortedRecords;
     }
 
-    return records
-      .filter((record) =>
-        [record.username, record.eventType, record.topic, record.question, record.details]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch)
-      )
-      .reverse();
-  }, [records, search]);
+    return sortedRecords.filter((record) =>
+      [record.timestamp, record.username, record.eventType, record.topic, record.question, record.details]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch)
+    );
+  }, [search, sortedRecords]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / recordsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const paginatedRecords = filteredRecords.slice((safePage - 1) * recordsPerPage, safePage * recordsPerPage);
 
   if (!authChecked) {
     return (
@@ -215,27 +250,41 @@ export default function AdminDashboard() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <SummaryCard title="Users" value={summary.users} icon={<Users className="h-5 w-5" />} />
-          <SummaryCard title="Questions" value={summary.questions} icon={<Search className="h-5 w-5" />} />
-          <SummaryCard title="Completed Topics" value={summary.completedTopics} icon={<ShieldCheck className="h-5 w-5" />} />
+          <SummaryCard title="Questions Asked" value={summary.questions} icon={<Search className="h-5 w-5" />} />
+          <SummaryCard title="Topics Completed" value={summary.completedTopics} icon={<ShieldCheck className="h-5 w-5" />} />
           <SummaryCard title="Average Progress" value={`${summary.averageProgress}%`} icon={<BarChart3 className="h-5 w-5" />} />
-          <SummaryCard title="Last Activity" value={summary.lastActivity} small icon={<RefreshCw className="h-5 w-5" />} />
+          <SummaryCard title="Latest Activity" value={summary.lastActivity} small icon={<RefreshCw className="h-5 w-5" />} />
         </section>
 
         <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="font-semibold text-ink">Training Records</h2>
-              <p className="text-sm text-slate-600">Loaded from Google Sheets</p>
+              <p className="text-sm text-slate-600">Latest records shown first</p>
             </div>
-            <label className="relative block sm:w-80">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search username, topic, question..."
-                className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-              />
-            </label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="relative block sm:w-80">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search username, topic, question..."
+                  className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Records
+                <select
+                  value={recordsPerPage}
+                  onChange={(event) => setRecordsPerPage(Number(event.target.value))}
+                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -251,7 +300,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRecords.map((record, index) => (
+                {paginatedRecords.map((record, index) => (
                   <tr key={`${record.timestamp}-${record.username}-${index}`} className="border-b border-line last:border-0">
                     <td className="whitespace-nowrap px-3 py-3 text-slate-600">{record.timestamp}</td>
                     <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">{record.username || "-"}</td>
@@ -270,6 +319,33 @@ export default function AdminDashboard() {
               No records found yet.
             </div>
           ) : null}
+
+          <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-500">
+              Showing {filteredRecords.length === 0 ? 0 : (safePage - 1) * recordsPerPage + 1} - {Math.min(safePage * recordsPerPage, filteredRecords.length)} of {filteredRecords.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={safePage === 1}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                title="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <span className="text-sm text-slate-600">Page {safePage} of {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={safePage === totalPages}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                title="Next page"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         </section>
       </div>
     </main>
