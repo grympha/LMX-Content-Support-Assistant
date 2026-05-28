@@ -75,7 +75,7 @@ function readTopicDocuments(intake?: IssueIntake) {
   const selectedTopic = intake?.issueCategory;
   const selectedFile = selectedTopic ? topicFiles[selectedTopic as IssueCategory] : undefined;
 
-  if (selectedFile) {
+  if (selectedFile && selectedTopic) {
     const filePath = path.join(topicRoot, selectedFile);
     if (existsSync(filePath)) {
       return [
