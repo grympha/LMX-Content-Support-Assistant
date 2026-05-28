@@ -77,7 +77,7 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              "Use the uploaded LMX Content Training Module context as the primary training source. If the context does not contain the answer, say what information is missing and fall back to the general LMX Content training rules."
+              "Use the uploaded LMX Content Training Module context as the primary source. Answer simply and directly. Prefer short numbered steps. Do not paste long excerpts from the uploaded knowledge. If the context does not contain the answer, ask for the missing module, screen, or workflow."
           },
           {
             role: "user",
