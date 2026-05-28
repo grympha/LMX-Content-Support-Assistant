@@ -25,6 +25,33 @@ function progressNumber(value: string | number) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function isEventType(value: string) {
+  return ["login", "topic_selected", "topic_completed", "question_asked", "quick_answer_selected"].includes(value);
+}
+
+function normalizeRecord(record: TrainingRecord): TrainingRecord {
+  // Handles older Apps Script mappings where a Full Name column shifted Event/Topic/Question/Progress values.
+  if (!record.eventType && isEventType(String(record.topic))) {
+    return {
+      ...record,
+      eventType: String(record.topic),
+      topic: String(record.question || ""),
+      question: "",
+      progressPercent: record.completedTopics || record.progressPercent || "",
+      completedTopics: record.source || "",
+      source: record.details || "",
+      details: ""
+    };
+  }
+
+  return record;
+}
+
+function formatProgress(value: string | number) {
+  const number = progressNumber(value);
+  return number > 0 ? `${number}%` : "-";
+}
+
 function timestampValue(timestamp: string) {
   const parsed = Date.parse(timestamp);
 
@@ -52,6 +79,7 @@ export default function AdminDashboard() {
   const [loadError, setLoadError] = useState("");
   const [warning, setWarning] = useState("");
   const [search, setSearch] = useState("");
+  const [usernameFilter, setUsernameFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(20);
 
@@ -71,7 +99,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, recordsPerPage]);
+  }, [search, usernameFilter, recordsPerPage]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,9 +151,11 @@ export default function AdminDashboard() {
   }
 
   const sortedRecords = useMemo(
-    () => records.slice().sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp)),
+    () => records.map(normalizeRecord).sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp)),
     [records]
   );
+
+  const usernames = useMemo(() => unique(sortedRecords.map((record) => record.username)), [sortedRecords]);
 
   const summary = useMemo(() => {
     const users = unique(sortedRecords.map((record) => record.username));
@@ -133,7 +163,7 @@ export default function AdminDashboard() {
     const completedTopicKeys = unique(
       sortedRecords
         .filter((record) => record.eventType === "topic_completed")
-        .map((record) => `${record.username}:${record.topic}`)
+        .map((record) => `${record.username}:${record.topic || record.question}`)
     );
     const lastActivity = sortedRecords[0]?.timestamp || "No activity yet";
     const latestProgressByUser = users.map((user) => {
@@ -150,17 +180,20 @@ export default function AdminDashboard() {
   const filteredRecords = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
 
+    const usernameFilteredRecords =
+      usernameFilter === "all" ? sortedRecords : sortedRecords.filter((record) => record.username === usernameFilter);
+
     if (!normalizedSearch) {
-      return sortedRecords;
+      return usernameFilteredRecords;
     }
 
-    return sortedRecords.filter((record) =>
+    return usernameFilteredRecords.filter((record) =>
       [record.timestamp, record.username, record.eventType, record.topic, record.question, record.details]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearch)
     );
-  }, [search, sortedRecords]);
+  }, [search, sortedRecords, usernameFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / recordsPerPage));
   const safePage = Math.min(page, totalPages);
@@ -263,6 +296,21 @@ export default function AdminDashboard() {
               <p className="text-sm text-slate-600">Latest records shown first</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Username
+                <select
+                  value={usernameFilter}
+                  onChange={(event) => setUsernameFilter(event.target.value)}
+                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                >
+                  <option value="all">All</option>
+                  {usernames.map((username) => (
+                    <option key={username} value={username}>
+                      {username}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="relative block sm:w-80">
                 <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
                 <input
@@ -307,7 +355,7 @@ export default function AdminDashboard() {
                     <td className="whitespace-nowrap px-3 py-3 text-slate-700">{record.eventType || "-"}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-slate-700">{record.topic || "-"}</td>
                     <td className="max-w-md px-3 py-3 text-slate-700">{record.question || record.details || "-"}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-slate-700">{record.progressPercent || "-"}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-700">{formatProgress(record.progressPercent)}</td>
                   </tr>
                 ))}
               </tbody>
