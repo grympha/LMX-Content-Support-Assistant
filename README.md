@@ -9,7 +9,7 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
 - Uploaded training module search with local training fallback
-- Learner name and training topic selection for more accurate retrieval
+- Training topic selection for more accurate retrieval
 - Training progress panel with topic completion tracking
 - Optional Google Sheets progress logging through `GOOGLE_SHEETS_WEBHOOK_URL`
 - Common Questions & Quick Answers dropdown
@@ -73,7 +73,7 @@ Use this setup when you want admin visibility without adding a database.
 3. Add this header row:
 
 ```text
-Timestamp | Username | Full Name | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
+Timestamp | Username | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
 ```
 
 4. Open `Extensions > Apps Script`.
@@ -87,7 +87,6 @@ function doPost(e) {
   sheet.appendRow([
     data.timestamp || new Date().toISOString(),
     data.username || '',
-    data.fullName || '',
     data.eventType || '',
     data.topic || '',
     data.question || '',
