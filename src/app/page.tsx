@@ -12,6 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
 import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
@@ -325,6 +326,8 @@ export default function Home() {
               <LayoutTrainingPage />
             ) : selectedTopic?.category === "Create Device" ? (
               <DeviceTrainingPage />
+            ) : selectedTopic?.category === "Device Pairing" ? (
+              <DevicePairingTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
