@@ -313,6 +313,8 @@ export default function Home() {
           <div className="flex-1 space-y-4 overflow-y-auto bg-mist/50 p-4">
             {selectedTopic?.category === "Dashboard Overview" ? (
               <DashboardTrainingPage />
+            ) : selectedTopic?.category === "Create Network" ? (
+              <NetworkTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
@@ -568,6 +570,175 @@ function DashboardTrainingPage() {
           <li>Create Device</li>
           <li>Schedule Content</li>
         </ol>
+      </article>
+    </section>
+  );
+}
+
+function NetworkTrainingPage() {
+  return (
+    <section className="space-y-4 text-sm leading-6 text-slate-700">
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h2 className="text-base font-semibold text-ink">Create Network</h2>
+        <div className="mt-3 overflow-hidden rounded-md border border-line bg-white">
+          <img
+            src="/create-network-screenshot.svg"
+            alt="LMX Content CMS Add Network window showing network name, description, tags, device settings, default values, and operational options"
+            className="w-full"
+          />
+        </div>
+
+        <h3 className="mt-4 font-semibold text-signal">Overview</h3>
+        <p className="mt-2">
+          The Network module is used to organize and manage devices, schedules, playlists, and operational settings within the LMX Content CMS platform.
+        </p>
+        <p className="mt-2">
+          A Network acts as the primary grouping structure for digital signage deployments. Devices must belong to a Network before content scheduling and playback management can function properly.
+        </p>
+
+        <h3 className="mt-4 font-semibold text-signal">Examples of Network usage</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Client deployment grouping</li>
+          <li>Regional screen grouping</li>
+          <li>Retail branch grouping</li>
+          <li>Airport or transportation deployment grouping</li>
+        </ul>
+
+        <p className="mt-3 font-medium text-slate-800">
+          A Network should be created before creating locations, registering devices, assigning playlists, and scheduling content.
+        </p>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Accessing the Network Module</h3>
+        <p className="mt-2">Navigate to:</p>
+        <div className="mt-2 rounded-md bg-slatePanel px-3 py-2 font-mono text-xs text-white">Dashboard - Network</div>
+        <p className="mt-3">To create a new network, click:</p>
+        <div className="mt-2 rounded-md bg-slatePanel px-3 py-2 font-mono text-xs text-white">Create</div>
+        <p className="mt-3">The Add Network window will appear.</p>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Main Configuration Fields</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <DashboardComponent
+            title="1. Network Name"
+            body="Defines the name of the network."
+            items={["Use a clear structured naming convention", "Examples: MY_Retail_Main, SG_Airport_T1, ClientA_KL"]}
+            note="Avoid vague names such as Test, ABC, or Network1."
+          />
+          <DashboardComponent
+            title="2. Description"
+            body="Optional field used to explain the network purpose."
+            items={["Internal operations", "Troubleshooting", "Deployment identification"]}
+            note="Example: Malaysia retail deployment for Client A."
+          />
+          <DashboardComponent
+            title="3. Tags"
+            body="Used for filtering and categorization."
+            items={["Retail", "Malaysia", "Airport", "DOOH"]}
+            note="Tags improve search and organization for large deployments."
+          />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Device Settings Section</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <DashboardComponent
+            title="4. Start Time / End Time"
+            body="Defines the playback operational window for the network."
+            items={["Example: 08:00 - 22:00", "For 24-hour operation: 00:00 - 23:59"]}
+            note="Incorrect playback windows may cause blank screens, content not playing, or unexpected default playlist playback."
+          />
+          <DashboardComponent
+            title="5. Volume Range"
+            body="Sets the default device audio level."
+            items={["Example: 40%", "Avoid setting volume too high for public environments"]}
+          />
+          <DashboardComponent
+            title="6. Screen Brightness"
+            body="Sets the default display brightness level."
+            items={["Example: 50%", "Indoor or outdoor adjustment", "Energy management", "Screen visibility optimization"]}
+          />
+          <DashboardComponent
+            title="7. Playlog Interval (min)"
+            body="Defines how often devices report playback logs to CMS."
+            items={["Example: 10 minutes", "Use shorter intervals for high-priority campaigns", "Use shorter intervals for detailed playback monitoring"]}
+          />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Default Values Section</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <DashboardComponent title="8. Schedule Types" body="Defines the scheduling category." items={["Example: Client", "Used for operational organization"]} />
+          <DashboardComponent title="9. Brands" body="Optional branding or deployment grouping." items={["Multi-brand environments", "Client separation", "Operational filtering"]} />
+          <DashboardComponent title="10. Start Date" body="Defines when the network becomes operational." items={["Select the correct start date before production use"]} />
+          <DashboardComponent
+            title="11. Playlist"
+            body="Assigns a default playlist to the network."
+            items={["Devices may show fallback or default content if no playlist is assigned properly", "Scheduled campaigns may not play if playlist setup is incomplete"]}
+          />
+          <DashboardComponent title="12. Duration" body="Defines operational duration if required." items={["Use when the deployment has a defined operational period"]} />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Operational Options</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-3">
+          <Checklist title="13. Play Log" items={["Recommended: Enabled", "Supports playback reporting", "Supports campaign validation", "Supports troubleshooting"]} />
+          <Checklist title="14. Background Download" items={["Recommended: Enabled", "Downloads content in advance", "Improves playback stability", "Reduces sync delays"]} />
+          <Checklist title="15. Active" items={["Must be enabled for operational use", "If disabled, devices may not receive schedules", "If disabled, network will not operate normally"]} />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Saving the Network</h3>
+        <p className="mt-2">After completing the configuration, click:</p>
+        <div className="mt-2 rounded-md bg-slatePanel px-3 py-2 font-mono text-xs text-white">Add</div>
+        <p className="mt-3">The network will now appear in the Network list.</p>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Common Mistakes</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <DashboardComponent title="1. Network Not Activated" body="Devices do not receive content." items={["Cause: Active = Disabled", "Fix: Enable the Active option"]} />
+          <DashboardComponent title="2. Wrong Playback Time" body="Client reports content not playing." items={["Cause: incorrect Start Time / End Time", "Fix: verify operational playback hours"]} />
+          <DashboardComponent title="3. Playlog Disabled" body="No playback reporting available." items={["Fix: enable Play Log"]} />
+          <DashboardComponent title="4. Background Download Disabled" body="Slow syncing or playback interruption." items={["Fix: enable Background Download"]} />
+          <DashboardComponent title="5. Poor Naming Convention" body="Network names should be clear and structured." items={["Bad: Test, ABC, Network1", "Good: MY_ClientA_Retail"]} />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Important Notes</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Networks are mandatory before creating locations and devices.</li>
+          <li>Devices must be mapped to the correct network to receive schedules properly.</li>
+          <li>Network playback settings directly affect device behavior.</li>
+          <li>Background Download is strongly recommended for production deployments.</li>
+          <li>Playlog reporting depends on proper network configuration.</li>
+        </ul>
+
+        <h3 className="mt-4 font-semibold text-ink">Best Practice</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>Create Network</li>
+          <li>Create Location</li>
+          <li>Create Playlist</li>
+          <li>Create Layout</li>
+          <li>Create Device</li>
+          <li>Schedule Content</li>
+          <li>Publish Campaign</li>
+        </ol>
+
+        <h3 className="mt-4 font-semibold text-ink">Next Step</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Create Location</li>
+          <li>Create Playlist</li>
+          <li>Register Device</li>
+          <li>Schedule Content</li>
+        </ul>
       </article>
     </section>
   );
