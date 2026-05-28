@@ -12,7 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { DashboardTrainingPage, LocationTrainingPage, NetworkTrainingPage } from "@/components/TrainingTopicPages";
+import { DashboardTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
 type ChatSource = "openai" | "knowledge" | "local";
@@ -318,6 +318,8 @@ export default function Home() {
               <NetworkTrainingPage />
             ) : selectedTopic?.category === "Create Location" ? (
               <LocationTrainingPage />
+            ) : selectedTopic?.category === "Create Playlist" ? (
+              <PlaylistTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
