@@ -51,12 +51,13 @@ const quickPrompts = [
   "Train me how to create a network",
   "Train me how to create a location",
   "How do I create a playlist?",
+  "How do I create a layout?",
   "How do I add and pair a device?",
   "How do I set up the default playlist?",
   "How do I schedule content?",
   "How do I publish content?",
   "How do I check playlogs?",
-  "What are the Android device requirements?",
+  "What operating systems and hardware are supported?",
   "How do I schedule URL or VAST content?"
 ];
 
@@ -174,7 +175,7 @@ export default function Home() {
           role: "assistant",
           source: "local",
           content:
-            "Overview:\nThe training assistant could not complete the request.\n\nWhen to Use:\n- This appears when the session, network, or chat API is unavailable.\n\nStep-by-Step Guide:\n- Confirm you are signed in\n- Refresh the page\n- Submit the training question again\n- Check server logs if the issue repeats\n\nImportant Notes:\n- The uploaded training module is still available after the app recovers.\n\nCommon Mistakes:\n- Continuing after the session has expired\n- Submitting with an unstable network connection\n\nNext Step:\nRefresh the page and ask the training question again."
+            "Please refresh the page and ask the training question again. If it still fails, check the app server logs."
         }
       ]);
     } finally {
@@ -344,17 +345,14 @@ export default function Home() {
 
         <section className="min-h-[760px] rounded-lg border border-line bg-mist/50 p-4 shadow-panel">
           {messages.length > 0 ? (
-            <div className="space-y-4">
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
               {messages.map((message) => (
                 <article
                   key={message.id}
-                  className={message.role === "user" ? "ml-auto max-w-2xl rounded-lg bg-slatePanel p-4 text-white" : "max-w-3xl rounded-lg border border-line bg-white p-4 text-ink"}
+                  className={message.role === "user" ? "w-full rounded-lg bg-slatePanel p-4 text-white" : "w-full rounded-lg border border-line bg-white p-4 text-ink"}
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
-                      {message.source ? <p className="text-xs text-slate-500">{sourceLabel(message.source)}</p> : null}
-                    </div>
+                    <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
                     {message.role === "assistant" ? (
                       <button
                         type="button"
@@ -371,7 +369,7 @@ export default function Home() {
               ))}
 
               {loading ? (
-                <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
+                <div className="flex w-full items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
                   <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
                   Searching all training topics...
                 </div>
@@ -508,12 +506,6 @@ function Input({ label, value, onChange, placeholder }: { label: string; value?:
       />
     </label>
   );
-}
-
-function sourceLabel(source: ChatSource) {
-  if (source === "openai") return "OpenAI assisted";
-  if (source === "knowledge") return "Uploaded training module";
-  return "Local training knowledge";
 }
 
 function FormattedResponse({ content }: { content: string }) {
