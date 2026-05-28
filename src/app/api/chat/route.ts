@@ -15,6 +15,15 @@ import { logProgressEvent } from "@/lib/progressLog";
 
 const cookieName = "lmx-support-session";
 const userCookieName = "lmx-support-user";
+const maxAttachmentCharacters = 12000;
+
+type ChatAttachment = {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl?: string;
+  text?: string;
+};
 
 const unclearFallback = `I could not find a clear answer based on the available LMX Content training information.
 
@@ -135,6 +144,67 @@ function hasConfidentKnowledgeMatch(message: string, intake: IssueIntake | undef
   return hasStrongDocumentMatch(documentMatches, hasStrongPhrase);
 }
 
+function dataUrlToBuffer(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  return Buffer.from(base64, "base64");
+}
+
+function isImageAttachment(attachment: ChatAttachment) {
+  return attachment.type.startsWith("image/") && Boolean(attachment.dataUrl);
+}
+
+async function extractAttachmentText(attachment: ChatAttachment) {
+  if (attachment.text) {
+    return attachment.text;
+  }
+
+  if (!attachment.dataUrl) {
+    return "";
+  }
+
+  const lowerName = attachment.name.toLowerCase();
+  const buffer = dataUrlToBuffer(attachment.dataUrl);
+
+  try {
+    if (attachment.type === "application/pdf" || lowerName.endsWith(".pdf")) {
+      const pdfParse = (await import("pdf-parse")).default as (input: Buffer) => Promise<{ text?: string }>;
+      const result = await pdfParse(buffer);
+      return result.text ?? "";
+    }
+
+    if (
+      attachment.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      lowerName.endsWith(".docx")
+    ) {
+      const mammoth = await import("mammoth");
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value ?? "";
+    }
+  } catch (error) {
+    console.error(`Unable to extract attachment text from ${attachment.name}`, error);
+    return "";
+  }
+
+  return "";
+}
+
+async function buildAttachmentContext(attachments: ChatAttachment[] = []) {
+  const textAttachments = attachments.filter((attachment) => !isImageAttachment(attachment));
+  const extracted = await Promise.all(
+    textAttachments.map(async (attachment) => {
+      const text = (await extractAttachmentText(attachment)).trim();
+
+      if (!text) {
+        return `File: ${attachment.name}\nNo readable text could be extracted.`;
+      }
+
+      return `File: ${attachment.name}\nType: ${attachment.type || "unknown"}\nContent:\n${text.slice(0, maxAttachmentCharacters)}`;
+    })
+  );
+
+  return extracted.join("\n\n---\n\n");
+}
+
 async function sessionToken(password: string) {
   const data = new TextEncoder().encode(`lmx-content-support:${password}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
@@ -162,28 +232,33 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     message?: string;
+    attachments?: ChatAttachment[];
     intake?: IssueIntake;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
   };
 
-  const message = body.message?.trim();
+  const message = body.message?.trim() ?? "";
+  const attachments = (body.attachments ?? []).slice(0, 3);
 
-  if (!message) {
-    return NextResponse.json({ error: "Message is required." }, { status: 400 });
+  if (!message && attachments.length === 0) {
+    return NextResponse.json({ error: "Message or attachment is required." }, { status: 400 });
   }
 
   const username = usernameFromRequest(request);
-  const documentMatches = searchTrainingKnowledge(message, body.intake);
+  const attachmentContext = await buildAttachmentContext(attachments);
+  const imageAttachments = attachments.filter(isImageAttachment);
+  const messageForSearch = [message, attachmentContext].filter(Boolean).join("\n\n");
+  const documentMatches = searchTrainingKnowledge(messageForSearch, body.intake);
 
   await logProgressEvent({
     eventType: "question_asked",
     username,
     fullName: body.intake?.clientTenant,
     topic: body.intake?.issueCategory || undefined,
-    question: message
+    question: attachments.length > 0 ? `${message || "Attachment review"} | Files: ${attachments.map((attachment) => attachment.name).join(", ")}` : message
   });
 
-  if (!hasConfidentKnowledgeMatch(message, body.intake, documentMatches)) {
+  if (!attachmentContext && imageAttachments.length === 0 && !hasConfidentKnowledgeMatch(message, body.intake, documentMatches)) {
     return NextResponse.json({
       reply: unclearFallback,
       source: "local"
@@ -196,6 +271,17 @@ export async function POST(request: Request) {
   );
 
   if (!process.env.OPENAI_API_KEY) {
+    if (attachmentContext || imageAttachments.length > 0) {
+      const attachmentNote = imageAttachments.length > 0
+        ? "\n\nImage attachments require `OPENAI_API_KEY` for visual analysis."
+        : "";
+
+      return NextResponse.json({
+        reply: `Attached File Review\n\nI received the attached file, but detailed file-based answering requires OpenAI integration to be enabled.\n\nExtracted readable text preview:\n${attachmentContext || "No readable text was extracted from the attachment."}${attachmentNote}\n\nKey steps\n- Add `OPENAI_API_KEY` in Render if you want the assistant to analyze attached files deeply\n- For PDF/DOCX/CSV, ask a specific question about the file content\n- For screenshots or images, enable OpenAI vision support through the API key`,
+        source: "local"
+      });
+    }
+
     return NextResponse.json({
       reply: localReply,
       source: documentMatches.length > 0 ? "knowledge" : "local"
@@ -217,7 +303,7 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              "Use the uploaded LMX Content Training Module context as the primary source. Answer using the compact topic-card template: topic title, one short explanation paragraph, then 'Key steps' with bullet points. Do not paste long excerpts from the uploaded knowledge. If the context does not contain the answer, return the approved fallback response instead of guessing."
+              "Use the uploaded LMX Content Training Module context and any attached file context as the primary sources. Answer using the compact topic-card template: topic title, one short explanation paragraph, then 'Key steps' with bullet points. Do not paste long excerpts from the uploaded knowledge or attached files. If neither the training knowledge nor attachments contain a clear answer, return the approved fallback response instead of guessing."
           },
           {
             role: "user",
@@ -227,8 +313,24 @@ export async function POST(request: Request) {
             role: "user",
             content: `Uploaded knowledge matches:\n${buildDocumentContext(documentMatches) || "No relevant uploaded knowledge match found."}`
           },
+          {
+            role: "user",
+            content: `Attached file text context:\n${attachmentContext || "No readable text attachment was provided."}`
+          },
           ...(body.history ?? []).slice(-8),
-          { role: "user", content: message }
+          {
+            role: "user",
+            content:
+              imageAttachments.length > 0
+                ? [
+                    { type: "text", text: message || "Please review the attached file and answer based on the LMX Content training context." },
+                    ...imageAttachments.map((attachment) => ({
+                      type: "image_url",
+                      image_url: { url: attachment.dataUrl }
+                    }))
+                  ]
+                : message || "Please review the attached file and answer based on the LMX Content training context."
+          }
         ]
       })
     });
