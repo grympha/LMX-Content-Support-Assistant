@@ -56,7 +56,6 @@ function formatProgress(value: string | number) {
   const number = progressNumber(value);
   return number > 0 ? `${number}%` : "-";
 }
-
 function timestampValue(timestamp: string) {
   const parsed = Date.parse(timestamp);
 
@@ -163,24 +162,27 @@ export default function AdminDashboard() {
   const usernames = useMemo(() => unique(sortedRecords.map((record) => record.username)), [sortedRecords]);
 
   const summary = useMemo(() => {
-    const users = unique(sortedRecords.map((record) => record.username));
-    const questions = sortedRecords.filter((record) => record.eventType === "question_asked").length;
+    const summaryRecords =
+      usernameFilter === "all" ? sortedRecords : sortedRecords.filter((record) => record.username === usernameFilter);
+    const users = unique(summaryRecords.map((record) => record.username));
+    const questions = summaryRecords.filter((record) => record.eventType === "question_asked").length;
+    const quickAnswers = summaryRecords.filter((record) => record.eventType === "quick_answer_selected").length;
     const completedTopicKeys = unique(
-      sortedRecords
+      summaryRecords
         .filter((record) => record.eventType === "topic_completed")
         .map((record) => `${record.username}:${record.topic || record.question}`)
     );
-    const lastActivity = sortedRecords[0]?.timestamp || "No activity yet";
+    const lastActivity = summaryRecords[0]?.timestamp || "No activity yet";
     const latestProgressByUser = users.map((user) => {
-      const userRecords = sortedRecords.filter((record) => record.username === user);
+      const userRecords = summaryRecords.filter((record) => record.username === user);
       return Math.max(...userRecords.map((record) => progressNumber(record.progressPercent)), 0);
     });
     const averageProgress = latestProgressByUser.length
       ? Math.round(latestProgressByUser.reduce((total, value) => total + value, 0) / latestProgressByUser.length)
       : 0;
 
-    return { users: users.length, questions, completedTopics: completedTopicKeys.length, lastActivity, averageProgress };
-  }, [sortedRecords]);
+    return { users: users.length, questions, quickAnswers, completedTopics: completedTopicKeys.length, lastActivity, averageProgress };
+  }, [sortedRecords, usernameFilter]);
 
   const filteredRecords = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
@@ -286,11 +288,12 @@ export default function AdminDashboard() {
         {warning ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{warning}</div> : null}
         {loadError ? <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{loadError}</div> : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <SummaryCard title="Users" value={summary.users} icon={<Users className="h-5 w-5" />} />
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <SummaryCard title={usernameFilter === "all" ? "Users" : "Selected User"} value={usernameFilter === "all" ? summary.users : usernameFilter} icon={<Users className="h-5 w-5" />} />
           <SummaryCard title="Questions Asked" value={summary.questions} icon={<Search className="h-5 w-5" />} />
           <SummaryCard title="Topics Completed" value={summary.completedTopics} icon={<ShieldCheck className="h-5 w-5" />} />
-          <SummaryCard title="Average Progress" value={`${summary.averageProgress}%`} icon={<BarChart3 className="h-5 w-5" />} />
+          <SummaryCard title="Quick Answers Used" value={summary.quickAnswers} icon={<RefreshCw className="h-5 w-5" />} />
+          <SummaryCard title="Progress" value={`${summary.averageProgress}%`} icon={<BarChart3 className="h-5 w-5" />} />
           <SummaryCard title="Latest Activity" value={summary.lastActivity} small icon={<RefreshCw className="h-5 w-5" />} />
         </section>
 
