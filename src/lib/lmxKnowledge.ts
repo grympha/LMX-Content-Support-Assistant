@@ -14,7 +14,7 @@ export type IssueCategory =
   | "Playlogs"
   | "User Management"
   | "Installation of LMX Content App"
-  | "Device Requirements"
+  | "Supported Operating Systems & Hardware"
   | "Programmatic / VAST"
   | "Other";
 
@@ -58,7 +58,7 @@ export const issueCategories: IssueCategory[] = [
   "Playlogs",
   "User Management",
   "Installation of LMX Content App",
-  "Device Requirements",
+  "Supported Operating Systems & Hardware",
   "Programmatic / VAST",
   "Other"
 ];
@@ -100,7 +100,7 @@ export const lmxKnowledge: KnowledgeEntry[] = [
   lesson("Playlogs", ["playlog", "playlogs", "report", "proof of play"], "Playlogs confirm what content played on devices for reporting and validation.", ["Open Playlogs or reports", "Select date range", "Filter by network, location, device, campaign, or content", "Review records", "Export if needed"], ["Play Log should be enabled", "Offline devices may upload later"], ["Wrong date range", "Checking before upload", "Expecting logs for content that did not play"], "Compare playlogs with schedule and device status."),
   lesson("User Management", ["user", "roles", "permissions"], "User Management controls who can access CMS modules, networks, and functions.", ["Open user management", "Create or invite user", "Enter details", "Assign role", "Assign network/module access", "Save", "Ask user to confirm access"], ["Use minimum required permission", "Match access to responsibility"], ["Too much access", "Wrong network assignment"], "Confirm the user can access the needed CMS area."),
   lesson("Installation of LMX Content App", ["android", "windows", "install", "installation", "apk", "installer", "verification code", "software render", "sr build"], "Install and register the LMX Content Player application for Android and Windows devices so it can download content, play scheduled media, synchronize with CMS, generate playlogs, and receive playlist updates.", ["Create the device in CMS first", "Download the correct Android APK or Windows installer", "For Android, install the APK, choose Just Once if prompted, and allow required permissions", "For Windows, right-click the installer and run as administrator", "Open the LMX Content Player application", "Select or enter Login with Verification Code", "Enter the one-time verification code from CMS", "Verify pairing, synchronization, and playback"], ["To update an existing app, install the latest version directly without uninstalling the previous version", "Verification codes are one-time use only", "Low-spec or unsupported GPU devices may require the Software Render (SR) build", "Stable internet is recommended during installation and registration"], ["Uninstalling before update and losing pairing or cache", "Installing before creating the CMS device record", "Skipping Android permissions", "Not running the Windows installer as administrator", "Using an expired or already-used verification code"], "After installation, pair the device, publish content, and verify playback."),
-  lesson("Device Requirements", ["requirements", "spec", "webview", "ram", "storage", "android 11"], "Device requirements confirm whether hardware, OS, storage, RAM, browser/WebView, and media support are suitable.", ["Identify platform", "Check OS version", "Check CPU, RAM, storage, and graphics", "Check WebView/browser", "Check supported media formats", "Compare with recommended devices"], ["Android should be Android 11+", "Modern WebView matters for VAST/HTML", "Windows is best for programmatic-heavy networks"], ["Approving weak hardware", "Ignoring WebView", "Using unsupported OS"], "Use requirements before approving deployment."),
+  lesson("Supported Operating Systems & Hardware", ["requirements", "spec", "hardware", "operating system", "os", "webview", "ram", "storage", "android 11", "windows 10", "windows 11", "linux", "webos", "brightsign"], "LMX Content CMS supports Windows, Linux, Android, LG webOS, and BrightSign. Hardware capability directly affects playback stability, synchronization performance, HTML rendering, programmatic campaign support, and multi-zone playback capability.", ["Identify the target platform", "Check OS version and whether it is supported", "Check CPU, RAM, storage, graphics, and system type", "For Android, confirm Android 11+ and WebView version 100 or above for programmatic/HTML use", "Check supported media formats for the platform", "Use recommended hardware for VAST, HTML ZIP, URL widgets, and split layouts", "Validate playback after installing the latest player"], ["Windows 10 and 11 are supported; Windows 7 is no longer supported", "Android 11+ is recommended, with 8GB RAM / 128GB ROM preferred and 4GB RAM / 64GB ROM minimum", "Low-end Android devices may struggle with VAST, HTML ZIP, URL widgets, and split layouts", "LG webOS has limited support for advanced HTML, programmatic features, widgets, and complex layouts", "Programmatic playback requires modern browser/WebView support"], ["Approving weak hardware for advanced content", "Ignoring WebView version on Android", "Using unsupported OS versions", "Deploying complex layouts on low-spec devices", "Using oversized or unoptimized media"], "Install the player application, pair the device, upload optimized content, publish a test campaign, and verify playback."),
   lesson("Programmatic / VAST", ["programmatic", "vast", "url", "ima", "hivestack", "dv360"], "Programmatic and VAST need correct ad setup, fallback content, compatible platform, modern WebView/browser, and stable internet.", ["Confirm platform support", "Check WebView/browser requirements", "Create URL, VAST, or programmatic schedule", "Set ad slot duration", "Add filler content", "Enter required IDs or API keys", "Save and publish", "Validate playback"], ["Windows and Android 11+ are preferred", "Fallback content is important for no-fill"], ["No filler content", "Wrong screen ID", "Unsupported OS"], "Test on a known working device.")
 ];
 
@@ -173,7 +173,7 @@ Rules:
 - Give step-by-step instructions for CMS workflows.
 - Use the uploaded LMX Content Training Module as the primary source.
 - Do not guess if a step is not covered. Ask what screen, module, or workflow the user is currently on.
-- Focus on training users to create networks, locations, playlists, layouts, devices, default playlists, schedules, publishing flows, playlogs, storage, users, app installation, and device requirements.
+- Focus on training users to create networks, locations, playlists, layouts, devices, default playlists, schedules, publishing flows, playlogs, storage, users, app installation, and supported operating systems/hardware.
 - Keep wording professional and easy for non-technical users.
 - For scheduling or publishing, remind users that Default Playlist requires at least one scheduled image and one scheduled video.
 - For device setup and app installation, remind users that verification codes are one-time use only.
