@@ -132,3 +132,61 @@ export function PlaylistTrainingPage() {
     </section>
   );
 }
+
+export function LayoutTrainingPage() {
+  return (
+    <section className="space-y-4 text-sm leading-6 text-slate-700">
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h2 className="text-base font-semibold text-ink">Create Layout</h2>
+        <div className="mt-3 overflow-hidden rounded-md border border-line bg-white"><img src="/create-layout-screenshot.svg" alt="LMX Content CMS Layout configuration page" className="w-full" /></div>
+        <h3 className="mt-4 font-semibold text-signal">Overview</h3>
+        <p className="mt-2">The Layout module is used to define how content is displayed on the screen within the LMX Content CMS platform.</p>
+        <p className="mt-2">Layouts control screen zone arrangement, content positioning, split-screen configuration, playlist placement, scrolling areas, and multi-content display behavior.</p>
+        <p className="mt-2">A Layout allows users to divide the screen into multiple sections and assign different playlists to each section.</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5"><li>Full-screen video</li><li>Video with scrolling ticker</li><li>Split-screen advertisements</li><li>Menu board layouts</li><li>Multi-zone DOOH playback</li></ul>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Accessing the Layout Module</h3><p className="mt-2">Navigate to:</p><CodeLine>Dashboard - Setup - Layout</CodeLine><p className="mt-3">To create a new layout, click:</p><CodeLine>Create</CodeLine><p className="mt-3">The Layout configuration page will appear.</p></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Main Configuration Fields</h3><div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <LessonCard title="1. Layout Name" body="Defines the layout identifier." items={["Use clear structured naming", "Examples: MY_KL_FullScreen, Airport_SplitVertical, Retail_MenuBoard", "Avoid: Test, Layout1, ABC"]} />
+        <LessonCard title="2. Location" body="Select the location where the layout will be used." items={["Ensures correct playlist and device mapping", "Prevents incorrect playback", "Prevents playlist mismatch"]} />
+        <LessonCard title="3. Layout Scale" body="Defines the screen scaling unit." items={["Common option: Percentage", "Controls zone sizing", "Controls layout positioning", "Controls screen division"]} />
+        <LessonCard title="4. Is Default Layout?" body="Defines whether this layout becomes the default screen layout." items={["Enable only if it should automatically apply to devices", "Verify before saving"]} note="Incorrect default layout configuration may cause wrong content arrangement or unintended screen display." />
+        <LessonCard title="5. Status" body="Controls whether the layout can be applied operationally." items={["Recommended: Enabled", "If disabled, layout cannot be applied properly", "Devices may fallback to other layouts"]} />
+        <LessonCard title="6. Description" body="Optional internal notes for operational reference." items={["Example: Split vertical layout for airport advertising screens", "Useful for support and deployment tracking"]} />
+      </div></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Existing Layout Types</h3><div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <LessonCard title="No Split" body="Single full-screen layout." items={["Full-screen video", "Standard advertisements", "Simple playback"]} />
+        <LessonCard title="Split Vertical" body="Splits the screen vertically into multiple zones." items={["Video with side banner", "Advertising with information panel"]} />
+        <LessonCard title="Split Horizontal" body="Splits the screen horizontally." items={["Top banner with main content", "Ticker with video"]} />
+        <LessonCard title="Four Square" body="Divides the screen into four equal zones." items={["Menu boards", "Multiple simultaneous advertisements", "Information dashboards"]} />
+        <LessonCard title="One Third Splits" body="Creates one-third vertical or horizontal split layouts." items={["Main content with side information", "Scrolling announcements", "News ticker layouts"]} />
+        <LessonCard title="Scroll Layout Variations" body="Supports split layouts with top or bottom scrolling areas." items={["DOOH informational displays", "Transportation systems", "Retail announcements", "Live ticker displays"]} />
+      </div></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Zone Configuration</h3><div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <LessonCard title="7. Tag Name" body="Defines the zone identifier." items={["Tag1", "MainVideo", "Ticker", "SideBanner"]} note="Each zone can have different playlists assigned." />
+        <LessonCard title="8. Play Lists" body="Assigns a playlist to the selected zone." items={["Valid playlist assignment", "Proper scheduling", "Approved content"]} note="Each zone needs a valid playlist for playback." />
+        <LessonCard title="9. Left / Top" body="Defines zone position on the screen." items={["Controls zone placement", "Controls alignment", "Controls screen arrangement"]} />
+        <LessonCard title="10. Width / Height" body="Defines zone size." items={["Example: Width = 100", "Example: Height = 100", "Controls content display area"]} />
+        <LessonCard title="11. Border Configuration" body="Optional visual border for zone separation." items={["Useful for debugging", "Useful for testing layouts", "Usually disabled in production"]} />
+      </div></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Saving the Layout</h3><p className="mt-2">After configuring all required settings, click:</p><CodeLine>Save</CodeLine><p className="mt-3">The layout will now appear in the Layout list.</p></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Common Mistakes</h3><div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <LessonCard title="Playlist Not Assigned" body="Zone appears blank." items={["Fix: assign valid playlist to each zone"]} />
+        <LessonCard title="Wrong Layout Type Selected" body="Content displays incorrectly." items={["Choose layout based on screen orientation", "Choose layout based on content type", "Choose layout based on deployment requirement"]} />
+        <LessonCard title="Incorrect Width / Height" body="Content overlaps or disappears." items={["Validate Width", "Validate Height", "Validate Left", "Validate Top"]} />
+        <LessonCard title="Layout Status Disabled" body="Layout does not apply." items={["Ensure Status = Enabled"]} />
+        <LessonCard title="Incorrect Default Layout" body="Wrong layout automatically applied." items={["Verify Is Default Layout before saving"]} />
+      </div></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Important Notes</h3><ul className="mt-2 list-disc space-y-1 pl-5"><li>Layout controls screen structure only.</li><li>Content must still be uploaded, assigned to playlist, scheduled, approved, and published.</li><li>Multi-zone layouts may require stronger device hardware.</li><li>Complex layouts may impact low-spec Android devices.</li></ul><h3 className="mt-4 font-semibold text-ink">Best Practice</h3><CodeLine>Create Layout - Create Playlist - Assign Playlist to Zones - Schedule Content - Publish Campaign - Verify Playback</CodeLine><p className="mt-3">Recommended for basic deployments: <span className="font-semibold text-ink">No Split</span></p><p className="mt-1">Recommended for advanced deployments: <span className="font-semibold text-ink">Split layouts with ticker support</span></p></article>
+
+      <article className="rounded-lg border border-line bg-white p-4"><h3 className="font-semibold text-ink">Troubleshooting Tip</h3><p className="mt-2 font-medium text-slate-800">If users report: Layout created but screen is blank</p><ul className="mt-2 list-disc space-y-1 pl-5"><li>Check playlist assignment</li><li>Check layout status</li><li>Check content scheduling</li><li>Check publish status</li><li>Check device compatibility</li><li>Check zone dimensions</li><li>Check screen orientation</li></ul><h3 className="mt-4 font-semibold text-ink">Next Step</h3><ol className="mt-2 list-decimal space-y-1 pl-5"><li>Create Device</li><li>Assign Playlist</li><li>Schedule Content</li><li>Publish Campaign</li><li>Verify Device Playback</li></ol></article>
+    </section>
+  );
+}
