@@ -10,6 +10,19 @@ export type ProgressEvent = {
   details?: string;
 };
 
+function malaysiaTimestamp() {
+  return new Intl.DateTimeFormat("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(new Date());
+}
+
 export async function logProgressEvent(event: ProgressEvent) {
   const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
 
@@ -22,7 +35,8 @@ export async function logProgressEvent(event: ProgressEvent) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        timestamp: new Date().toISOString(),
+        timestamp: malaysiaTimestamp(),
+        timezone: "Asia/Kuala_Lumpur",
         ...event
       })
     });
