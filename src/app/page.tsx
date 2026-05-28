@@ -153,6 +153,11 @@ const commonQuestions: CommonQuestion[] = [
     question: "What is the purpose of Default Playlist?",
     answer:
       "Default Playlist Purpose\n\nDefault Playlist acts as fallback playback content.\n\nUsed when\n- No active campaign\n- Failed synchronization\n- No-fill programmatic response\n- Schedule expired"
+  },
+  {
+    question: "What version supports Pull To Content?",
+    answer:
+      "Pull To Content Supported Version\n\nSupported versions:\n- Windows = 10.0.34 and above\n- Android = 2.9.1.2 Native and above\n\nBefore using Pull To Content, ensure:\n- Device is already paired with LMX Inventory\n- Pull To Content feature is enabled\n- Device is online and synchronized\n\nIf pairing or feature enablement is not correct:\n- Pull To Content may not trigger\n- Inventory synchronization may fail\n- Playback requests may not be received"
   }
 ];
 
