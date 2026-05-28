@@ -20,6 +20,7 @@ import { PlaylogTrainingPage } from "@/components/PlaylogTrainingPage";
 import { PublishContentTrainingPage } from "@/components/PublishContentTrainingPage";
 import { ScheduleContentTrainingPage } from "@/components/ScheduleContentTrainingPage";
 import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
+import { UserManagementTrainingPage } from "@/components/UserManagementTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
@@ -346,6 +347,8 @@ export default function Home() {
               <PublishContentTrainingPage />
             ) : selectedTopic?.category === "Playlogs" ? (
               <PlaylogTrainingPage />
+            ) : selectedTopic?.category === "User Management" ? (
+              <UserManagementTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
