@@ -11,8 +11,10 @@ import {
   searchTrainingKnowledge,
   type DocumentKnowledgeMatch
 } from "@/lib/documentKnowledge";
+import { logProgressEvent } from "@/lib/progressLog";
 
 const cookieName = "lmx-support-session";
+const userCookieName = "lmx-support-user";
 
 const unclearFallback = `I could not find a clear answer based on the available LMX Content training information.
 
@@ -65,6 +67,20 @@ const highConfidencePhrases = [
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9\s/+.-]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function readCookie(cookieHeader: string, name: string) {
+  return cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+function usernameFromRequest(request: Request) {
+  const cookie = request.headers.get("cookie") ?? "";
+  const encodedUsername = readCookie(cookie, userCookieName) ?? "";
+  return encodedUsername ? decodeURIComponent(encodedUsername) : "";
 }
 
 function keywordMatches(haystack: string, keyword: string) {
@@ -156,7 +172,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
+  const username = usernameFromRequest(request);
   const documentMatches = searchTrainingKnowledge(message, body.intake);
+
+  await logProgressEvent({
+    eventType: "question_asked",
+    username,
+    fullName: body.intake?.clientTenant,
+    topic: body.intake?.issueCategory || undefined,
+    question: message
+  });
 
   if (!hasConfidentKnowledgeMatch(message, body.intake, documentMatches)) {
     return NextResponse.json({
