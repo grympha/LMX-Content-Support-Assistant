@@ -32,12 +32,17 @@ function isEventType(value: string) {
 function normalizeRecord(record: TrainingRecord): TrainingRecord {
   // Handles older Apps Script mappings where a Full Name column shifted Event/Topic/Question/Progress values.
   if (!record.eventType && isEventType(String(record.topic))) {
+    const shiftedQuestion =
+      typeof record.progressPercent === "string" && !Number.isFinite(Number(record.progressPercent))
+        ? record.progressPercent
+        : "";
+
     return {
       ...record,
       eventType: String(record.topic),
       topic: String(record.question || ""),
-      question: "",
-      progressPercent: record.completedTopics || record.progressPercent || "",
+      question: shiftedQuestion,
+      progressPercent: shiftedQuestion ? "" : record.completedTopics || record.progressPercent || "",
       completedTopics: record.source || "",
       source: record.details || "",
       details: ""
