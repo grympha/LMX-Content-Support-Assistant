@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">LMX Content CMS Dashboard Screenshot</title>
+  <desc id="desc">Dashboard with online, offline, and unpaired device counters, device status table, online network chart, and storage indicator.</desc>
+  <rect width="1600" height="720" fill="#eaf3ff"/>
+  <path d="M0 84h1600v636H0z" fill="#eff7ff"/>
+  <path d="M0 112 450 84l185 636H0z" fill="#dfeeff" opacity=".65"/>
+  <path d="M1180 84h420v636h-260z" fill="#d8e6ff" opacity=".55"/>
+  <rect width="1600" height="58" fill="#dfe7f5"/>
+  <rect y="58" width="1600" height="34" fill="#cfd9e9"/>
+  <g transform="translate(24 7)">
+    <path d="M0 26 C18 2 37 2 55 26 C73 50 91 50 110 26 C128 2 146 2 165 26" fill="none" stroke="#1e7fc8" stroke-width="9" stroke-linecap="round"/>
+    <text x="94" y="28" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#444">MovingWalls</text>
+    <text x="0" y="48" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="3">moving walls</text>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#444">
+    <text x="22" y="80">Dashboard</text>
+    <text x="86" y="80">Network</text>
+    <text x="156" y="80">Device Manager</text>
+    <text x="268" y="80">Setup</text>
+    <text x="323" y="80">Main Storage</text>
+    <text x="428" y="80">Scheduled Content</text>
+    <text x="562" y="80">View History</text>
+    <text x="665" y="80">Content Approval</text>
+    <text x="792" y="80">Play Log</text>
+    <text x="872" y="80">Monitor</text>
+  </g>
+  <g font-family="Arial, sans-serif" fill="#111">
+    <text x="22" y="140" font-size="24" font-weight="700">Dashboard</text>
+  </g>
+  <g transform="translate(28 178)">
+    <rect x="0" y="0" width="210" height="96" rx="7" fill="#1fa015"/>
+    <rect x="20" y="-20" width="42" height="42" rx="7" fill="#28b83c"/>
+    <text x="48" y="47" text-anchor="middle" font-family="Arial" font-size="16" font-weight="700" fill="#fff">ON</text>
+    <text x="18" y="61" font-family="Arial" font-size="13" font-weight="700" fill="#fff">Online Device(s)</text>
+    <text x="178" y="63" font-family="Arial" font-size="34" font-weight="700" fill="#fff">4</text>
+  </g>
+  <g transform="translate(252 178)">
+    <rect x="0" y="0" width="210" height="96" rx="7" fill="#d92323"/>
+    <rect x="20" y="-20" width="42" height="42" rx="7" fill="#f04545"/>
+    <text x="41" y="9" text-anchor="middle" font-family="Arial" font-size="22" font-weight="700" fill="#fff">X</text>
+    <text x="18" y="61" font-family="Arial" font-size="13" font-weight="700" fill="#fff">Offline Device(s)</text>
+    <text x="155" y="63" font-family="Arial" font-size="34" font-weight="700" fill="#fff">128</text>
+  </g>
+  <g transform="translate(476 178)">
+    <rect x="0" y="0" width="210" height="96" rx="7" fill="#438d9b"/>
+    <rect x="20" y="-20" width="42" height="42" rx="7" fill="#438d9b"/>
+    <text x="41" y="9" text-anchor="middle" font-family="Arial" font-size="25" font-weight="700" fill="#fff">!</text>
+    <text x="18" y="61" font-family="Arial" font-size="13" font-weight="700" fill="#fff">Unpaired Device(s)</text>
+    <text x="168" y="63" font-family="Arial" font-size="34" font-weight="700" fill="#fff">21</text>
+  </g>
+  <g transform="translate(28 324)">
+    <rect width="660" height="438" rx="8" fill="#fff" filter="url(#shadow)"/>
+    <text x="18" y="34" font-family="Arial" font-size="12" font-weight="700" fill="#344">Network (52)</text>
+    <text x="306" y="34" font-family="Arial" font-size="12" font-weight="700" fill="#344">Device Name</text>
+    <rect x="18" y="44" width="256" height="26" rx="3" fill="#fff" stroke="#ccd6e2"/>
+    <text x="28" y="62" font-family="Arial" font-size="10" fill="#8aa">All</text>
+    <rect x="306" y="44" width="370" height="26" rx="3" fill="#fff" stroke="#ccd6e2"/>
+    <text x="318" y="62" font-family="Arial" font-size="10" fill="#aaa">Search Device Name</text>
+    <rect x="18" y="86" width="646" height="34" fill="#248da1"/>
+    <text x="28" y="108" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Device Name (162)</text>
+    <text x="570" y="108" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Status</text>
+    <g font-family="Arial" font-size="12" fill="#222">
+      <text x="28" y="146">Solum Box</text>
+      <text x="28" y="174">Sanchit</text>
+      <text x="28" y="202">MW PH 2026 Laptop</text>
+      <text x="28" y="230">hezri laptop</text>
+      <text x="28" y="258">test_indo</text>
+      <text x="28" y="286">TB60 Test</text>
+      <text x="28" y="314">Test</text>
+      <text x="28" y="342">Tanix</text>
+      <text x="28" y="370">Hezri Office</text>
+      <text x="28" y="398">Home PC</text>
+    </g>
+    <g fill="none" stroke="#d3d9e2">
+      <path d="M18 158h646M18 186h646M18 214h646M18 242h646M18 270h646M18 298h646M18 326h646M18 354h646M18 382h646M18 410h646"/>
+    </g>
+    <g>
+      <circle cx="598" cy="146" r="5" fill="#4eb95b"/>
+      <circle cx="598" cy="174" r="5" fill="#4eb95b"/>
+      <circle cx="598" cy="202" r="5" fill="#4eb95b"/>
+      <circle cx="598" cy="230" r="5" fill="#4eb95b"/>
+      <circle cx="598" cy="258" r="5" fill="#f2aa3a"/>
+      <circle cx="598" cy="286" r="5" fill="#f2aa3a"/>
+      <circle cx="598" cy="314" r="5" fill="#f2aa3a"/>
+      <circle cx="598" cy="342" r="5" fill="#dc2a2a"/>
+      <circle cx="598" cy="370" r="5" fill="#dc2a2a"/>
+      <circle cx="598" cy="398" r="5" fill="#dc2a2a"/>
+    </g>
+    <g font-family="Arial" font-size="11" fill="#2f70b7">
+      <rect x="418" y="468" width="26" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="425" y="483">First</text>
+      <rect x="444" y="468" width="48" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="453" y="483">Previous</text>
+      <rect x="492" y="468" width="24" height="22" fill="#2f80d2"/>
+      <text x="501" y="483" fill="#fff">1</text>
+      <rect x="516" y="468" width="24" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="525" y="483">2</text>
+      <rect x="540" y="468" width="24" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="549" y="483">3</text>
+      <rect x="564" y="468" width="24" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="573" y="483">4</text>
+      <rect x="588" y="468" width="24" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="597" y="483">5</text>
+      <rect x="612" y="468" width="37" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="622" y="483">Next</text>
+      <rect x="649" y="468" width="28" height="22" fill="#fff" stroke="#ccd6e2"/>
+      <text x="657" y="483">Last</text>
+    </g>
+  </g>
+  <g transform="translate(708 146)">
+    <rect width="872" height="412" rx="8" fill="#fff" filter="url(#shadow)"/>
+    <text x="436" y="32" text-anchor="middle" font-family="Arial" font-size="25" font-weight="700" fill="#000">Online Network</text>
+    <circle cx="450" cy="222" r="135" fill="#2f8fdb"/>
+    <path d="M450 222 450 87 A135 135 0 0 1 565 292z" fill="#7fb6e4" stroke="#c6ddf4"/>
+    <path d="M450 222 335 292 A135 135 0 0 1 378 107z" fill="#50a8ef" stroke="#c6ddf4"/>
+    <path d="M450 222 378 107 A135 135 0 0 1 450 87z" fill="#3b95e2" stroke="#c6ddf4"/>
+    <path d="M450 222 335 292 A135 135 0 0 0 565 292z" fill="#2677bd" stroke="#c6ddf4"/>
+    <g font-family="Arial" font-size="13" font-weight="700" fill="#000">
+      <text x="508" y="82">Sanchit, 1</text>
+      <text x="596" y="260">Zul Test Tv, 1</text>
+      <text x="366" y="370">Hezri, 1</text>
+      <text x="246" y="185">MW PHP, 1</text>
+    </g>
+  </g>
+  <g transform="translate(1400 18)" font-family="Arial" font-size="12" fill="#333">
+    <rect x="-28" y="-5" width="74" height="18" fill="#eef2f8" stroke="#666"/>
+    <text x="-20" y="8">English</text>
+    <text x="115" y="78">8.13GB / 20 GB</text>
+  </g>
+  <rect x="28" y="668" width="660" height="28" fill="#005676"/>
+  <text x="42" y="686" font-family="Arial" font-size="12" font-weight="700" fill="#bcecff">Release Information: Release document for the build version V4.0.50. To know More</text>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity=".22"/>
+    </filter>
+  </defs>
+</svg>
