@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">LMX Content CMS Layout Configuration Screenshot</title>
+  <desc id="desc">Layout configuration page showing layout name, location, scale, default layout, status, description, existing layout type dropdown, zone preview, playlist assignment, zone size, and save button.</desc>
+  <rect width="1600" height="720" fill="#dfe8f4"/>
+  <rect width="1600" height="58" fill="#d9e2f0"/>
+  <rect y="58" width="1600" height="34" fill="#c9d5e5"/>
+  <g transform="translate(24 7)">
+    <path d="M0 26 C18 2 37 2 55 26 C73 50 91 50 110 26 C128 2 146 2 165 26" fill="none" stroke="#1e7fc8" stroke-width="9" stroke-linecap="round"/>
+    <text x="94" y="28" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#444">MovingWalls</text>
+    <text x="0" y="48" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="3">moving walls</text>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#333">
+    <text x="22" y="80">Dashboard</text><text x="86" y="80">Network</text><text x="156" y="80">Device Manager</text><text x="268" y="80">Setup</text><text x="323" y="80">Main Storage</text><text x="428" y="80">Scheduled Content</text><text x="562" y="80">View History</text><text x="665" y="80">Content Approval</text><text x="782" y="80">Play Log</text><text x="845" y="80">Monitor</text>
+  </g>
+  <rect x="0" y="92" width="1600" height="628" fill="#eaf3ff"/>
+  <polygon points="1260,92 1600,92 1600,720 1400,720" fill="#b7cdf7" opacity=".42"/>
+  <polygon points="0,460 520,720 0,720" fill="#cfe0f6" opacity=".55"/>
+  <text x="23" y="132" font-family="Arial" font-size="14" fill="#40556a">Tenant (MO)  &gt;  Layout  &gt;</text>
+  <text x="136" y="132" font-family="Arial" font-size="22" font-weight="700" fill="#303840">Layout</text>
+  <rect x="1530" y="108" width="55" height="28" rx="3" fill="#0c5366"/>
+  <text x="1541" y="127" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Back</text>
+  <rect x="12" y="150" width="1576" height="546" fill="#e9f3ff" stroke="#b4c9ec"/>
+  <g font-family="Arial" font-size="12" font-weight="700" fill="#273746">
+    <text x="31" y="179">Layout Name*</text><text x="290" y="179">Location*</text><text x="550" y="179">Layout Scale *</text><text x="820" y="179">Is Default Layout?</text><text x="1070" y="179">Description</text>
+  </g>
+  <g fill="#fff" stroke="#cbd5e1">
+    <rect x="30" y="190" width="240" height="27" rx="2"/><rect x="290" y="190" width="240" height="27" rx="2"/><rect x="550" y="190" width="240" height="27" rx="2"/><rect x="1070" y="190" width="500" height="27" rx="2"/>
+  </g>
+  <g font-family="Arial" font-size="11" fill="#9aa4b2">
+    <text x="40" y="208">Layout Name</text><text x="300" y="208">Select Location</text><text x="562" y="208">Percentage</text><text x="1082" y="208">Description</text>
+  </g>
+  <rect x="820" y="190" width="9" height="9" fill="#fff" stroke="#718096"/><rect x="820" y="211" width="9" height="9" fill="#1e8be3" stroke="#1e8be3"/><path d="M822 215 L825 218 L830 211" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <text x="835" y="220" font-family="Arial" font-size="11" fill="#34495e">Status</text>
+  <rect x="30" y="260" width="1020" height="34" fill="#155b72"/>
+  <text x="46" y="280" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Existing Layouts</text>
+  <text x="144" y="280" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Screen Type</text>
+  <rect x="36" y="291" width="160" height="24" fill="#fff" stroke="#516b7f"/><rect x="205" y="291" width="78" height="24" fill="#fff" stroke="#516b7f"/>
+  <text x="45" y="307" font-family="Arial" font-size="11" fill="#111">-Select Layout-</text><text x="214" y="307" font-family="Arial" font-size="11" fill="#111">-Select Type-</text>
+  <rect x="36" y="316" width="170" height="218" fill="#fff" stroke="#606f7b"/>
+  <rect x="36" y="316" width="170" height="22" fill="#1264d8"/>
+  <g font-family="Arial" font-size="11" fill="#111">
+    <text x="46" y="331" fill="#fff">-Select Layout-</text>
+    <text x="46" y="360">No Split</text><text x="46" y="383">Split Vertical</text><text x="46" y="406">Split Horizontal</text><text x="46" y="429">Four Square</text><text x="46" y="452">Split Vertical One Third</text><text x="46" y="475">Split Horizontal One Third</text><text x="46" y="498">Split Vertical One Third With Top Scroll</text><text x="46" y="521">Split Vertical With Top Scroll</text>
+  </g>
+  <rect x="31" y="294" width="1019" height="330" fill="#f1f7ff" stroke="#3394ff" stroke-dasharray="2 2"/>
+  <text x="532" y="314" font-family="Arial" font-size="12" fill="#1e8be3">Tag1</text>
+  <rect x="525" y="330" width="38" height="45" fill="#cad4df"/>
+  <circle cx="552" cy="354" r="10" fill="none" stroke="#91a4b8" stroke-width="4"/><path d="M558 361 L568 373" stroke="#3498db" stroke-width="4" stroke-linecap="round"/>
+  <text x="517" y="620" font-family="Arial" font-size="11" fill="#1688ff">&lt;- 100 % -&gt;</text>
+  <rect x="1070" y="265" width="510" height="104" fill="#dbe9fb" opacity=".88"/>
+  <g font-family="Arial" font-size="12" font-weight="700" fill="#273746">
+    <text x="1084" y="290">Tag Name</text><text x="1327" y="290">Play Lists</text><text x="1084" y="332">Left</text><text x="1205" y="332">Top</text><text x="1327" y="332">Width</text><text x="1450" y="332">Height</text>
+  </g>
+  <g fill="#fff" stroke="#cbd5e1">
+    <rect x="1084" y="299" width="226" height="27" rx="2"/><rect x="1327" y="299" width="230" height="27" rx="2"/><rect x="1084" y="340" width="104" height="27" rx="2"/><rect x="1205" y="340" width="104" height="27" rx="2"/><rect x="1327" y="340" width="104" height="27" rx="2"/><rect x="1450" y="340" width="104" height="27" rx="2"/>
+  </g>
+  <g font-family="Arial" font-size="11" fill="#5f6f80">
+    <text x="1094" y="317">Tag1</text><text x="1338" y="317">-Select Playlist-</text><text x="1094" y="358">0</text><text x="1215" y="358">0</text><text x="1337" y="358">100</text><text x="1460" y="358">100</text>
+  </g>
+  <rect x="1074" y="373" width="9" height="9" fill="#fff" stroke="#718096"/><text x="1088" y="383" font-family="Arial" font-size="12" font-weight="700" fill="#273746">Border Configuration</text>
+  <rect x="1480" y="648" width="48" height="28" rx="3" fill="#ff2148"/><text x="1492" y="667" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Cancel</text>
+  <rect x="1534" y="648" width="42" height="28" rx="3" fill="#628ba4"/><text x="1545" y="667" font-family="Arial" font-size="12" font-weight="700" fill="#fff">Save</text>
+</svg>
