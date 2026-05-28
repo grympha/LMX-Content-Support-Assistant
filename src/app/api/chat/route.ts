@@ -273,11 +273,11 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) {
     if (attachmentContext || imageAttachments.length > 0) {
       const attachmentNote = imageAttachments.length > 0
-        ? "\n\nImage attachments require `OPENAI_API_KEY` for visual analysis."
+        ? "\n\nImage attachments require OPENAI_API_KEY for visual analysis."
         : "";
 
       return NextResponse.json({
-        reply: `Attached File Review\n\nI received the attached file, but detailed file-based answering requires OpenAI integration to be enabled.\n\nExtracted readable text preview:\n${attachmentContext || "No readable text was extracted from the attachment."}${attachmentNote}\n\nKey steps\n- Add `OPENAI_API_KEY` in Render if you want the assistant to analyze attached files deeply\n- For PDF/DOCX/CSV, ask a specific question about the file content\n- For screenshots or images, enable OpenAI vision support through the API key`,
+        reply: `Attached File Review\n\nI received the attached file, but detailed file-based answering requires OpenAI integration to be enabled.\n\nExtracted readable text preview:\n${attachmentContext || "No readable text was extracted from the attachment."}${attachmentNote}\n\nKey steps\n- Add OPENAI_API_KEY in Render if you want the assistant to analyze attached files deeply\n- For PDF/DOCX/CSV, ask a specific question about the file content\n- For screenshots or images, enable OpenAI vision support through the API key`,
         source: "local"
       });
     }
