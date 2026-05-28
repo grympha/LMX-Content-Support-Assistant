@@ -26,6 +26,10 @@ body > main:has(> section.w-full.max-w-md) {
   padding-bottom: 0.5rem;
 }
 
+label:has(input[placeholder="Person taking this training"]) {
+  display: none;
+}
+
 button,
 input,
 select,
