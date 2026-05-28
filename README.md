@@ -12,6 +12,7 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 - Training topic selection for more accurate retrieval
 - Training progress panel with topic completion tracking
 - Optional Google Sheets progress logging through `GOOGLE_SHEETS_WEBHOOK_URL`
+- Malaysia time timestamps for training records
 - Common Questions & Quick Answers dropdown
 - Response cards with copy and clear actions
 - Render.com deployment configuration
@@ -62,6 +63,8 @@ The app records these training events when `GOOGLE_SHEETS_WEBHOOK_URL` is config
 - assistant question asked
 - common quick answer selected
 
+Training records use Malaysia time: `Asia/Kuala_Lumpur`.
+
 Training progress is also saved in the user's browser local storage, so the progress panel still works if Google Sheets logging is not configured.
 
 ## Google Sheets CSV Record Setup
@@ -73,7 +76,7 @@ Use this setup when you want admin visibility without adding a database.
 3. Add this header row:
 
 ```text
-Timestamp | Username | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
+Timestamp | Timezone | Username | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
 ```
 
 4. Open `Extensions > Apps Script`.
@@ -85,7 +88,8 @@ function doPost(e) {
   var data = JSON.parse(e.postData.contents || '{}');
 
   sheet.appendRow([
-    data.timestamp || new Date().toISOString(),
+    data.timestamp || '',
+    data.timezone || 'Asia/Kuala_Lumpur',
     data.username || '',
     data.eventType || '',
     data.topic || '',
