@@ -21,6 +21,7 @@ import { PlaylogTrainingPage } from "@/components/PlaylogTrainingPage";
 import { PublishContentTrainingPage } from "@/components/PublishContentTrainingPage";
 import { ScheduleContentTrainingPage } from "@/components/ScheduleContentTrainingPage";
 import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
+import { SupportedHardwareTrainingPage } from "@/components/SupportedHardwareTrainingPage";
 import { UserManagementTrainingPage } from "@/components/UserManagementTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
@@ -352,6 +353,8 @@ export default function Home() {
               <UserManagementTrainingPage />
             ) : selectedTopic?.category === "Installation of LMX Content App" ? (
               <AppInstallationTrainingPage />
+            ) : selectedTopic?.category === "Supported Operating Systems & Hardware" ? (
+              <SupportedHardwareTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
