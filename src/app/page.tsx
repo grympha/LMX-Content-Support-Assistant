@@ -311,7 +311,11 @@ export default function Home() {
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-mist/50 p-4">
-            <TrainingOverview selectedTopic={selectedTopic?.category} />
+            {selectedTopic?.category === "Dashboard Overview" ? (
+              <DashboardTrainingPage />
+            ) : (
+              <TrainingOverview selectedTopic={selectedTopic?.category} />
+            )}
 
             {messages.length === 0 ? (
               <div className="rounded-md border border-dashed border-line bg-white px-4 py-3 text-center text-sm text-slate-500">
@@ -441,6 +445,169 @@ function TrainingOverview({ selectedTopic }: { selectedTopic?: string }) {
         </a>.
       </p>
     </section>
+  );
+}
+
+function DashboardTrainingPage() {
+  return (
+    <section className="space-y-4 text-sm leading-6 text-slate-700">
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h2 className="text-base font-semibold text-ink">Dashboard Page</h2>
+        <div className="mt-3 overflow-hidden rounded-md border border-line bg-white">
+          <img
+            src="/dashboard-page-screenshot.svg"
+            alt="LMX Content CMS dashboard screenshot showing online devices, offline devices, unpaired devices, device table, online network chart, and storage indicator"
+            className="w-full"
+          />
+        </div>
+
+        <h3 className="mt-4 font-semibold text-signal">Overview</h3>
+        <p className="mt-2">
+          The Dashboard is the main landing page of the LMX Content CMS platform. It provides a high-level overview of device activity, network status, storage usage, and operational monitoring.
+        </p>
+        <p className="mt-2">
+          This page helps users quickly monitor the health and status of the digital signage environment without navigating through multiple menus.
+        </p>
+
+        <h3 className="mt-4 font-semibold text-signal">The Dashboard is commonly used for</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Monitoring online and offline devices</li>
+          <li>Checking unpaired devices</li>
+          <li>Reviewing device connectivity</li>
+          <li>Monitoring storage usage</li>
+          <li>Viewing network activity</li>
+          <li>Quickly identifying playback or operational issues</li>
+        </ul>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Main Dashboard Components</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <DashboardComponent
+            title="1. Online Device(s)"
+            body="Displays the number of currently connected and active devices."
+            items={["Verify active player connectivity", "Monitor operational screens", "Confirm devices are communicating with CMS"]}
+            note="Green indicator: Device is online and reporting normally."
+          />
+          <DashboardComponent
+            title="2. Offline Device(s)"
+            body="Displays the number of devices currently disconnected or not communicating with CMS."
+            items={["Internet issue", "Device powered off", "Player application stopped", "Network instability", "Device sleep mode", "Player crash"]}
+            note="Recommended checks: internet connectivity, power source, player app status, and restart if necessary."
+          />
+          <DashboardComponent
+            title="3. Unpaired Device(s)"
+            body="Displays devices that are not yet paired or verified with the CMS platform."
+            items={["Device created but not activated", "Incorrect verification code", "Pairing process incomplete", "Device reset or app data cleared"]}
+            note="Verification codes are one-time use only."
+          />
+          <DashboardComponent
+            title="4. Device Status Table"
+            body="Displays device name, current connectivity status, and activity indicator."
+            items={["Green = Online", "Yellow = Warning or unstable", "Red = Offline"]}
+            note="Use this table to identify problematic devices and search by network or device name."
+          />
+          <DashboardComponent
+            title="5. Network Filter"
+            body="Allows users to filter devices by network."
+            items={["Client-specific monitoring", "Regional troubleshooting", "Large deployment management"]}
+            note="Example networks: Malaysia Network, Airport Network, Retail Branch Network."
+          />
+          <DashboardComponent
+            title="6. Device Search"
+            body="Search for a specific device using the device name or partial keyword."
+            items={["Troubleshooting support calls", "Finding one device quickly", "Filtering large device lists"]}
+          />
+          <DashboardComponent
+            title="7. Online Network Chart"
+            body="Displays network activity visualization."
+            items={["Monitor device distribution", "Understand network connectivity trends", "Identify active networks"]}
+            note="Useful for operations monitoring, deployment visibility, and health checks."
+          />
+          <DashboardComponent
+            title="8. Storage Indicator"
+            body="Displays current storage usage and remaining storage capacity."
+            items={["Prevent storage full issues", "Monitor content download capacity", "Identify potential playback risk"]}
+            note="Low storage may cause content sync failure, playback issues, or application instability."
+          />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Common Dashboard Checks</h3>
+        <div className="mt-3 grid gap-3 xl:grid-cols-3">
+          <Checklist title="When Device is Offline" items={["Internet connection", "Device power", "Player application status", "CMS heartbeat", "Firewall or network restriction"]} />
+          <Checklist title="When Device Shows Online but Screen is Black" items={["HDMI or display source", "Published content", "Playlist assignment", "Content compatibility", "Player application health"]} />
+          <Checklist title="When Devices are Unpaired" items={["Verification code validity", "Device mapping", "Player login status", "CMS pairing process"]} />
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-line bg-white p-4">
+        <h3 className="font-semibold text-ink">Important Notes</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Dashboard information updates based on device heartbeat and CMS communication.</li>
+          <li>Device status may delay if internet connection is unstable.</li>
+          <li>Offline devices may still display cached content locally.</li>
+          <li>Storage usage should be monitored regularly to avoid content synchronization issues.</li>
+        </ul>
+
+        <h3 className="mt-4 font-semibold text-ink">Best Practice</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Check offline device count daily.</li>
+          <li>Review unpaired devices.</li>
+          <li>Monitor storage usage.</li>
+          <li>Validate active network distribution.</li>
+          <li>Investigate abnormal status indicators immediately.</li>
+        </ul>
+
+        <h3 className="mt-4 font-semibold text-ink">Next Step</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>Create Network</li>
+          <li>Create Location</li>
+          <li>Create Playlist</li>
+          <li>Create Device</li>
+          <li>Schedule Content</li>
+        </ol>
+      </article>
+    </section>
+  );
+}
+
+function DashboardComponent({
+  title,
+  body,
+  items,
+  note
+}: {
+  title: string;
+  body: string;
+  items: string[];
+  note?: string;
+}) {
+  return (
+    <div className="rounded-md border border-line bg-mist p-3">
+      <h4 className="font-semibold text-signal">{title}</h4>
+      <p className="mt-1">{body}</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      {note ? <p className="mt-2 font-medium text-slate-800">{note}</p> : null}
+    </div>
+  );
+}
+
+function Checklist({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-md border border-line bg-mist p-3">
+      <h4 className="font-semibold text-signal">{title}</h4>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
