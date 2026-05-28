@@ -15,6 +15,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
 import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
 import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
+import { ScheduleContentTrainingPage } from "@/components/ScheduleContentTrainingPage";
 import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
@@ -334,6 +335,8 @@ export default function Home() {
               <StorageManagementTrainingPage />
             ) : selectedTopic?.category === "Default Playlist" ? (
               <DefaultPlaylistTrainingPage />
+            ) : selectedTopic?.category === "Schedule Content" ? (
+              <ScheduleContentTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
