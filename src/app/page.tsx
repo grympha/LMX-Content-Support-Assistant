@@ -12,6 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrainingPage";
 import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
 import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
 import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
@@ -337,6 +338,8 @@ export default function Home() {
               <DefaultPlaylistTrainingPage />
             ) : selectedTopic?.category === "Schedule Content" ? (
               <ScheduleContentTrainingPage />
+            ) : selectedTopic?.category === "Bundle Scheduling" ? (
+              <BundleSchedulingTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
