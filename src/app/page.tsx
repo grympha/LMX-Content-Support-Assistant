@@ -14,6 +14,7 @@ import {
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
 import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
+import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
 import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
@@ -328,6 +329,8 @@ export default function Home() {
               <DeviceTrainingPage />
             ) : selectedTopic?.category === "Device Pairing" ? (
               <DevicePairingTrainingPage />
+            ) : selectedTopic?.category === "Storage Management" ? (
+              <StorageManagementTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
