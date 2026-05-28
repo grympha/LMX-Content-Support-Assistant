@@ -5,9 +5,11 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Plus,
   Send,
   ShieldCheck,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AppInstallationTrainingPage } from "@/components/AppInstallationTrainingPage";
@@ -33,6 +35,14 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   source?: ChatSource;
+};
+
+type ChatAttachment = {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl?: string;
+  text?: string;
 };
 
 type KnowledgeTopic = (typeof lmxKnowledge)[number];
@@ -63,8 +73,10 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -91,6 +103,54 @@ export default function Home() {
     () => lmxKnowledge.find((entry) => entry.category === intake.issueCategory),
     [intake.issueCategory]
   );
+
+  async function fileToDataUrl(file: File) {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+
+    for (let index = 0; index < bytes.length; index += 1) {
+      binary += String.fromCharCode(bytes[index]);
+    }
+
+    return `data:${file.type || "application/octet-stream"};base64,${btoa(binary)}`;
+  }
+
+  async function handleAttachmentChange(files: FileList | null) {
+    if (!files) {
+      return;
+    }
+
+    const nextFiles = Array.from(files).slice(0, Math.max(0, 3 - attachments.length));
+    const supportedFiles = nextFiles.filter((file) => file.size <= 8 * 1024 * 1024);
+    const prepared = await Promise.all(
+      supportedFiles.map(async (file) => {
+        const isTextLike =
+          file.type.startsWith("text/") ||
+          file.type.includes("csv") ||
+          file.type.includes("json") ||
+          /\.(csv|txt|md|json)$/i.test(file.name);
+
+        return {
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          text: isTextLike ? await file.text() : undefined,
+          dataUrl: isTextLike ? undefined : await fileToDataUrl(file)
+        };
+      })
+    );
+
+    setAttachments((current) => [...current, ...prepared].slice(0, 3));
+
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.value = "";
+    }
+  }
+
+  function removeAttachment(name: string) {
+    setAttachments((current) => current.filter((attachment) => attachment.name !== name));
+  }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,7 +192,7 @@ export default function Home() {
   async function sendMessage(text = input) {
     const messageText = text.trim();
 
-    if (!messageText || loading) {
+    if ((!messageText && attachments.length === 0) || loading) {
       return;
     }
 
@@ -144,8 +204,16 @@ export default function Home() {
 
     setSelectedCommonQuestion("");
     setIntake(questionIntake);
-    setMessages([{ id: crypto.randomUUID(), role: "user", content: messageText }]);
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: [messageText || "Please review the attached file.", ...attachments.map((attachment) => `Attached: ${attachment.name}`)].join("\n")
+      }
+    ]);
     setInput("");
+    const submittedAttachments = attachments;
+    setAttachments([]);
     setLoading(true);
 
     try {
@@ -154,6 +222,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: messageText,
+          attachments: submittedAttachments,
           intake: questionIntake,
           history: []
         })
@@ -363,13 +432,46 @@ export default function Home() {
                 className="min-h-28 resize-none rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                 placeholder="Ask any LMX Content question. The assistant will search all training topics."
               />
+              {attachments.length > 0 ? (
+                <div className="grid gap-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.name} className="flex items-center justify-between gap-2 rounded-md border border-line bg-mist px-3 py-2 text-xs text-slate-600">
+                      <span className="truncate">{attachment.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(attachment.name)}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-line bg-white text-slate-500 hover:border-signal hover:text-signal"
+                        title="Remove attachment"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <input
+                ref={attachmentInputRef}
+                type="file"
+                multiple
+                accept=".csv,.txt,.md,.json,.pdf,.doc,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                onChange={(event) => handleAttachmentChange(event.target.files)}
+                className="hidden"
+              />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={loading || (!input.trim() && attachments.length === 0)}
                 className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-signal px-4 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
                 Send
+              </button>
+              <button
+                type="button"
+                onClick={() => attachmentInputRef.current?.click()}
+                className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-signal hover:text-signal"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Attach file
               </button>
             </form>
           </section>
