@@ -16,6 +16,7 @@ import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrain
 import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
 import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
 import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
+import { PlaylogTrainingPage } from "@/components/PlaylogTrainingPage";
 import { PublishContentTrainingPage } from "@/components/PublishContentTrainingPage";
 import { ScheduleContentTrainingPage } from "@/components/ScheduleContentTrainingPage";
 import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
@@ -343,6 +344,8 @@ export default function Home() {
               <BundleSchedulingTrainingPage />
             ) : selectedTopic?.category === "Publish Content" ? (
               <PublishContentTrainingPage />
+            ) : selectedTopic?.category === "Playlogs" ? (
+              <PlaylogTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
