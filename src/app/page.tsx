@@ -12,7 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { issueCategories, type IssueIntake } from "@/lib/lmxKnowledge";
+import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
 type ChatSource = "openai" | "knowledge" | "local";
 
@@ -91,6 +91,11 @@ export default function Home() {
     const completed = required.filter((field) => Boolean(intake[field])).length;
     return Math.round((completed / required.length) * 100);
   }, [intake]);
+
+  const selectedTopic = useMemo(
+    () => lmxKnowledge.find((entry) => entry.category === intake.issueCategory),
+    [intake.issueCategory]
+  );
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -269,6 +274,7 @@ export default function Home() {
                   ))}
                 </select>
               </label>
+              {selectedTopic ? <TopicDetail topic={selectedTopic} /> : null}
             </div>
           </section>
 
@@ -312,6 +318,8 @@ export default function Home() {
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-mist/50 p-4">
+            <TrainingOverview selectedTopic={selectedTopic?.category} />
+
             {messages.length === 0 ? (
               <div className="flex h-full min-h-[320px] items-center justify-center text-center text-slate-500">
                 Start a new training question from the chat input or quick lessons.
@@ -380,6 +388,83 @@ export default function Home() {
         </section>
       </div>
     </main>
+  );
+}
+
+function TrainingOverview({ selectedTopic }: { selectedTopic?: string }) {
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 text-sm leading-6 text-slate-700">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-ink">Overview</h2>
+        <p className="mt-2">
+          The LMX Content CMS Training Assistant is an internal learning and support tool designed to help users understand and operate the LMX Content CMS platform.
+        </p>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div>
+          <h3 className="font-semibold text-signal">This assistant provides</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Step-by-step CMS guidance</li>
+            <li>Device setup assistance</li>
+            <li>Scheduling and publishing instructions</li>
+            <li>Basic troubleshooting workflows</li>
+            <li>Device compatibility checks</li>
+            <li>Playlog and reporting guidance</li>
+            <li>Programmatic DOOH operational support</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-signal">Training Scope</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Dashboard, network, location, playlist, and layout setup</li>
+            <li>Device registration, scheduling, publishing, and storage</li>
+            <li>Playlogs, troubleshooting, Android compatibility, and programmatic workflows</li>
+            <li>CMS operational best practices</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-md border border-line bg-mist p-3">
+        <h3 className="font-semibold text-ink">Important Notes</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>This assistant provides Level 1 operational guidance only.</li>
+          <li>Always validate critical changes before production deployment.</li>
+          <li>Escalate unresolved backend or system-related issues to the engineering team.</li>
+          <li>Device compatibility depends on actual hardware capability, not only RAM or storage specifications.</li>
+          <li>Verification codes for device pairing are one-time use only.</li>
+        </ul>
+      </div>
+
+      <p className="mt-4">
+        To begin the training, select a training topic from the available options and start asking your questions.
+        {selectedTopic ? ` Current topic: ${selectedTopic}.` : ""}
+      </p>
+      <p className="mt-2">
+        Knowledge source: uploaded LMX Content training modules, troubleshooting guides, and operational documentation. For more detailed training documentation, refer to{" "}
+        <a className="font-semibold text-signal underline" href="https://movingwallshub.atlassian.net/wiki/x/mYCKCQ" target="_blank" rel="noreferrer">
+          Moving Walls Hub
+        </a>.
+      </p>
+    </section>
+  );
+}
+
+function TopicDetail({ topic }: { topic: (typeof lmxKnowledge)[number] }) {
+  return (
+    <div className="rounded-md border border-line bg-mist p-3 text-sm text-slate-700">
+      <h3 className="font-semibold text-ink">{topic.category}</h3>
+      <p className="mt-1 leading-5">{topic.overview}</p>
+      <div className="mt-3">
+        <p className="font-medium text-signal">Key steps</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5">
+          {topic.steps.slice(0, 5).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 
