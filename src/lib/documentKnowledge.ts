@@ -29,7 +29,7 @@ const topicFiles: Partial<Record<IssueCategory, string>> = {
   Playlogs: "playlogs.md",
   "User Management": "user-management.md",
   "Installation of LMX Content App": "installation-of-lmx-content-app.md",
-  "Device Requirements": "device-requirements.md",
+  "Supported Operating Systems & Hardware": "supported-operating-systems-hardware.md",
   "Programmatic / VAST": "programmatic-vast.md"
 };
 
