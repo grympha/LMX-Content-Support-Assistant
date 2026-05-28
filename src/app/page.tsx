@@ -58,9 +58,6 @@ const responseSections = [
   "Next Step:"
 ];
 
-const welcomeMessage =
-  "Overview:\nI can train users on LMX Content CMS using the uploaded LMX Content Training Module.\n\nWhen to Use:\n- Learning CMS setup\n- Creating networks, locations, playlists, layouts, and devices\n- Scheduling and publishing content\n- Checking playlogs, storage, installations, and device requirements\n\nStep-by-Step Guide:\n- Enter the learner full name\n- Select the training topic\n- Ask what you want to learn\n- Follow the step-by-step guide\n\nImportant Notes:\n- For publishing, Default Playlist must include at least one scheduled image and one scheduled video\n- Verification codes for device pairing are one-time use only\n\nCommon Mistakes:\n- Skipping the default playlist setup\n- Creating devices before network and location are ready\n- Scheduling content in the wrong timezone or playlist\n\nNext Step:\nChoose a quick lesson or ask a training question such as \"How do I create a location?\"";
-
 export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -68,9 +65,7 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [intake, setIntake] = useState<IssueIntake>(emptyIntake);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "assistant", source: "knowledge", content: welcomeMessage }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -143,9 +138,7 @@ export default function Home() {
         body: JSON.stringify({
           message: messageText,
           intake,
-          history: messages
-            .filter((message) => message.id !== "welcome")
-            .map(({ role, content }) => ({ role, content }))
+          history: messages.map(({ role, content }) => ({ role, content }))
         })
       });
 
