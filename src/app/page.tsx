@@ -314,7 +314,7 @@ export default function Home() {
             <TrainingOverview selectedTopic={selectedTopic?.category} />
 
             {messages.length === 0 ? (
-              <div className="flex h-full min-h-[320px] items-center justify-center text-center text-slate-500">
+              <div className="rounded-md border border-dashed border-line bg-white px-4 py-3 text-center text-sm text-slate-500">
                 Start a new training question from the chat input or quick lessons.
               </div>
             ) : null}
