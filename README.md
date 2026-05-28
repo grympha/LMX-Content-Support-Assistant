@@ -5,12 +5,14 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 ## Features
 
 - Next.js, TypeScript, and Tailwind CSS
-- Password-protected access with `APP_PASSWORD`
+- Username and password-protected access with `APP_PASSWORD`
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
 - Uploaded training module search with local training fallback
 - Learner name and training topic selection for more accurate retrieval
-- Quick lessons for networks, locations, playlists, devices, default playlist, scheduling, publishing, playlogs, and VAST
+- Training progress panel with topic completion tracking
+- Optional Google Sheets progress logging through `GOOGLE_SHEETS_WEBHOOK_URL`
+- Common Questions & Quick Answers dropdown
 - Response cards with copy and clear actions
 - Render.com deployment configuration
 
@@ -31,6 +33,7 @@ Set the password:
 ```bash
 APP_PASSWORD=your-internal-password
 OPENAI_API_KEY=
+GOOGLE_SHEETS_WEBHOOK_URL=
 ```
 
 Run the development server:
@@ -45,8 +48,73 @@ Open `http://localhost:3000`.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `APP_PASSWORD` | Yes | Password required before users can access the assistant. |
+| `APP_PASSWORD` | Yes | Password required before users can access the assistant. Users also enter a username for tracking. |
 | `OPENAI_API_KEY` | No | Enables OpenAI-assisted training responses. When empty, the app uses uploaded training knowledge plus local fallback. |
+| `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL used to save login, question, quick answer, and progress records to Google Sheets. |
+
+## User Tracking
+
+The app records these training events when `GOOGLE_SHEETS_WEBHOOK_URL` is configured:
+
+- user login
+- training topic selected
+- topic marked complete
+- assistant question asked
+- common quick answer selected
+
+Training progress is also saved in the user's browser local storage, so the progress panel still works if Google Sheets logging is not configured.
+
+## Google Sheets CSV Record Setup
+
+Use this setup when you want admin visibility without adding a database.
+
+1. Create a Google Sheet.
+2. Rename the first tab to `Training Records`.
+3. Add this header row:
+
+```text
+Timestamp | Username | Full Name | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
+```
+
+4. Open `Extensions > Apps Script`.
+5. Paste this script:
+
+```js
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Training Records');
+  var data = JSON.parse(e.postData.contents || '{}');
+
+  sheet.appendRow([
+    data.timestamp || new Date().toISOString(),
+    data.username || '',
+    data.fullName || '',
+    data.eventType || '',
+    data.topic || '',
+    data.question || '',
+    data.progressPercent || '',
+    (data.completedTopics || []).join(', '),
+    data.source || '',
+    data.details || ''
+  ]);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+```
+
+6. Click `Deploy > New deployment`.
+7. Choose `Web app`.
+8. Set `Execute as` to `Me`.
+9. Set access to the correct internal access option for your organization. If testing fails, use `Anyone with the link` only for the webhook URL and keep the URL private.
+10. Copy the Web App URL.
+11. Add it in Render as:
+
+```env
+GOOGLE_SHEETS_WEBHOOK_URL=https://script.google.com/macros/s/your-web-app-id/exec
+```
+
+You can export the sheet as CSV from Google Sheets using `File > Download > Comma Separated Values (.csv)`.
 
 ## Knowledge Base
 
@@ -61,11 +129,13 @@ Training coverage includes:
 - Create Layout
 - Create Device
 - Device pairing
+- Installation of LMX Content App
 - Default Playlist
 - Scheduling and publishing content
 - Playlogs and storage
-- Android, Windows, Linux, LG webOS, and BrightSign requirements
-- URL, Google IMA/VAST, Hivestack, and programmatic guidance
+- Supported Operating Systems & Hardware
+- Programmatic / VAST
+- Basic Troubleshooting
 
 When users select a training topic, `/api/chat` searches the matching file in `knowledge/topics/` first. If no topic is selected, it searches all topic files and then falls back to structured local training rules in `src/lib/lmxKnowledge.ts`.
 
@@ -88,9 +158,10 @@ Add environment variables:
 APP_PASSWORD=your-secure-password
 NODE_VERSION=22
 OPENAI_API_KEY=
+GOOGLE_SHEETS_WEBHOOK_URL=
 ```
 
-`OPENAI_API_KEY` is optional.
+`OPENAI_API_KEY` and `GOOGLE_SHEETS_WEBHOOK_URL` are optional.
 
 ## GitHub Usage
 
