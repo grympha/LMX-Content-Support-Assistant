@@ -101,10 +101,84 @@ export const lmxKnowledge: KnowledgeEntry[] = [
   lesson("Publish Content", ["publish", "publishing", "unable to publish", "error"], "Publishing sends approved schedules, playlists, and media updates to devices.", ["Go to Dashboard > Schedule Content", "Select Network", "Select Location", "Select Playlist", "Verify schedule configuration", "Confirm content is approved", "Check Publish to all mapped network", "Click Publish", "Wait for synchronization", "Verify playback on device"], ["Publishing is mandatory after scheduling", "Devices must be online to receive updates"], ["Device offline", "Publish incomplete", "Unsupported media", "Expired schedule", "Playlist empty"], "Verify Device Playback, Monitor Synchronization, and Check Playlogs."),
   lesson("Playlogs", ["playlog", "playlogs", "report", "proof of play"], "Playlogs record media playback activity for reporting and troubleshooting.", ["Go to Dashboard > Playlog", "Click Get New Log", "Select From Date and To Date", "Select device filter", "Select content filter", "Customize headers if needed", "Choose CSV or PDF", "Click Get Log", "Download and review the report"], ["General Playlog download is limited to 30 days including current date", "Device-level playlog is available up to the previous day"], ["Wrong date range", "Device offline", "Playlog disabled", "Content did not actually play"], "Validate campaign delivery and export client reports."),
   lesson("User Management", ["user", "roles", "permissions", "rbac"], "User Management controls CMS access, roles, permissions, and network visibility.", ["Go to Dashboard > Setup > User", "Click Create User", "Enter Username", "Enter Email", "Enter First Name and Last Name", "Select User Type", "Choose Language", "Enable Status", "Assign required access", "Click Add"], ["Only Tenant Admins can create users", "Assign minimum required access"], ["Wrong role", "Account disabled", "Network restriction", "Too much access"], "Verify the user can log in and access the required module."),
-  lesson("Basic Troubleshooting", ["troubleshoot", "troubleshooting", "black screen", "offline", "not playing", "wrong content", "old content", "missing playlog", "sync failure", "synchronization", "programmatic failure"], "Basic Troubleshooting helps isolate common playback, synchronization, device, network, content, schedule, storage, display, and programmatic issues.", ["Define what is happening, when it started, and which device or location is affected", "Verify device online status in Dashboard > Device Manager", "Verify schedule validity, playlist assignment, and publish status", "Verify content compatibility, synchronization, and storage availability", "Check network stability, firewall restrictions, and DNS accessibility", "Check screen power, HDMI, and display source", "Review playlogs and device synchronization", "Escalate backend or system issues if playback does not recover"], ["Never assume root cause without checking evidence", "Most playback issues originate from synchronization or scheduling errors", "Default Playlist may appear when active campaigns fail", "Stable internet is critical for synchronization and programmatic campaigns"], ["Skipping device status check", "Checking playlist but not publish status", "Ignoring storage full conditions", "Assuming black screen is always a CMS issue", "Missing WebView checks for HTML/VAST"], "Verify Playback Recovery, Monitor Device Stability, Validate Playlogs, and Escalate Backend Issues if Required."),
+  lesson(
+    "Basic Troubleshooting",
+    ["troubleshoot", "troubleshooting", "black screen", "offline", "not playing", "wrong content", "old content", "missing playlog", "sync failure", "synchronization", "programmatic failure"],
+    "Basic Troubleshooting in LMX Content CMS helps identify and isolate common playback, synchronization, and device-related issues across CMS configuration, device/player, internet/network, content file, scheduling, storage, screen/display, and programmatic delivery.",
+    [
+      "Follow the troubleshooting flow: CMS > Device > Network > Content > Schedule > Playback > Screen",
+      "Validate what is happening, when the issue started, which device is affected, and whether the issue is intermittent or persistent",
+      "For black screen, check device online status in Dashboard > Device Manager",
+      "For black screen, verify playlist assignment, active schedule, campaign expiry, and publish completion",
+      "For black screen, verify content compatibility: MP4, PNG, JPEG, HTML5 ZIP, MP3, and PDF",
+      "For black screen, check storage availability, failed downloads, cached content, HDMI, display source, and screen power",
+      "For device offline, check WiFi/Ethernet, internet stability, DNS accessibility, firewall restrictions, power status, sleep mode, reboot loop, and restart the player application",
+      "For content not playing, verify playlist contains content, content is approved and published, device is synchronized, and schedule is active",
+      "For wrong content showing, verify active schedule, playlist mapping, publish status, default playlist behavior, hard stop, impression cap, and schedule overlap",
+      "For old content still showing, verify synchronization status, internet connectivity, publish completion, and storage availability",
+      "For missing playlogs, verify device online status, actual playback, playlog synchronization, playback timing, General Playlog 30-day limit, and Device Playlog availability up to the previous day only",
+      "For Programmatic/VAST issues, verify SSP response, internet stability, WebView version, creative compatibility, and fallback playlist behavior",
+      "Define the issue, isolate the layer, validate evidence, then apply the correct action such as republish content, restart player, optimize content, clear storage, update WebView, or reboot device"
+    ],
+    [
+      "Most playback issues originate from synchronization or scheduling errors",
+      "Default Playlist may appear when active campaigns fail",
+      "Unsupported media may trigger black screen",
+      "Low-spec Android devices may struggle with HTML/VAST playback",
+      "Stable internet is critical for synchronization and programmatic campaigns",
+      "Never assume root cause; always verify logs, playback, synchronization, and device status"
+    ],
+    [
+      "Skipping the device online status check",
+      "Checking playlist but not publish status",
+      "Ignoring storage full or failed download conditions",
+      "Assuming black screen is always a CMS issue",
+      "Missing HDMI, screen source, or display power checks",
+      "Ignoring WebView checks for HTML/VAST content",
+      "Using the wrong playlog date range or expecting current-day device playlogs immediately"
+    ],
+    "After troubleshooting, verify playback recovery, monitor device stability, validate playlogs, and escalate backend issues if required."
+  ),
   lesson("Installation of LMX Content App", ["android", "windows", "install", "installation", "apk", "installer", "verification code", "software render", "sr build"], "Install and register the LMX Content Player application for Android and Windows devices.", ["Create the device in CMS first", "Download the correct Android APK or Windows installer", "For Android, install the APK and allow required permissions", "For Windows, right-click the installer and run as administrator", "Open the LMX Content Player application", "Select Login with Verification Code", "Enter the one-time verification code from CMS", "Verify pairing and synchronization", "Publish test content and verify playback"], ["For updates, install the latest version directly without uninstalling", "Verification codes are one-time use only", "Low-spec devices may require the Software Render build"], ["Installing before creating the CMS device", "Skipping Android permissions", "Not running Windows installer as administrator", "Using an expired code"], "Pair Device, Publish Content, and verify playback."),
   lesson("Supported Operating Systems & Hardware", ["requirements", "spec", "hardware", "operating system", "os", "webview", "ram", "storage", "android 11", "windows 10", "windows 11", "linux", "webos", "brightsign"], "LMX Content CMS supports Windows, Linux, Android, LG webOS, and BrightSign hardware.", ["Identify the target platform", "Check OS version", "Check CPU, RAM, storage, graphics, and system type", "For Android, confirm Android 11+", "For Android programmatic or HTML content, confirm WebView version 100 or above", "Check supported media formats", "Use recommended hardware for VAST, HTML ZIP, URL widgets, and split layouts", "Install the latest player", "Publish a test campaign and verify playback"], ["Windows 10 and 11 are supported; Windows 7 is no longer supported", "Android 11+ is recommended", "Low-end Android devices may struggle with VAST, HTML ZIP, URL widgets, and split layouts", "Programmatic playback requires modern browser or WebView support"], ["Approving weak hardware for advanced content", "Ignoring Android WebView version", "Using unsupported OS versions", "Using oversized media"], "Install the player application, pair the device, and verify playback."),
-  lesson("Programmatic / VAST", ["programmatic", "vast", "url", "ima", "hivestack", "dv360", "ssp", "dsp", "no-fill", "impression", "webview", "html", "online zip", "offline zip"], "Programmatic DOOH allows advertisements to be delivered automatically through DSP, SSP, CMS, Player, Device, and Screen. LMX Content supports VAST, URL, HTML, Online ZIP, Offline ZIP, and SSP/DSP integration.", ["Confirm platform support: Windows 10/11 or Android 11+ with WebView v100+", "Configure the VAST URL, website URL, HTML ZIP, Online ZIP, or Offline ZIP content", "Assign the content to the correct playlist", "Schedule the campaign by date, time, location, and device mapping", "Publish the content after approval", "Verify device synchronization and playback", "Monitor SSP delivery and playlogs", "Check fallback/default playlist behavior during no-fill or failed ad requests"], ["Programmatic playback depends heavily on internet stability", "VAST and HTML creatives require updated browser engines", "Default Playlist is strongly recommended as fallback", "Low-spec Android devices may struggle with heavy HTML or VAST playback"], ["SSP no-fill", "Outdated Android WebView", "Firewall blocking ad endpoints", "Unsupported or oversized creative", "Content scheduled but not published"], "Verify Playback, Monitor SSP Delivery, Validate Playlogs, and Troubleshoot Playback Issues.")
+  lesson(
+    "Programmatic / VAST",
+    ["programmatic", "vast", "url", "ima", "hivestack", "dv360", "ssp", "dsp", "no-fill", "impression", "webview", "html", "online zip", "offline zip"],
+    "Programmatic DOOH allows advertisements to be delivered automatically through a real-time advertising ecosystem. LMX Content CMS supports Programmatic Campaign Delivery, VAST Playback, URL Widgets, HTML Creatives, and SSP/DSP Integration.",
+    [
+      "Understand the workflow: DSP > SSP > CMS > Player > Device > Screen",
+      "VAST means Video Ad Serving Template and is used to deliver video advertisements, interactive creatives, and dynamic media playback",
+      "Supported programmatic formats include VAST, URL, HTML, Online ZIP, and Offline ZIP",
+      "Use supported platforms: Windows 10 and 11, or Android 11+ with WebView Version 100+",
+      "For Windows, supported formats include VAST, URL, HTML, Offline ZIP, and Online ZIP",
+      "For Android, supported formats include VAST, URL, and HTML online content",
+      "For stable playback, use stable internet, Android 11+ or Windows 11, updated WebView/browser engine, sufficient RAM/storage, and optimized creative size",
+      "Recommended Android specification is 4GB RAM minimum and 64GB storage minimum; 8GB RAM / 128GB storage is recommended for advanced playback",
+      "Access Programmatic Scheduling from Dashboard > Schedule Content or Dashboard > Main Storage depending on deployment workflow",
+      "Upload or configure the creative source: VAST URL, website URL, or HTML ZIP package",
+      "Assign the content to the selected playlist",
+      "Schedule playback date, playback time, location, and device mapping",
+      "After approval, publish content so devices receive the update",
+      "Troubleshoot using DSP > SSP > CMS > Player > Device > Screen and validate ad request delivery, SSP response, content synchronization, playback rendering, and screen output"
+    ],
+    [
+      "Programmatic playback depends heavily on internet stability",
+      "VAST and HTML creatives require updated browser engines",
+      "Android devices should use Android 11+ with WebView Version 100+",
+      "Default Playlist is strongly recommended as fallback during no-fill, failed ad requests, or connectivity interruption",
+      "Low-spec Android devices may struggle with heavy HTML or VAST playback",
+      "Unsupported devices may fail advanced rendering"
+    ],
+    [
+      "Default Playlist showing because of SSP no-fill, impression cap reached, ad request failed, internet instability, or hard stop enabled",
+      "Black screen during VAST playback due to unsupported creative, outdated WebView, weak hardware, or failed rendering",
+      "URL widget not loading due to internet restriction, firewall blocking, unsupported browser engine, or website incompatibility",
+      "HTML ZIP not rendering due to unsupported scripts, oversized package, low RAM device, or rendering engine limitation",
+      "Impression not recorded due to playback interruption, SSP delivery issue, player synchronization issue, or internet instability",
+      "Content configured but not published"
+    ],
+    "After configuring Programmatic/VAST playback, verify playback, monitor SSP delivery, validate playlogs, and troubleshoot playback issues."
+  )
 ];
 
 function formatBullets(items: string[]) {
