@@ -28,8 +28,7 @@ const topicFiles: Partial<Record<IssueCategory, string>> = {
   "Publish Content": "publish-content.md",
   Playlogs: "playlogs.md",
   "User Management": "user-management.md",
-  "Android Installation": "android-installation.md",
-  "Windows Installation": "windows-installation.md",
+  "Installation of LMX Content App": "installation-of-lmx-content-app.md",
   "Device Requirements": "device-requirements.md",
   "Programmatic / VAST": "programmatic-vast.md"
 };
