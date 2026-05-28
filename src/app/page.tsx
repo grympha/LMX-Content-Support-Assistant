@@ -12,6 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AppInstallationTrainingPage } from "@/components/AppInstallationTrainingPage";
 import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrainingPage";
 import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
 import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
@@ -349,6 +350,8 @@ export default function Home() {
               <PlaylogTrainingPage />
             ) : selectedTopic?.category === "User Management" ? (
               <UserManagementTrainingPage />
+            ) : selectedTopic?.category === "Installation of LMX Content App" ? (
+              <AppInstallationTrainingPage />
             ) : (
               <TrainingOverview selectedTopic={selectedTopic?.category} />
             )}
