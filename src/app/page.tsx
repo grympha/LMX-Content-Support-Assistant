@@ -2,7 +2,6 @@
 
 import {
   Clipboard,
-  GraduationCap,
   Loader2,
   Lock,
   LogOut,
@@ -136,10 +135,14 @@ export default function Home() {
       return;
     }
 
-    setMessages((current) => [
-      ...current,
-      { id: crypto.randomUUID(), role: "user", content: messageText }
-    ]);
+    const questionIntake: IssueIntake = {
+      ...intake,
+      issueCategory: "",
+      description: messageText
+    };
+
+    setIntake(questionIntake);
+    setMessages([{ id: crypto.randomUUID(), role: "user", content: messageText }]);
     setInput("");
     setLoading(true);
 
@@ -149,8 +152,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: messageText,
-          intake,
-          history: messages.map(({ role, content }) => ({ role, content }))
+          intake: questionIntake,
+          history: []
         })
       });
 
@@ -180,7 +183,8 @@ export default function Home() {
   }
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
-    setIntake((current) => ({ ...current, [field]: value }));
+    setMessages([]);
+    setIntake((current) => ({ ...current, [field]: value, description: field === "issueCategory" ? "" : current.description }));
   }
 
   if (!authChecked) {
@@ -284,6 +288,43 @@ export default function Home() {
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="font-semibold text-ink">Ask Assistant</h2>
+              <button
+                type="button"
+                onClick={() => setMessages([])}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
+                title="Clear answer"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                sendMessage();
+              }}
+              className="grid gap-3"
+            >
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                rows={4}
+                className="min-h-28 resize-none rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                placeholder="Ask any LMX Content question. The assistant will search all training topics."
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-signal px-4 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
+                Send
+              </button>
+            </form>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
             <h2 className="mb-3 font-semibold text-ink">Quick Lessons</h2>
             <div className="grid gap-2">
               {quickPrompts.map((prompt) => (
@@ -301,129 +342,77 @@ export default function Home() {
           </section>
         </aside>
 
-        <section className="flex min-h-[760px] flex-col rounded-lg border border-line bg-white shadow-panel">
-          <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slatePanel text-white">
-                <GraduationCap className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-ink">Training Chat</h2>
-                <p className="text-sm text-slate-600">Step-by-step CMS guidance from the uploaded training module</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setMessages([])}
-              className="flex w-fit items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Clear
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-4 overflow-y-auto bg-mist/50 p-4">
-            {selectedTopic?.category === "Dashboard Overview" ? (
-              <DashboardTrainingPage />
-            ) : selectedTopic?.category === "Create Network" ? (
-              <NetworkTrainingPage />
-            ) : selectedTopic?.category === "Create Location" ? (
-              <LocationTrainingPage />
-            ) : selectedTopic?.category === "Create Playlist" ? (
-              <PlaylistTrainingPage />
-            ) : selectedTopic?.category === "Create Layout" ? (
-              <LayoutTrainingPage />
-            ) : selectedTopic?.category === "Create Device" ? (
-              <DeviceTrainingPage />
-            ) : selectedTopic?.category === "Device Pairing" ? (
-              <DevicePairingTrainingPage />
-            ) : selectedTopic?.category === "Storage Management" ? (
-              <StorageManagementTrainingPage />
-            ) : selectedTopic?.category === "Default Playlist" ? (
-              <DefaultPlaylistTrainingPage />
-            ) : selectedTopic?.category === "Schedule Content" ? (
-              <ScheduleContentTrainingPage />
-            ) : selectedTopic?.category === "Bundle Scheduling" ? (
-              <BundleSchedulingTrainingPage />
-            ) : selectedTopic?.category === "Publish Content" ? (
-              <PublishContentTrainingPage />
-            ) : selectedTopic?.category === "Playlogs" ? (
-              <PlaylogTrainingPage />
-            ) : selectedTopic?.category === "User Management" ? (
-              <UserManagementTrainingPage />
-            ) : selectedTopic?.category === "Installation of LMX Content App" ? (
-              <AppInstallationTrainingPage />
-            ) : selectedTopic?.category === "Supported Operating Systems & Hardware" ? (
-              <SupportedHardwareTrainingPage />
-            ) : (
-              <TrainingOverview selectedTopic={selectedTopic?.category} />
-            )}
-
-            {messages.length === 0 ? (
-              <div className="rounded-md border border-dashed border-line bg-white px-4 py-3 text-center text-sm text-slate-500">
-                Start a new training question from the chat input or quick lessons.
-              </div>
-            ) : null}
-
-            {messages.map((message) => (
-              <article
-                key={message.id}
-                className={message.role === "user" ? "ml-auto max-w-2xl rounded-lg bg-slatePanel p-4 text-white" : "max-w-3xl rounded-lg border border-line bg-white p-4 text-ink"}
-              >
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">{message.role === "user" ? "Training question" : "Training guide"}</p>
-                    {message.source ? <p className="text-xs text-slate-500">{sourceLabel(message.source)}</p> : null}
+        <section className="min-h-[760px] rounded-lg border border-line bg-mist/50 p-4 shadow-panel">
+          {messages.length > 0 ? (
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <article
+                  key={message.id}
+                  className={message.role === "user" ? "ml-auto max-w-2xl rounded-lg bg-slatePanel p-4 text-white" : "max-w-3xl rounded-lg border border-line bg-white p-4 text-ink"}
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
+                      {message.source ? <p className="text-xs text-slate-500">{sourceLabel(message.source)}</p> : null}
+                    </div>
+                    {message.role === "assistant" ? (
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(message.content)}
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
+                        title="Copy response"
+                      >
+                        <Clipboard className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    ) : null}
                   </div>
-                  {message.role === "assistant" ? (
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(message.content)}
-                      className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
-                      title="Copy response"
-                    >
-                      <Clipboard className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  ) : null}
+                  {message.role === "assistant" ? <FormattedResponse content={message.content} /> : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                </article>
+              ))}
+
+              {loading ? (
+                <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Searching all training topics...
                 </div>
-                {message.role === "assistant" ? <FormattedResponse content={message.content} /> : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
-              </article>
-            ))}
-
-            {loading ? (
-              <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                Preparing step-by-step training guide...
-              </div>
-            ) : null}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              sendMessage();
-            }}
-            className="border-t border-line bg-white p-4"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                rows={2}
-                className="min-h-14 flex-1 resize-none rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                placeholder="Ask how to use LMX Content, for example: How do I schedule content?"
-              />
-              <button
-                type="submit"
-                disabled={loading || !input.trim()}
-                className="flex min-h-14 items-center justify-center gap-2 rounded-md bg-signal px-5 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-                Send
-              </button>
+              ) : null}
+              <div ref={messagesEndRef} />
             </div>
-          </form>
+          ) : selectedTopic?.category === "Dashboard Overview" ? (
+            <DashboardTrainingPage />
+          ) : selectedTopic?.category === "Create Network" ? (
+            <NetworkTrainingPage />
+          ) : selectedTopic?.category === "Create Location" ? (
+            <LocationTrainingPage />
+          ) : selectedTopic?.category === "Create Playlist" ? (
+            <PlaylistTrainingPage />
+          ) : selectedTopic?.category === "Create Layout" ? (
+            <LayoutTrainingPage />
+          ) : selectedTopic?.category === "Create Device" ? (
+            <DeviceTrainingPage />
+          ) : selectedTopic?.category === "Device Pairing" ? (
+            <DevicePairingTrainingPage />
+          ) : selectedTopic?.category === "Storage Management" ? (
+            <StorageManagementTrainingPage />
+          ) : selectedTopic?.category === "Default Playlist" ? (
+            <DefaultPlaylistTrainingPage />
+          ) : selectedTopic?.category === "Schedule Content" ? (
+            <ScheduleContentTrainingPage />
+          ) : selectedTopic?.category === "Bundle Scheduling" ? (
+            <BundleSchedulingTrainingPage />
+          ) : selectedTopic?.category === "Publish Content" ? (
+            <PublishContentTrainingPage />
+          ) : selectedTopic?.category === "Playlogs" ? (
+            <PlaylogTrainingPage />
+          ) : selectedTopic?.category === "User Management" ? (
+            <UserManagementTrainingPage />
+          ) : selectedTopic?.category === "Installation of LMX Content App" ? (
+            <AppInstallationTrainingPage />
+          ) : selectedTopic?.category === "Supported Operating Systems & Hardware" ? (
+            <SupportedHardwareTrainingPage />
+          ) : (
+            <TrainingOverview selectedTopic={selectedTopic?.category} />
+          )}
         </section>
       </div>
     </main>
