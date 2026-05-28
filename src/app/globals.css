@@ -21,6 +21,11 @@ body {
   color: #17202a;
 }
 
+body > main:has(> section.w-full.max-w-md) {
+  min-height: auto;
+  padding-bottom: 0.5rem;
+}
+
 button,
 input,
 select,
