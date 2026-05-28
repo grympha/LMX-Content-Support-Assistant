@@ -52,6 +52,10 @@ const highConfidencePhrases = [
   "webview",
   "supported operating",
   "hardware",
+  "supported formats",
+  "formats supported",
+  "file formats",
+  "media formats",
   "install player",
   "installation",
   "pull to content",
@@ -77,6 +81,10 @@ function keywordMatches(haystack: string, keyword: string) {
   return new RegExp(`(^|\\s)${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(haystack);
 }
 
+function hasStrongDocumentMatch(documentMatches: DocumentKnowledgeMatch[], hasStrongPhrase: boolean) {
+  return hasStrongPhrase && documentMatches.some((match) => match.score >= 2);
+}
+
 function hasConfidentKnowledgeMatch(message: string, intake: IssueIntake | undefined, documentMatches: DocumentKnowledgeMatch[]) {
   if (intake?.issueCategory && intake.issueCategory !== "Other") {
     return true;
@@ -93,7 +101,7 @@ function hasConfidentKnowledgeMatch(message: string, intake: IssueIntake | undef
   const best = scored[0];
 
   if (!best || best.score === 0) {
-    return false;
+    return hasStrongDocumentMatch(documentMatches, hasStrongPhrase);
   }
 
   if (best.entry.category === "Schedule Content" && !/\bschedul(e|ed|ing)?\b|\bcampaign\b/.test(normalizedMessage)) {
@@ -108,7 +116,7 @@ function hasConfidentKnowledgeMatch(message: string, intake: IssueIntake | undef
     return true;
   }
 
-  return documentMatches.some((match) => match.score >= 2) && hasStrongPhrase;
+  return hasStrongDocumentMatch(documentMatches, hasStrongPhrase);
 }
 
 async function sessionToken(password: string) {
