@@ -167,17 +167,6 @@ export function buildDocumentContext(matches: DocumentKnowledgeMatch[]) {
   return matches.map((match) => `${match.title}\n${match.snippet}`).join("\n\n");
 }
 
-export function mergeDocumentContextIntoFallback(baseReply: string, matches: DocumentKnowledgeMatch[]) {
-  if (matches.length === 0) {
-    return baseReply;
-  }
-
-  const references = matches
-    .map((match) => `- ${match.title}: ${match.snippet}`)
-    .join("\n");
-
-  return baseReply.replace(
-    "Step-by-Step Guide:\n",
-    `Step-by-Step Guide:\nUploaded Training Topic Reference:\n${references}\n`
-  );
+export function mergeDocumentContextIntoFallback(baseReply: string) {
+  return baseReply;
 }
