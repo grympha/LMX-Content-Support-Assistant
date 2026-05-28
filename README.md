@@ -6,6 +6,7 @@ Internal training assistant for LMX Content CMS. The app teaches users how to us
 
 - Next.js, TypeScript, and Tailwind CSS
 - Username and password-protected access with `APP_PASSWORD`
+- Admin dashboard at `/admin` protected with `ADMIN_PASSWORD`
 - Server-side `/api/chat` route
 - Optional OpenAI integration with `OPENAI_API_KEY`
 - Uploaded training module search with local training fallback
@@ -34,6 +35,7 @@ Set the password:
 
 ```bash
 APP_PASSWORD=your-internal-password
+ADMIN_PASSWORD=your-admin-password
 OPENAI_API_KEY=
 GOOGLE_SHEETS_WEBHOOK_URL=
 ```
@@ -46,13 +48,39 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+Admin dashboard:
+
+```text
+http://localhost:3000/admin
+```
+
 ## Environment Variables
 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `APP_PASSWORD` | Yes | Password required before users can access the assistant. Users also enter a username for tracking. |
+| `ADMIN_PASSWORD` | Recommended | Password for `/admin`. If empty, the app falls back to `APP_PASSWORD`. |
 | `OPENAI_API_KEY` | No | Enables OpenAI-assisted training responses. When empty, the app uses uploaded training knowledge plus local fallback. |
-| `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL used to save login, question, quick answer, and progress records to Google Sheets. |
+| `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL used to save and read login, question, quick answer, and progress records. |
+
+## Admin Dashboard
+
+The admin dashboard is available at:
+
+```text
+/admin
+```
+
+It shows:
+
+- total users
+- total questions asked
+- completed topic count
+- average progress
+- last activity
+- searchable training record table
+
+The dashboard reads records from the Google Apps Script URL configured in `GOOGLE_SHEETS_WEBHOOK_URL`. To enable this, the Apps Script must include both `doPost` and `doGet` from the setup below.
 
 ## User Tracking
 
@@ -102,8 +130,12 @@ Timestamp | Timezone | Username | Event Type | Topic | Question | Progress Perce
 5. Paste this script:
 
 ```js
+function getTrainingSheet() {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Training Records');
+}
+
 function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Training Records');
+  var sheet = getTrainingSheet();
   var data = JSON.parse(e.postData.contents || '{}');
 
   sheet.appendRow([
@@ -123,6 +155,31 @@ function doPost(e) {
     .createTextOutput(JSON.stringify({ ok: true }))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+function doGet() {
+  var sheet = getTrainingSheet();
+  var values = sheet.getDataRange().getValues();
+  var rows = values.slice(1);
+
+  var records = rows.map(function(row) {
+    return {
+      timestamp: row[0] || '',
+      timezone: row[1] || '',
+      username: row[2] || '',
+      eventType: row[3] || '',
+      topic: row[4] || '',
+      question: row[5] || '',
+      progressPercent: row[6] || '',
+      completedTopics: row[7] || '',
+      source: row[8] || '',
+      details: row[9] || ''
+    };
+  });
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ records: records }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 ```
 
 6. Click `Deploy > New deployment`.
@@ -134,6 +191,12 @@ function doPost(e) {
 
 ```env
 GOOGLE_SHEETS_WEBHOOK_URL=https://script.google.com/macros/s/your-web-app-id/exec
+```
+
+If you already deployed the old Apps Script, update it and create a new deployment version:
+
+```text
+Deploy > Manage deployments > Edit > Version > New version > Deploy
 ```
 
 You can export the sheet as CSV from Google Sheets using `File > Download > Comma Separated Values (.csv)`.
@@ -178,6 +241,7 @@ Add environment variables:
 
 ```env
 APP_PASSWORD=your-secure-password
+ADMIN_PASSWORD=your-admin-password
 NODE_VERSION=22
 OPENAI_API_KEY=
 GOOGLE_SHEETS_WEBHOOK_URL=
