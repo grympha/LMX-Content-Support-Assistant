@@ -211,9 +211,7 @@ function chunkMarkdown(topic: string, content: string) {
 }
 
 function readKnowledgeChunks(intake?: IssueIntake) {
-  const selectedTopic = intake?.issueCategory && intake.issueCategory !== "Other" ? intake.issueCategory : "";
-  const selectedFile = selectedTopic ? topicFiles[selectedTopic] : "";
-  const files = selectedFile ? [selectedFile] : existsSync(topicRoot) ? readdirSync(topicRoot).filter((file) => file.endsWith(".md")) : [];
+  const files = existsSync(topicRoot) ? readdirSync(topicRoot).filter((file) => file.endsWith(".md")) : [];
 
   return files.flatMap((file) => {
     const filePath = path.join(topicRoot, file);

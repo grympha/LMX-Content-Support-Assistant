@@ -101,6 +101,8 @@ The assistant searches Markdown training files in:
 knowledge/topics/
 ```
 
+This folder includes the original topic files plus imported Atlassian/Confluence `.doc` exports prefixed with `imported-`.
+
 The full module is stored at:
 
 ```text
