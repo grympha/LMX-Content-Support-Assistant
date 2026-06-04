@@ -20,6 +20,17 @@ export type LocalSearchResult = {
   answer: string;
 };
 
+type SupportPlaybook = {
+  id: string;
+  title: string;
+  triggers: string[];
+  summary: string;
+  whatToCheck: string[];
+  howToFix: string[];
+  nextSteps: string[];
+  clientResponse: string;
+};
+
 const knowledgeRoot = path.join(process.cwd(), "knowledge");
 const topicRoot = path.join(knowledgeRoot, "topics");
 
@@ -93,6 +104,154 @@ const synonymGroups = [
   ["programmatic", "vast", "ssp", "dsp", "no fill", "no-fill", "webview", "ima"],
   ["hardware", "requirements", "specification", "spec", "operating system", "os", "android", "windows"],
   ["user management", "user", "role", "roles", "permission", "permissions", "access"]
+];
+
+const supportPlaybooks: SupportPlaybook[] = [
+  {
+    id: "old-content",
+    title: "Old Content Still Showing",
+    triggers: ["old content", "old video", "not updated", "cached content", "still showing", "previous content", "content still playing"],
+    summary: "Old content usually means the device has not received the latest publish/sync update, is offline or unstable, or is still playing cached content from an older schedule.",
+    whatToCheck: [
+      "Confirm the new content was saved, approved, and published, not only uploaded or scheduled.",
+      "Check the target Network, Location, Playlist, and Device mapping are correct.",
+      "Check the schedule date, start/end time, daypart, priority, and expiry date.",
+      "Open Device Manager and confirm the device is online or recently connected.",
+      "Check whether the device has completed synchronization after the latest publish.",
+      "Confirm device storage is not full and the player has enough space to download new media.",
+      "Review playlogs or playback evidence to confirm whether the old content is still actually playing."
+    ],
+    howToFix: [
+      "Republish the affected playlist or campaign after confirming the correct target mapping.",
+      "Restart the LMX Content player app or reboot the device if sync does not update.",
+      "If the device is offline, restore internet connectivity first, then wait for sync or republish.",
+      "Remove expired or incorrect schedules that overlap with the intended campaign.",
+      "Clean up storage if the device or CMS storage is full, then trigger publish/sync again.",
+      "If old cached content remains after reconnecting, perform a controlled player restart and validate playback."
+    ],
+    nextSteps: [
+      "Ask for device name, network, location, playlist, campaign name, and latest publish time.",
+      "Verify playback on the physical screen after republish/sync.",
+      "If the issue continues, collect screenshots of schedule setup, publish status, device status, and playlog evidence before escalating."
+    ],
+    clientResponse:
+      "We are checking whether the latest schedule was approved, published, and synchronized to the affected device. Old content normally appears when the player has not received the latest update, is offline/unstable, or is still using cached content. We will republish/sync the campaign, verify the device status, and confirm playback once the update reaches the screen."
+  },
+  {
+    id: "black-screen",
+    title: "Black Screen or LMX Logo Showing",
+    triggers: ["black screen", "blank screen", "empty display", "no display", "screen blank", "logo issue", "lmx logo"],
+    summary: "A black screen or LMX logo usually points to missing playable content, publish/sync failure, unsupported media, storage issues, or device/display connectivity problems.",
+    whatToCheck: [
+      "Confirm the device is online in Dashboard or Device Manager.",
+      "Check that the playlist has active scheduled content for the current date and time.",
+      "Confirm content is approved and published successfully.",
+      "Check media format, codec, file size, and resolution compatibility.",
+      "Check if Default Playlist has valid scheduled fallback content.",
+      "Check device storage, internet stability, HDMI/display source, and screen power.",
+      "For HTML/VAST content, confirm WebView/browser support and internet access."
+    ],
+    howToFix: [
+      "Publish a simple test image or MP4 to confirm the player can display content.",
+      "Republish the intended campaign after validating schedule and playlist mapping.",
+      "Replace unsupported or oversized files with optimized supported media.",
+      "Restart the player app or reboot the device after network/storage correction.",
+      "Add valid fallback content to Default Playlist if scheduled content fails.",
+      "For VAST/HTML issues, update WebView/browser and verify URL/SSP response."
+    ],
+    nextSteps: [
+      "Collect device name, OS, content type, schedule time, and a screen photo.",
+      "Confirm whether the issue affects one device, one location, or all devices.",
+      "Escalate with player logs if a simple test campaign also fails."
+    ],
+    clientResponse:
+      "We are checking the device status, active schedule, publish status, and media compatibility. A black screen can happen when content is not published/synced, unsupported media is scheduled, or the player/display has a connectivity issue. We will validate with simple test content and confirm the next action based on the result."
+  },
+  {
+    id: "offline-device",
+    title: "Device Offline or Fluctuating Online/Offline",
+    triggers: ["device offline", "offline device", "not online", "disconnected", "fluctuating", "online offline", "heartbeat"],
+    summary: "Offline or fluctuating status is usually caused by unstable internet, heartbeat/socket interruption, player app crash, device power/sleep behavior, or firewall/network restrictions.",
+    whatToCheck: [
+      "Check WiFi/Ethernet stability on the device network.",
+      "Confirm the player app is running and not crashed or closed.",
+      "Check power, sleep mode, reboot loop, and auto boot/shutdown settings.",
+      "Check firewall/DNS restrictions that may block CMS or heartbeat communication.",
+      "Compare CMS status with actual playback; the device may continue playing cached content while offline.",
+      "Check if many devices are affected, which may indicate backend or network incident."
+    ],
+    howToFix: [
+      "Restart the player app and verify it reconnects to CMS.",
+      "Reboot the device if the app does not reconnect.",
+      "Stabilize internet or switch network connection if WiFi is weak.",
+      "Disable sleep/power saving settings that interrupt player operation.",
+      "Ask the IT/network team to allow required CMS connectivity if firewall is suspected.",
+      "If backend issue is suspected, monitor CMS status and escalate with timestamp and affected devices."
+    ],
+    nextSteps: [
+      "Collect device name, location, internet type, last online time, and whether content is still playing.",
+      "Monitor the device for at least one heartbeat cycle after restart.",
+      "Escalate if status keeps fluctuating across stable network conditions."
+    ],
+    clientResponse:
+      "The screen may continue playing cached content even when CMS shows offline. We are checking the player heartbeat, internet stability, and device power/app status. We will restart/reconnect the player and confirm whether the device status stabilizes in CMS."
+  },
+  {
+    id: "missing-playlog",
+    title: "Missing Playlog",
+    triggers: ["missing playlog", "missing playlogs", "no playlog", "playlog missing", "report missing", "proof of play missing"],
+    summary: "Missing playlogs can happen when playback did not trigger, the device was offline, playlog sync is delayed, the date range is wrong, or the report is requested before device-level logs are available.",
+    whatToCheck: [
+      "Confirm the content actually played on the device during the requested period.",
+      "Check device online status and synchronization after playback.",
+      "Check the playlog date range; General Playlog has a 30-day limit.",
+      "For device-level playlog, confirm the report is requested up to the previous day only.",
+      "Check whether Play Log is enabled for the network/campaign where required.",
+      "Confirm the correct device/content filter is selected."
+    ],
+    howToFix: [
+      "Use the correct date range and report level: General or Device Level.",
+      "Wait for synchronization if playback just happened recently.",
+      "Bring the device online and allow playlogs to sync.",
+      "Regenerate the report after confirming filters and dates.",
+      "If logs remain missing, collect campaign, device, date/time, and playback evidence for escalation."
+    ],
+    nextSteps: [
+      "Ask for campaign name, content name, device, date range, and report type.",
+      "Compare schedule timing against actual playback time.",
+      "Escalate if confirmed playback exists but logs do not sync after the expected window."
+    ],
+    clientResponse:
+      "We are validating whether the content played during the selected date range and whether the device synchronized its playlogs. Playlog availability depends on playback, device connectivity, report type, and date range. We will regenerate the report with the correct filters and escalate if confirmed playback is still missing from the logs."
+  },
+  {
+    id: "publish-error",
+    title: "Unable to Publish",
+    triggers: ["unable to publish", "publish error", "cannot publish", "can't publish", "before creating a schedule", "default playlist error"],
+    summary: "Publish errors commonly happen when required Default Playlist content is missing, content is not scheduled/approved, the target playlist is wrong, or unsupported media is used.",
+    whatToCheck: [
+      "Check the exact publish error message.",
+      "Confirm Default Playlist has at least one scheduled image and one scheduled video if required by the platform rule.",
+      "Confirm uploaded content is scheduled, approved, and assigned to the correct playlist.",
+      "Check valid media formats such as MP4, JPG, and PNG.",
+      "Verify Network, Location, Playlist, and campaign target mapping.",
+      "Check schedule start/end date and time are valid."
+    ],
+    howToFix: [
+      "Add or schedule the missing Default Playlist image/video content.",
+      "Approve the content after saving the schedule.",
+      "Replace unsupported media with supported formats.",
+      "Correct the target playlist or location mapping, then publish again.",
+      "If publish still fails, capture the error message and affected campaign details for escalation."
+    ],
+    nextSteps: [
+      "Ask for the exact error message and screenshot.",
+      "Validate Default Playlist first, then campaign schedule, then publish again.",
+      "Confirm device sync after successful publish."
+    ],
+    clientResponse:
+      "The publish error is usually caused by a missing Default Playlist requirement or content that is not fully scheduled/approved. We will verify the Default Playlist, content format, approval status, and playlist mapping, then republish once the missing requirement is corrected."
+  }
 ];
 
 function normalize(value: string) {
@@ -210,7 +369,7 @@ function chunkMarkdown(topic: string, content: string) {
   return chunks;
 }
 
-function readKnowledgeChunks(intake?: IssueIntake) {
+function readKnowledgeChunks() {
   const files = existsSync(topicRoot) ? readdirSync(topicRoot).filter((file) => file.endsWith(".md")) : [];
 
   return files.flatMap((file) => {
@@ -339,7 +498,35 @@ function uniqueLines(lines: string[]) {
 }
 
 function formatBullets(items: string[], limit = 6) {
-  return uniqueLines(items).slice(0, limit).map((item) => `- ${item}`).join("\n");
+  const lines = uniqueLines(items).slice(0, limit);
+  return lines.length > 0 ? lines.map((item) => `- ${item}`).join("\n") : "- No matching action found in the local knowledge. Ask for the screen/module and error details.";
+}
+
+function findPlaybook(message: string, terms: string[]) {
+  const normalizedMessage = normalize(message);
+  const normalizedTerms = terms.map(normalize);
+
+  return supportPlaybooks
+    .map((playbook) => ({
+      playbook,
+      score: playbook.triggers.reduce((total, trigger) => {
+        const normalizedTrigger = normalize(trigger);
+        const phraseHit = normalizedMessage.includes(normalizedTrigger) ? 15 : 0;
+        const termHit = normalizedTerms.includes(normalizedTrigger) ? 8 : 0;
+        const wordHits = normalizedTrigger
+          .split(/\s+/)
+          .filter((word) => word.length > 2)
+          .reduce((totalWords, word) => totalWords + (normalizedMessage.includes(word) ? 1 : 0), 0);
+        return total + phraseHit + termHit + wordHits;
+      }, 0)
+    }))
+    .sort((a, b) => b.score - a.score)[0];
+}
+
+function actionLines(matches: LocalSearchMatch[], patterns: RegExp[]) {
+  const lines = matches.flatMap((match) => bulletLines(match.content));
+  const preferred = lines.filter((line) => patterns.some((pattern) => pattern.test(normalize(line))));
+  return preferred.length > 0 ? preferred : lines;
 }
 
 function confidenceFor(matches: LocalSearchMatch[]) {
@@ -378,32 +565,48 @@ ${topics.map((topic) => `- ${topic}`).join("\n")}
 Please ask again with the screen, module, or issue you are working on.`;
 }
 
-function buildTroubleshootingAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[]) {
-  const issueSpecific = matches.flatMap((match) => bulletLines(match.content));
+function buildTroubleshootingAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[], message: string, terms: string[]) {
+  const playbookMatch = findPlaybook(message, terms);
+  const playbook = playbookMatch && playbookMatch.score >= 8 ? playbookMatch.playbook : undefined;
+  const issueSpecific = actionLines(matches, [
+    /\b(check|confirm|verify|review|validate|ensure|open|go to|select|compare)\b/,
+    /\b(republish|restart|reboot|sync|synchronization|publish|remove|clean|update|replace|trigger)\b/
+  ]);
   const steps = entry?.steps ?? [];
-  const notes = entry?.importantNotes ?? [];
-  const mistakes = entry?.commonMistakes ?? [];
+  const checks = playbook?.whatToCheck ?? issueSpecific;
+  const fixes = playbook?.howToFix ?? [...steps, ...issueSpecific];
+  const nextSteps = playbook?.nextSteps ?? [
+    "Collect the affected device, network, location, playlist, campaign, publish time, and screenshot or playback evidence.",
+    "Validate the result after applying the fix.",
+    "Escalate with CMS screenshots, device status, schedule details, and playlog evidence if the issue continues."
+  ];
 
-  return `${topic}
+  return `${playbook?.title ?? topic}
 
-${entry?.overview ?? "Use the matching training knowledge below to isolate the issue and apply the correct next action."}
+${playbook?.summary ?? entry?.overview ?? "Use the matching training knowledge below to isolate the issue and apply the correct next action."}
 
-Check in this order
-${formatBullets([...issueSpecific, ...steps], 7)}
+What to check
+${formatBullets(checks, 7)}
 
-Likely causes or mistakes
-${formatBullets([...mistakes, ...notes], 5)}
+How to fix
+${formatBullets(fixes, 6)}
 
 Next action
-- Verify the device status, schedule, playlist, publish status, synchronization, and playback result.
-- If the issue continues after these checks, collect the device, location, schedule, and playback evidence before escalating.`;
+${formatBullets(nextSteps, 4)}
+
+Client response
+${playbook?.clientResponse ?? "We are checking the CMS setup, device status, publish/sync status, and playback evidence to identify the cause. Once verified, we will apply the correct fix and confirm the playback result."}`;
 }
 
 function buildStandardAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[], intent: SearchIntent) {
-  const matchedBullets = matches.flatMap((match) => bulletLines(match.content));
+  const matchedBullets = actionLines(matches, [/\b(click|select|go to|enter|choose|save|approve|publish|download|upload|create|set|enable|verify|confirm|check)\b/]);
   const steps = entry?.steps ?? [];
   const notes = entry?.importantNotes ?? [];
-  const heading = intent === "requirements" ? "What to check" : intent === "reporting" ? "Key steps" : "Key steps";
+  const heading = intent === "requirements" ? "What to check" : "How to do it";
+  const nextSteps =
+    intent === "reporting"
+      ? ["Download or regenerate the report after confirming filters and date range.", "If expected data is missing, verify playback, device sync, and selected report level."]
+      : ["Verify the result in CMS and on the affected device/screen.", "If it fails, capture the error message, screenshot, and affected module before escalating."];
 
   return `${topic}
 
@@ -412,14 +615,17 @@ ${entry?.overview ?? "Here is the best matching guidance from the local LMX Cont
 ${heading}
 ${formatBullets([...matchedBullets, ...steps], 7)}
 
-Important notes
-${formatBullets(notes.length > 0 ? notes : matchedBullets.slice(3), 4)}`;
+What to check
+${formatBullets(notes.length > 0 ? notes : matchedBullets.slice(3), 4)}
+
+Next step
+${formatBullets(nextSteps, 3)}`;
 }
 
 export function buildLocalSearchResponse(message: string, intake?: IssueIntake): LocalSearchResult {
   const intent = detectIntent(message);
   const queryTerms = expandTerms(message, intake);
-  const chunks = readKnowledgeChunks(intake);
+  const chunks = readKnowledgeChunks();
   const matches = chunks
     .map((chunk) => scoreChunk(chunk, queryTerms, intent, intake))
     .filter((match) => match.score > 0)
@@ -441,7 +647,7 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
   const entry = bestKnowledgeEntry(String(topTopic), message, queryTerms);
   const answer =
     intent === "troubleshooting"
-      ? buildTroubleshootingAnswer(String(topTopic), entry, matches)
+      ? buildTroubleshootingAnswer(String(topTopic), entry, matches, message, queryTerms)
       : buildStandardAnswer(String(topTopic), entry, matches, intent);
 
   return {
