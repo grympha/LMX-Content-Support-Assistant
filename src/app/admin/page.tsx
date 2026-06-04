@@ -84,6 +84,7 @@ export default function AdminDashboard() {
   const [warning, setWarning] = useState("");
   const [search, setSearch] = useState("");
   const [usernameFilter, setUsernameFilter] = useState("all");
+  const [eventFilter, setEventFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(20);
 
@@ -104,6 +105,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     setPage(1);
   }, [search, usernameFilter, recordsPerPage]);
+  useEffect(() => {
+    setPage(1);
+  }, [eventFilter]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,10 +164,12 @@ export default function AdminDashboard() {
   );
 
   const usernames = useMemo(() => unique(sortedRecords.map((record) => record.username)), [sortedRecords]);
+  const events = useMemo(() => unique(sortedRecords.map((record) => record.eventType)), [sortedRecords]);
 
   const summary = useMemo(() => {
-    const summaryRecords =
-      usernameFilter === "all" ? sortedRecords : sortedRecords.filter((record) => record.username === usernameFilter);
+    const summaryRecords = sortedRecords
+      .filter((r) => (usernameFilter === "all" ? true : r.username === usernameFilter))
+      .filter((r) => (eventFilter === "all" ? true : r.eventType === eventFilter));
     const users = unique(summaryRecords.map((record) => record.username));
     const questions = summaryRecords.filter((record) => record.eventType === "question_asked").length;
     const quickAnswers = summaryRecords.filter((record) => record.eventType === "quick_answer_selected").length;
@@ -182,13 +188,14 @@ export default function AdminDashboard() {
       : 0;
 
     return { users: users.length, questions, quickAnswers, completedTopics: completedTopicKeys.length, lastActivity, averageProgress };
-  }, [sortedRecords, usernameFilter]);
+  }, [sortedRecords, usernameFilter, eventFilter]);
 
   const filteredRecords = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
 
-    const usernameFilteredRecords =
-      usernameFilter === "all" ? sortedRecords : sortedRecords.filter((record) => record.username === usernameFilter);
+    const usernameFilteredRecords = sortedRecords
+      .filter((r) => (usernameFilter === "all" ? true : r.username === usernameFilter))
+      .filter((r) => (eventFilter === "all" ? true : r.eventType === eventFilter));
 
     if (!normalizedSearch) {
       return usernameFilteredRecords;
@@ -200,7 +207,7 @@ export default function AdminDashboard() {
         .toLowerCase()
         .includes(normalizedSearch)
     );
-  }, [search, sortedRecords, usernameFilter]);
+  }, [search, sortedRecords, usernameFilter, eventFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / recordsPerPage));
   const safePage = Math.min(page, totalPages);
@@ -315,6 +322,21 @@ export default function AdminDashboard() {
                   {usernames.map((username) => (
                     <option key={username} value={username}>
                       {username}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Event
+                <select
+                  value={eventFilter}
+                  onChange={(event) => setEventFilter(event.target.value)}
+                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                >
+                  <option value="all">All</option>
+                  {events.map((eventType) => (
+                    <option key={eventType} value={eventType}>
+                      {eventType}
                     </option>
                   ))}
                 </select>
