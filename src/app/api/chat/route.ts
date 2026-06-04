@@ -15,6 +15,65 @@ type ChatAttachment = {
   text?: string;
 };
 
+type ChatProvider = "openai" | "claude" | "local";
+
+type OpenAiMessage = { role: "system" | "user" | "assistant"; content: string };
+
+export function getPreferredChatProvider(): ChatProvider {
+  if (process.env.CLAUDE_API_KEY) {
+    return "claude";
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    return "openai";
+  }
+
+  return "local";
+}
+
+async function callOpenAI(messages: OpenAiMessage[]) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      temperature: 0.2,
+      messages
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed with ${response.status}`);
+  }
+
+  return (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+}
+
+async function callClaude(messages: OpenAiMessage[]) {
+  const url = process.env.CLAUDE_API_URL ?? "https://api.anthropic.com/v1/chat/completions";
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.CLAUDE_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: process.env.CLAUDE_MODEL ?? "claude-3.5",
+      messages,
+      temperature: 0.2
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Claude request failed with ${response.status}`);
+  }
+
+  return (await response.json()) as { choices?: Array<{ message?: { content?: string } }>; completion?: string };
+}
+
 function readCookie(cookieHeader: string, name: string) {
   return cookieHeader
     .split(";")
@@ -146,14 +205,15 @@ export async function POST(request: Request) {
 
   const imageAttachmentNote =
     imageAttachments.length > 0
-      ? "\n\nImage note\n- Image attachments need OPENAI_API_KEY for visual analysis. I can still answer from the text question and local training knowledge."
+      ? "\n\nImage note\n- Image attachments need an AI provider for visual analysis. I can still answer from the text question and local training knowledge."
       : "";
   const localReply = `${localSearch.answer}${imageAttachmentNote}`;
+  const provider = getPreferredChatProvider();
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (provider === "local") {
     if (imageAttachments.length > 0 && !message && !attachmentContext) {
       return NextResponse.json({
-        reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
+        reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
         source: "local"
       });
     }
@@ -164,72 +224,78 @@ export async function POST(request: Request) {
     });
   }
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: assistantSystemPrompt },
-          {
-            role: "system",
-            content:
-              "Use the uploaded LMX Content Training Module context and any attached file context as the primary sources. Answer using the compact topic-card template: topic title, one short explanation paragraph, then 'Key steps' with bullet points. Do not paste long excerpts from the uploaded knowledge or attached files. If neither the training knowledge nor attachments contain a clear answer, return the approved fallback response instead of guessing."
-          },
-          {
-            role: "user",
-            content: `Training context JSON:\n${JSON.stringify(body.intake ?? {}, null, 2)}`
-          },
-          {
-            role: "user",
-            content: `Uploaded knowledge matches:\n${localKnowledgeContext || "No relevant uploaded knowledge match found."}`
-          },
-          {
-            role: "user",
-            content: `Attached file text context:\n${attachmentContext || "No readable text attachment was provided."}`
-          },
-          ...(body.history ?? []).slice(-8),
-          {
-            role: "user",
-            content:
-              imageAttachments.length > 0
-                ? [
-                    { type: "text", text: message || "Please review the attached file and answer based on the LMX Content training context." },
-                    ...imageAttachments.map((attachment) => ({
-                      type: "image_url",
-                      image_url: { url: attachment.dataUrl }
-                    }))
-                  ]
-                : message || "Please review the attached file and answer based on the LMX Content training context."
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI request failed with ${response.status}`);
+  const messages: OpenAiMessage[] = [
+    { role: "system", content: assistantSystemPrompt },
+    {
+      role: "system",
+      content:
+        "Use the uploaded LMX Content Training Module context and any attached file context as the primary sources. Answer using the compact topic-card template: topic title, one short explanation paragraph, then 'Key steps' with bullet points. Do not paste long excerpts from the uploaded knowledge or attached files. If neither the training knowledge nor attachments contain a clear answer, return the approved fallback response instead of guessing."
+    },
+    {
+      role: "user",
+      content: `Training context JSON:\n${JSON.stringify(body.intake ?? {}, null, 2)}`
+    },
+    {
+      role: "user",
+      content: `Uploaded knowledge matches:\n${localKnowledgeContext || "No relevant uploaded knowledge match found."}`
+    },
+    {
+      role: "user",
+      content: `Attached file text context:\n${attachmentContext || "No readable text attachment was provided."}`
+    },
+    ...(body.history ?? []).slice(-8),
+    {
+      role: "user",
+      content: imageAttachments.length > 0
+        ? `${message || "Please review the attached file and answer based on the LMX Content training context."}\n\nAttached images are present but require a visual analysis provider.`
+        : message || "Please review the attached file and answer based on the LMX Content training context."
     }
+  ];
 
-    const data = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const reply = data.choices?.[0]?.message?.content;
-
-    return NextResponse.json({
-      reply: reply || localReply,
-      source: reply ? "openai" : localSearch.confidence === "low" ? "local" : "knowledge"
-    });
-  } catch (error) {
-    console.error(error);
+  async function fallbackToLocal(errorMessage: string) {
+    console.error(errorMessage);
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
-      warning: "OpenAI unavailable. Used local knowledge fallback."
+      warning: `AI unavailable. Used local knowledge fallback.`
     });
+  }
+
+  try {
+    const data =
+      provider === "claude"
+        ? await callClaude(messages)
+        : await callOpenAI(messages);
+
+    const reply = data.choices?.[0]?.message?.content || (data as { completion?: string }).completion;
+
+    if (!reply) {
+      return await fallbackToLocal(`No reply returned from ${provider}.`);
+    }
+
+    return NextResponse.json({
+      reply,
+      source: provider
+    });
+  } catch (error) {
+    console.error(error);
+
+    if (provider === "claude" && process.env.OPENAI_API_KEY) {
+      try {
+        const data = await callOpenAI(messages);
+        const reply = data.choices?.[0]?.message?.content;
+
+        if (reply) {
+          return NextResponse.json({
+            reply,
+            source: "openai"
+          });
+        }
+      } catch (fallbackError) {
+        console.error(fallbackError);
+      }
+    }
+
+    return await fallbackToLocal(`AI request failed for provider ${provider}.`);
   }
 }

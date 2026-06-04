@@ -28,7 +28,7 @@ import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, Networ
 import { commonQuestions } from "@/lib/commonQuestions";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
-type ChatSource = "openai" | "knowledge" | "local";
+type ChatSource = "openai" | "knowledge" | "local" | "claude";
 
 type ChatMessage = {
   id: string;
@@ -474,6 +474,15 @@ export default function Home() {
                 Attach file
               </button>
             </form>
+            <div className="mt-4 rounded-md border border-line bg-mist px-4 py-3 text-xs text-slate-600">
+              <p className="font-semibold text-slate-800">Answer source guide</p>
+              <p className="mt-1 leading-5">
+                OpenAI: AI-assisted response using the configured API.<br />
+                Knowledge: local training content match from the LMX knowledge base.<br />
+                Local: fallback response when confidence is low or no external API is configured.<br />
+                Claude: optional future Claude provider response.
+              </p>
+            </div>
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
@@ -505,7 +514,14 @@ export default function Home() {
                   className={message.role === "user" ? "w-full rounded-lg bg-slatePanel p-4 text-white" : "w-full rounded-lg border border-line bg-white p-4 text-ink"}
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
+                      {message.role === "assistant" && message.source ? (
+                        <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-signal">
+                          {message.source === "openai" ? "OpenAI" : message.source === "knowledge" ? "Knowledge" : "Local"}
+                        </span>
+                      ) : null}
+                    </div>
                     {message.role === "assistant" ? (
                       <button
                         type="button"

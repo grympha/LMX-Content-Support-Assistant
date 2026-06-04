@@ -90,7 +90,10 @@ npm run typecheck
 | `APP_PASSWORD` | Yes | Learner password for the main app. Users also enter a username for progress tracking. |
 | `ADMIN_PASSWORD` | Recommended | Admin password for `/admin`. If empty, admin auth falls back to `APP_PASSWORD`. |
 | `OPENAI_API_KEY` | No | Enables OpenAI-assisted answers and image attachment analysis. Without it, the app uses local knowledge fallback. |
-| `OPENAI_MODEL` | No | Optional model override. The chat route currently defaults to `gpt-4o-mini`. |
+| `OPENAI_MODEL` | No | Optional OpenAI model override. The chat route defaults to `gpt-4o-mini`. |
+| `CLAUDE_API_KEY` | No | Optional Anthropic Claude API key. If configured, Claude is used before OpenAI. |
+| `CLAUDE_MODEL` | No | Optional Claude model override. The chat route currently defaults to `claude-3.5`. |
+| `CLAUDE_API_URL` | No | Optional Claude API base URL if using a proxy or alternative endpoint. |
 | `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL for logging and reading training records. |
 
 ## Knowledge Base

@@ -168,6 +168,6 @@ export function buildDocumentContext(matches: DocumentKnowledgeMatch[]) {
   return matches.map((match) => `${match.title}\n${match.snippet}`).join("\n\n");
 }
 
-export function mergeDocumentContextIntoFallback(baseReply: string, _matches?: DocumentKnowledgeMatch[]) {
+export function mergeDocumentContextIntoFallback(baseReply: string) {
   return baseReply;
 }
