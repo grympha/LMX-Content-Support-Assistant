@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { assistantSystemPrompt, type IssueIntake } from "@/lib/lmxKnowledge";
 import { buildLocalSearchResponse, localMatchesToDocumentContext } from "@/lib/localSearchEngine";
 import { logProgressEvent } from "@/lib/progressLog";
+import { getPreferredChatProvider } from "@/lib/chatProviders";
 
 const cookieName = "lmx-support-session";
 const userCookieName = "lmx-support-user";
@@ -15,21 +16,7 @@ type ChatAttachment = {
   text?: string;
 };
 
-type ChatProvider = "openai" | "claude" | "local";
-
 type OpenAiMessage = { role: "system" | "user" | "assistant"; content: string };
-
-export function getPreferredChatProvider(): ChatProvider {
-  if (process.env.CLAUDE_API_KEY) {
-    return "claude";
-  }
-
-  if (process.env.OPENAI_API_KEY) {
-    return "openai";
-  }
-
-  return "local";
-}
 
 async function callOpenAI(messages: OpenAiMessage[]) {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {

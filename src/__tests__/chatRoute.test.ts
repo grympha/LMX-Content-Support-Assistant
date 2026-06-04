@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getPreferredChatProvider } from "../app/api/chat/route";
+import { getPreferredChatProvider } from "../lib/chatProviders";
 
 describe("getPreferredChatProvider", () => {
   const originalOpenAiKey = process.env.OPENAI_API_KEY;
