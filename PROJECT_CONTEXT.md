@@ -72,7 +72,7 @@ knowledge/lmx-content-training-module.md
 knowledge/topics/
 ```
 
-The first Atlassian/Confluence import added 33 topic Markdown files under `knowledge/topics/` using the `imported-` prefix. Each imported file includes the original source filename near the top.
+The Atlassian/Confluence imports currently add 71 topic Markdown files under `knowledge/topics/` using the `imported-` prefix. Each imported file includes the original source filename near the top.
 
 Static screenshots:
 
@@ -163,7 +163,7 @@ Important behavior:
 - The local search engine ranks smaller Markdown chunks instead of whole files.
 - If confidence is low, the assistant asks for a clearer module, screen, or issue instead of guessing.
 
-Current behavior after the first Atlassian import:
+Current behavior after the Atlassian imports:
 
 - All Markdown files in `knowledge/topics/` are searched.
 - Selected topics receive a score boost, but imported docs can still match even when a topic is selected.

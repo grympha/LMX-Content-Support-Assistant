@@ -27,6 +27,7 @@ Use this list to continue development from any PC.
 ## Knowledge Improvements
 
 - When more Atlassian/Confluence exports are provided, convert them into `knowledge/topics/imported-*.md` files and keep filenames descriptive.
+- Review imported duplicate/overlapping guides such as publish errors, VAST scheduling, black screen, and download app docs; merge or de-duplicate later if search results become noisy.
 - Review all `knowledge/topics/` files against the latest LMX Content CMS training module.
 - Keep `src/lib/lmxKnowledge.ts` fallback lessons aligned with Markdown topic files.
 - Add source/version notes to the knowledge files so future maintainers know when content was last verified.

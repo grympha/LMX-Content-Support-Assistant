@@ -6,6 +6,7 @@ All notable project changes should be recorded here.
 
 ### Added
 
+- Imported second batch of 38 Atlassian/Confluence `.doc` exports into `knowledge/topics/` as searchable Markdown files.
 - Imported 33 Atlassian/Confluence `.doc` exports into `knowledge/topics/` as searchable Markdown files.
 - Updated local search to search all topic Markdown files while still boosting the selected topic.
 - Added local deep-search engine for Ask Assistant without requiring an API key.
