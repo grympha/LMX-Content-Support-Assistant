@@ -5,10 +5,12 @@ Use this list to continue development from any PC.
 ## High Priority
 
 - Verify `npm run lint` with the installed Next.js version. If `next lint` is unavailable, migrate the script to the supported ESLint CLI flow.
+- Run `npm install`, `npm run typecheck`, and `npm run build` on a PC with Node/npm available after the local search engine change.
 - Add basic automated tests for:
   - auth route success/failure
   - chat route local fallback
   - knowledge topic matching
+  - local search synonym and intent matching
   - progress logging no-op when `GOOGLE_SHEETS_WEBHOOK_URL` is empty
 - Confirm the Google Sheets Apps Script header matches the current logged fields, especially `Full Name`.
 - Add a real production secret rotation note for `APP_PASSWORD`, `ADMIN_PASSWORD`, and `OPENAI_API_KEY`.
@@ -27,7 +29,8 @@ Use this list to continue development from any PC.
 - Review all `knowledge/topics/` files against the latest LMX Content CMS training module.
 - Keep `src/lib/lmxKnowledge.ts` fallback lessons aligned with Markdown topic files.
 - Add source/version notes to the knowledge files so future maintainers know when content was last verified.
-- Consider replacing keyword retrieval with embeddings or a small local search index if topic coverage grows.
+- Tune `src/lib/localSearchEngine.ts` synonym groups using real support questions from learners.
+- Consider replacing local keyword retrieval with embeddings or a small local search index if topic coverage grows.
 
 ## Chat Improvements
 

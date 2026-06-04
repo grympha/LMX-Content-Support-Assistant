@@ -1,16 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  assistantSystemPrompt,
-  buildFallbackResponse,
-  lmxKnowledge,
-  type IssueIntake
-} from "@/lib/lmxKnowledge";
-import {
-  buildDocumentContext,
-  mergeDocumentContextIntoFallback,
-  searchTrainingKnowledge,
-  type DocumentKnowledgeMatch
-} from "@/lib/documentKnowledge";
+import { assistantSystemPrompt, type IssueIntake } from "@/lib/lmxKnowledge";
+import { buildLocalSearchResponse, localMatchesToDocumentContext } from "@/lib/localSearchEngine";
 import { logProgressEvent } from "@/lib/progressLog";
 
 const cookieName = "lmx-support-session";
@@ -25,59 +15,6 @@ type ChatAttachment = {
   text?: string;
 };
 
-const unclearFallback = `I could not find a clear answer based on the available LMX Content training information.
-
-Please try asking a more specific question, for example:
-- How do I generate Playlogs?
-- How do I restart Windows player pairing?
-- Why is the Default Playlist showing?
-
-- What formats are supported?
-
-For further assistance, please contact our Support Helpdesk at support@movingwalls.com.`;
-
-const highConfidencePhrases = [
-  "black screen",
-  "default playlist",
-  "playlog",
-  "playlogs",
-  "pair device",
-  "pairing",
-  "verification code",
-  "device offline",
-  "offline device",
-  "create network",
-  "create location",
-  "create playlist",
-  "create layout",
-  "create device",
-  "publish content",
-  "publishing",
-  "schedule content",
-  "scheduling",
-  "main storage",
-  "storage",
-  "upload content",
-  "programmatic",
-  "vast",
-  "webview",
-  "supported operating",
-  "hardware",
-  "supported formats",
-  "formats supported",
-  "file formats",
-  "media formats",
-  "install player",
-  "installation",
-  "pull to content",
-  "windows player",
-  "user management"
-];
-
-function normalize(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9\s/+.-]/g, " ").replace(/\s+/g, " ").trim();
-}
-
 function readCookie(cookieHeader: string, name: string) {
   return cookieHeader
     .split(";")
@@ -90,58 +27,6 @@ function usernameFromRequest(request: Request) {
   const cookie = request.headers.get("cookie") ?? "";
   const encodedUsername = readCookie(cookie, userCookieName) ?? "";
   return encodedUsername ? decodeURIComponent(encodedUsername) : "";
-}
-
-function keywordMatches(haystack: string, keyword: string) {
-  const normalizedKeyword = normalize(keyword);
-
-  if (!normalizedKeyword) {
-    return false;
-  }
-
-  if (normalizedKeyword.includes(" ") || normalizedKeyword.includes("/")) {
-    return haystack.includes(normalizedKeyword);
-  }
-
-  return new RegExp(`(^|\\s)${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(haystack);
-}
-
-function hasStrongDocumentMatch(documentMatches: DocumentKnowledgeMatch[], hasStrongPhrase: boolean) {
-  return hasStrongPhrase && documentMatches.some((match) => match.score >= 2);
-}
-
-function hasConfidentKnowledgeMatch(message: string, intake: IssueIntake | undefined, documentMatches: DocumentKnowledgeMatch[]) {
-  if (intake?.issueCategory && intake.issueCategory !== "Other") {
-    return true;
-  }
-
-  const normalizedMessage = normalize(message);
-  const hasStrongPhrase = highConfidencePhrases.some((phrase) => normalizedMessage.includes(phrase));
-  const scored = lmxKnowledge
-    .map((entry) => ({
-      entry,
-      score: entry.keywords.reduce((total, keyword) => total + (keywordMatches(normalizedMessage, keyword) ? 1 : 0), 0)
-    }))
-    .sort((a, b) => b.score - a.score);
-  const best = scored[0];
-
-  if (!best || best.score === 0) {
-    return hasStrongDocumentMatch(documentMatches, hasStrongPhrase);
-  }
-
-  if (best.entry.category === "Schedule Content" && !/\bschedul(e|ed|ing)?\b|\bcampaign\b/.test(normalizedMessage)) {
-    return false;
-  }
-
-  if (best.score >= 2) {
-    return true;
-  }
-
-  if (best.score === 1 && hasStrongPhrase) {
-    return true;
-  }
-
-  return hasStrongDocumentMatch(documentMatches, hasStrongPhrase);
 }
 
 function dataUrlToBuffer(dataUrl: string) {
@@ -248,7 +133,8 @@ export async function POST(request: Request) {
   const attachmentContext = await buildAttachmentContext(attachments);
   const imageAttachments = attachments.filter(isImageAttachment);
   const messageForSearch = [message, attachmentContext].filter(Boolean).join("\n\n");
-  const documentMatches = searchTrainingKnowledge(messageForSearch, body.intake);
+  const localSearch = buildLocalSearchResponse(messageForSearch || message, body.intake);
+  const localKnowledgeContext = localMatchesToDocumentContext(localSearch.matches);
 
   await logProgressEvent({
     eventType: "question_asked",
@@ -258,33 +144,23 @@ export async function POST(request: Request) {
     question: attachments.length > 0 ? `${message || "Attachment review"} | Files: ${attachments.map((attachment) => attachment.name).join(", ")}` : message
   });
 
-  if (!attachmentContext && imageAttachments.length === 0 && !hasConfidentKnowledgeMatch(message, body.intake, documentMatches)) {
-    return NextResponse.json({
-      reply: unclearFallback,
-      source: "local"
-    });
-  }
-
-  const localReply = mergeDocumentContextIntoFallback(
-    buildFallbackResponse(message, body.intake),
-    documentMatches
-  );
+  const imageAttachmentNote =
+    imageAttachments.length > 0
+      ? "\n\nImage note\n- Image attachments need OPENAI_API_KEY for visual analysis. I can still answer from the text question and local training knowledge."
+      : "";
+  const localReply = `${localSearch.answer}${imageAttachmentNote}`;
 
   if (!process.env.OPENAI_API_KEY) {
-    if (attachmentContext || imageAttachments.length > 0) {
-      const attachmentNote = imageAttachments.length > 0
-        ? "\n\nImage attachments require OPENAI_API_KEY for visual analysis."
-        : "";
-
+    if (imageAttachments.length > 0 && !message && !attachmentContext) {
       return NextResponse.json({
-        reply: `Attached File Review\n\nI received the attached file, but detailed file-based answering requires OpenAI integration to be enabled.\n\nExtracted readable text preview:\n${attachmentContext || "No readable text was extracted from the attachment."}${attachmentNote}\n\nKey steps\n- Add OPENAI_API_KEY in Render if you want the assistant to analyze attached files deeply\n- For PDF/DOCX/CSV, ask a specific question about the file content\n- For screenshots or images, enable OpenAI vision support through the API key`,
+        reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
         source: "local"
       });
     }
 
     return NextResponse.json({
       reply: localReply,
-      source: documentMatches.length > 0 ? "knowledge" : "local"
+      source: localSearch.confidence === "low" ? "local" : "knowledge"
     });
   }
 
@@ -311,7 +187,7 @@ export async function POST(request: Request) {
           },
           {
             role: "user",
-            content: `Uploaded knowledge matches:\n${buildDocumentContext(documentMatches) || "No relevant uploaded knowledge match found."}`
+            content: `Uploaded knowledge matches:\n${localKnowledgeContext || "No relevant uploaded knowledge match found."}`
           },
           {
             role: "user",
@@ -346,13 +222,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       reply: reply || localReply,
-      source: reply ? "openai" : documentMatches.length > 0 ? "knowledge" : "local"
+      source: reply ? "openai" : localSearch.confidence === "low" ? "local" : "knowledge"
     });
   } catch (error) {
     console.error(error);
     return NextResponse.json({
       reply: localReply,
-      source: documentMatches.length > 0 ? "knowledge" : "local",
+      source: localSearch.confidence === "low" ? "local" : "knowledge",
       warning: "OpenAI unavailable. Used local knowledge fallback."
     });
   }

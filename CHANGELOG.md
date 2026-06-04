@@ -6,6 +6,8 @@ All notable project changes should be recorded here.
 
 ### Added
 
+- Added local deep-search engine for Ask Assistant without requiring an API key.
+- Added Markdown chunking, synonym expansion, intent detection, confidence scoring, and answer templates for local answers.
 - Added project handoff documentation:
   - `README.md`
   - `PROJECT_CONTEXT.md`
@@ -15,6 +17,7 @@ All notable project changes should be recorded here.
 ### Notes
 
 - The current app is a Next.js LMX Content CMS training assistant with learner auth, admin auth, topic pages, chat support, attachment handling, local knowledge fallback, optional OpenAI responses, optional Google Sheets logging, and Render deployment configuration.
+- Ask Assistant now uses `src/lib/localSearchEngine.ts` for no-key local responses and for stronger knowledge context when OpenAI is enabled.
 
 ## Existing Baseline
 

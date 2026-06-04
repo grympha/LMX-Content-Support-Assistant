@@ -54,6 +54,7 @@ Core knowledge and logging libraries:
 ```text
 src/lib/lmxKnowledge.ts
 src/lib/documentKnowledge.ts
+src/lib/localSearchEngine.ts
 src/lib/commonQuestions.ts
 src/lib/progressLog.ts
 ```
@@ -112,9 +113,9 @@ The chat route:
 1. Confirms the learner is authenticated.
 2. Extracts text from TXT, CSV, Markdown, JSON, PDF, and DOCX attachments.
 3. Keeps image attachments as data URLs for OpenAI vision analysis when enabled.
-4. Searches `knowledge/topics/` through `searchTrainingKnowledge`.
+4. Searches `knowledge/topics/` through the local search engine.
 5. Logs the question through `logProgressEvent`.
-6. Uses local fallback if there is no `OPENAI_API_KEY`.
+6. Uses local search and template answers if there is no `OPENAI_API_KEY`.
 7. Calls the OpenAI Chat Completions API if `OPENAI_API_KEY` is configured.
 8. Falls back to local knowledge if the OpenAI request fails.
 
@@ -132,7 +133,22 @@ OPENAI_MODEL
 
 ## Knowledge Retrieval
 
-Topic retrieval is implemented in:
+Deep local retrieval is implemented in:
+
+```text
+src/lib/localSearchEngine.ts
+```
+
+It performs:
+
+- Markdown section chunking
+- natural wording and synonym expansion
+- local intent detection
+- weighted scoring by topic, heading, exact phrase, and body matches
+- confidence detection
+- answer templates for how-to, troubleshooting, requirements, reporting, and general questions
+
+The older simple topic retrieval helper remains in:
 
 ```text
 src/lib/documentKnowledge.ts
@@ -140,10 +156,10 @@ src/lib/documentKnowledge.ts
 
 Important behavior:
 
-- If a learner selected a training topic, only that mapped topic Markdown file is searched.
+- If a learner selected a training topic, only that mapped topic Markdown file is searched first.
 - If no topic is selected, all files in `knowledge/topics/` are searched.
-- If topic files are unavailable, the full module file is used as fallback.
-- Retrieval is keyword based and intentionally simple.
+- The local search engine ranks smaller Markdown chunks instead of whole files.
+- If confidence is low, the assistant asks for a clearer module, screen, or issue instead of guessing.
 
 Structured fallback answers are implemented in:
 
@@ -278,7 +294,7 @@ Current deployment assumptions:
 - There are no automated tests yet.
 - Authentication is simple password-based access, not full user identity management.
 - Google Sheets is used as a lightweight activity log, not a database.
-- Knowledge retrieval is keyword scoring, not embeddings/vector search.
+- Knowledge retrieval is local weighted keyword and synonym scoring, not embeddings/vector search.
 
 ## Safe Editing Checklist
 
