@@ -73,6 +73,30 @@ function timestampValue(timestamp: string) {
   return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
 }
 
+function formatMalaysiaTimestamp(timestamp: string | undefined) {
+  if (!timestamp) return "-";
+  const ms = timestampValue(timestamp);
+  if (!ms) return timestamp;
+
+  try {
+    const dt = new Date(ms);
+    const parts = dt.toLocaleString("en-GB", {
+      timeZone: "Asia/Kuala_Lumpur",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+    // `en-GB` gives DD/MM/YYYY, HH:MM:SS (with a comma in some locales). Normalize to single space.
+    return parts.replace(/,?\s*/g, " ").trim();
+  } catch {
+    return timestamp;
+  }
+}
+
 export default function AdminDashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -178,7 +202,8 @@ export default function AdminDashboard() {
         .filter((record) => record.eventType === "topic_completed")
         .map((record) => `${record.username}:${record.topic || record.question}`)
     );
-    const lastActivity = summaryRecords[0]?.timestamp || "No activity yet";
+    const lastActivityRaw = summaryRecords[0]?.timestamp;
+    const lastActivity = lastActivityRaw ? formatMalaysiaTimestamp(lastActivityRaw) : "No activity yet";
     const latestProgressByUser = users.map((user) => {
       const userRecords = summaryRecords.filter((record) => record.username === user);
       return Math.max(...userRecords.map((record) => progressNumber(record.progressPercent)), 0);
@@ -380,7 +405,7 @@ export default function AdminDashboard() {
               <tbody>
                 {paginatedRecords.map((record, index) => (
                   <tr key={`${record.timestamp}-${record.username}-${index}`} className="border-b border-line last:border-0">
-                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{record.timestamp}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{formatMalaysiaTimestamp(record.timestamp)}</td>
                     <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">{record.username || "-"}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-slate-700">{record.eventType || "-"}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-slate-700">{record.topic || "-"}</td>
