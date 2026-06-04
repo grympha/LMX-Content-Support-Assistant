@@ -31,6 +31,18 @@ type SupportPlaybook = {
   clientResponse: string;
 };
 
+type PlatformRequirement = {
+  platform: string;
+  triggers: string[];
+  osVersion: string;
+  processor: string[];
+  systemType: string;
+  memory: string[];
+  mediaFormats?: string[];
+  programmaticNotes?: string[];
+  source: string;
+};
+
 const knowledgeRoot = path.join(process.cwd(), "knowledge");
 const topicRoot = path.join(knowledgeRoot, "topics");
 
@@ -251,6 +263,62 @@ const supportPlaybooks: SupportPlaybook[] = [
     ],
     clientResponse:
       "The publish error is usually caused by a missing Default Playlist requirement or content that is not fully scheduled/approved. We will verify the Default Playlist, content format, approval status, and playlist mapping, then republish once the missing requirement is corrected."
+  }
+];
+
+const platformRequirements: PlatformRequirement[] = [
+  {
+    platform: "Android",
+    triggers: ["android", "android device", "android devices", "android player", "android tv", "android media player"],
+    osVersion: "Android 11 and above",
+    processor: ["Rockchip RK3328 Cortex A53, Quad Core", "Amlogic S905 Cortex A53, Quad Core"],
+    systemType: "64-bit recommended",
+    memory: ["8 GB RAM / 128 GB ROM recommended", "4 GB RAM / 64 GB ROM minimum"],
+    mediaFormats: ["Images: PNG, JPG, JPEG", "Videos: MP4, MKV"],
+    programmaticNotes: ["Programmatic playback is fully supported on Android 11+ when WebView Version is 100 or above.", "Supported programmatic formats: VAST, URL, HTML online content."],
+    source: "MW Content Software Supported & System Requirements"
+  },
+  {
+    platform: "Windows",
+    triggers: ["windows", "windows device", "windows devices", "windows player"],
+    osVersion: "Windows 10 and 11",
+    processor: ["Intel Core i5 or i7 recommended", "Intel Pentium II/III or AMD Processor supported"],
+    systemType: "64-bit recommended; 32-bit supported",
+    memory: ["8 GB RAM and above recommended", "4 GB RAM minimum", "1 GB Graphics Card and above"],
+    mediaFormats: ["Images: PNG, JPG, JPEG", "Videos: MP4, MOV, WEBM, WMV"],
+    programmaticNotes: ["Windows 10 and 11 fully support VAST, URL, HTML, Offline ZIP, and Online ZIP."],
+    source: "MW Content Software Supported & System Requirements"
+  },
+  {
+    platform: "Linux",
+    triggers: ["linux", "linux device", "linux devices", "ubuntu"],
+    osVersion: "Ubuntu 18.04 LTS and above",
+    processor: ["Intel Core i5 or i7 recommended", "Intel Pentium II/III supported"],
+    systemType: "64-bit recommended; 32-bit supported",
+    memory: ["8 GB RAM and above recommended", "4 GB RAM minimum", "1 GB Graphics Card and above"],
+    mediaFormats: ["Images: PNG, JPG, JPEG", "Videos: MP4, MOV, WEBM"],
+    source: "MW Content Software Supported & System Requirements"
+  },
+  {
+    platform: "LG webOS",
+    triggers: ["lg webos", "webos", "lg"],
+    osVersion: "LG webOS Signage 4.0.1",
+    processor: ["alpha 5 Gen5 AI / ARM Cortex-A53, Quad-Core 1.0 GHz"],
+    systemType: "64-bit recommended",
+    memory: ["4 GB RAM / 16 GB ROM", "2 GB RAM / 8 GB ROM"],
+    mediaFormats: ["Images: PNG, JPG, JPEG", "Videos: MP4"],
+    programmaticNotes: ["LG webOS has limited feature support. Heavy HTML/VAST may require custom player handling."],
+    source: "MW Content Software Supported & System Requirements"
+  },
+  {
+    platform: "BrightSign",
+    triggers: ["brightsign", "bright sign"],
+    osVersion: "BrightSign HS123, XT1143, HD224",
+    processor: ["ARM Cortex-A15, Quad-Core 1.0 and 2.0 GHz"],
+    systemType: "64-bit recommended",
+    memory: ["4 GB RAM / 16 GB ROM", "2 GB RAM / 8 GB ROM"],
+    mediaFormats: ["Images: PNG, JPG, JPEG", "Videos: MP4"],
+    source: "MW Content Software Supported & System Requirements"
   }
 ];
 
@@ -523,6 +591,52 @@ function findPlaybook(message: string, terms: string[]) {
     .sort((a, b) => b.score - a.score)[0];
 }
 
+function findPlatformRequirement(message: string) {
+  const normalizedMessage = normalize(message);
+  const asksRequirement = /\b(requirement|requirements|spec|specs|specification|hardware|os|operating system|ram|rom|processor|cpu|support|supported)\b/.test(normalizedMessage);
+
+  if (!asksRequirement) {
+    return undefined;
+  }
+
+  return platformRequirements.find((requirement) =>
+    requirement.triggers.some((trigger) => normalizedMessage.includes(normalize(trigger)))
+  );
+}
+
+function buildPlatformRequirementAnswer(requirement: PlatformRequirement) {
+  return `${requirement.platform} Device Requirements
+
+Core requirement
+- OS Version: ${requirement.osVersion}
+- Processor: ${requirement.processor.join(" / ")}
+- System Type: ${requirement.systemType}
+- Memory/Storage: ${requirement.memory.join(" / ")}
+
+What to check
+- Confirm the device OS is ${requirement.osVersion}.
+- Confirm the CPU matches or is equivalent to the recommended processor class.
+- Confirm the device is 64-bit where possible.
+- Confirm RAM and ROM meet at least the minimum requirement, preferably the recommended requirement.
+${requirement.mediaFormats ? `- Confirm media formats needed by the client are supported: ${requirement.mediaFormats.join("; ")}.` : ""}
+${requirement.programmaticNotes ? `- For programmatic or widget playback, confirm: ${requirement.programmaticNotes.join(" ")}` : ""}
+
+How to fix / action
+- If the device is below the minimum requirement, do not onboard it for production playback.
+- If the device meets minimum but not recommended specs, use it only for simple image/video playback and avoid heavy HTML, VAST, widgets, or split layouts.
+- For new procurement, recommend the stated recommended RAM/ROM and processor class.
+
+Next step
+- Ask the client for the exact device model, Android version, CPU, RAM, ROM/storage, and WebView version if programmatic/HTML playback is required.
+- Compare the device details against the requirements above before approving it.
+
+Client response
+For ${requirement.platform}, the required OS is ${requirement.osVersion}. Recommended hardware is ${requirement.processor.join(" or ")} with ${requirement.systemType}, and ${requirement.memory[0]}. Minimum accepted memory/storage is ${requirement.memory[1] ?? requirement.memory[0]}. Please share the exact device model and specs so we can confirm whether it is suitable for LMX Content.
+
+Source
+- ${requirement.source}`;
+}
+
 function actionLines(matches: LocalSearchMatch[], patterns: RegExp[]) {
   const lines = matches.flatMap((match) => bulletLines(match.content));
   const preferred = lines.filter((line) => patterns.some((pattern) => pattern.test(normalize(line))));
@@ -631,6 +745,18 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
+  const platformRequirement = intent === "requirements" ? findPlatformRequirement(message) : undefined;
+
+  if (platformRequirement) {
+    return {
+      intent,
+      queryTerms,
+      matches,
+      confidence: "high",
+      answer: buildPlatformRequirementAnswer(platformRequirement)
+    };
+  }
+
   const confidence = confidenceFor(matches);
 
   if (confidence === "low") {
