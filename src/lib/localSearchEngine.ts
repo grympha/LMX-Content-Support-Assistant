@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { lmxKnowledge, type IssueCategory, type IssueIntake, type KnowledgeEntry } from "@/lib/lmxKnowledge";
+import { logLowConfidenceQuery } from "@/lib/searchDiagnostics";
 
 export type SearchIntent = "how_to" | "troubleshooting" | "definition" | "requirements" | "reporting" | "general";
 
@@ -337,8 +338,19 @@ function titleCaseFromFile(file: string) {
 function detectIntent(message: string): SearchIntent {
   const normalized = normalize(message);
 
-  if (/\b(why|error|issue|problem|not|fail|failed|offline|black|blank|wrong|missing|stuck|cannot|can't|unable)\b/.test(normalized)) {
-    return "troubleshooting";
+  // If the user asked a direct question, prefer how-to/definition or troubleshooting
+  if (/\?|^\s*(how|what|why|when|where)\b/.test(message) || /^\s*(how|what|why|when|where)\b/.test(normalized)) {
+    if (/\b(why|error|fail|failed|not|cannot|can't|unable|stuck)\b/.test(normalized)) {
+      return "troubleshooting";
+    }
+
+    if (/\b(how|create|setup|set up|install|pair|publish|schedule|upload|add|generate|download)\b/.test(normalized)) {
+      return "how_to";
+    }
+
+    if (/\b(what is|meaning|define|definition|explain)\b/.test(normalized)) {
+      return "definition";
+    }
   }
 
   if (/\b(requirement|requirements|spec|hardware|os|operating system|support|supported|format|formats|webview|android|windows)\b/.test(normalized)) {
@@ -349,8 +361,8 @@ function detectIntent(message: string): SearchIntent {
     return "reporting";
   }
 
-  if (/\b(what is|meaning|define|definition|explain)\b/.test(normalized)) {
-    return "definition";
+  if (/\b(why|error|issue|problem|not|fail|failed|offline|black|blank|wrong|missing|stuck|cannot|can't|unable)\b/.test(normalized)) {
+    return "troubleshooting";
   }
 
   if (/\b(how|create|setup|set up|install|pair|publish|schedule|upload|add|generate|download)\b/.test(normalized)) {
@@ -362,11 +374,19 @@ function detectIntent(message: string): SearchIntent {
 
 function expandTerms(message: string, intake?: IssueIntake) {
   const normalized = normalize([message, intake?.issueCategory, intake?.description, intake?.deviceOs].filter(Boolean).join(" "));
+  const words = normalized.split(/\s+/).filter(Boolean);
   const terms = new Set(
-    normalized
-      .split(/\s+/)
+    words
       .filter((word) => word.length > 2 && !stopWords.has(word))
   );
+
+  // Add adjacent bigrams to capture phrase matches like "black screen", "play logs"
+  for (let i = 0; i < words.length - 1; i++) {
+    const bigram = `${words[i]} ${words[i + 1]}`;
+    if (bigram.length > 4 && !stopWords.has(words[i]) && !stopWords.has(words[i + 1])) {
+      terms.add(bigram);
+    }
+  }
 
   for (const group of synonymGroups) {
     if (group.some((phrase) => normalized.includes(phrase))) {
@@ -393,7 +413,7 @@ function expandTerms(message: string, intake?: IssueIntake) {
     }
   }
 
-  return Array.from(terms).slice(0, 80);
+  return Array.from(terms).slice(0, 120);
 }
 
 function markdownToPlainText(value: string) {
@@ -481,30 +501,31 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string }, 
 
     if (bodyHits || headingHits || topicHits) {
       matchedTerms.push(term);
-      score += bodyHits * (normalizedTerm.includes(" ") ? 8 : 3);
-      score += headingHits * 14;
-      score += topicHits * 18;
+      // Tuned weights: prefer phrase matches, but give more weight to headings/topics
+      score += bodyHits * (normalizedTerm.includes(" ") ? 10 : 4);
+      score += headingHits * 18;
+      score += topicHits * 22;
     }
   }
 
   if (intake?.issueCategory && intake.issueCategory !== "Other" && chunk.topic === intake.issueCategory) {
-    score += 80;
+    score += 100;
   }
 
   if (intent === "troubleshooting" && /\b(troubleshoot|issue|possible causes|checks|common mistakes|quick fixes)\b/.test(body)) {
-    score += 35;
+    score += 45;
   }
 
   if (intent === "how_to" && /\b(steps|step|create|click|select|save|publish|install|pair)\b/.test(body)) {
-    score += 30;
+    score += 40;
   }
 
   if (intent === "requirements" && /\b(requirements|supported|hardware|android|windows|webview|format|spec)\b/.test(body)) {
-    score += 30;
+    score += 40;
   }
 
   if (intent === "reporting" && /\b(playlog|report|csv|pdf|download|proof)\b/.test(body)) {
-    score += 30;
+    score += 40;
   }
 
   return {
@@ -651,7 +672,8 @@ function confidenceFor(matches: LocalSearchMatch[]) {
     return "high";
   }
 
-  if (best >= 28) {
+  // Lower the medium threshold slightly to surface helpful results sooner
+  if (best >= 20) {
     return "medium";
   }
 
@@ -760,6 +782,17 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
   const confidence = confidenceFor(matches);
 
   if (confidence === "low") {
+    try {
+      logLowConfidenceQuery({
+        message,
+        intake: intake ? { issueCategory: intake.issueCategory, deviceOs: intake.deviceOs, description: intake.description } : undefined,
+        queryTerms,
+        topMatches: matches.slice(0, 3).map((m) => ({ topic: m.topic, heading: m.heading, score: m.score }))
+      });
+    } catch {
+      // ignore
+    }
+
     return {
       intent,
       queryTerms,

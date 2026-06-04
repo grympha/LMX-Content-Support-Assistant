@@ -198,7 +198,7 @@ export default function Home() {
 
     const questionIntake: IssueIntake = {
       ...intake,
-      issueCategory: "",
+      issueCategory: intake.issueCategory || "",
       description: messageText
     };
 
@@ -474,15 +474,6 @@ export default function Home() {
                 Attach file
               </button>
             </form>
-            <div className="mt-4 rounded-md border border-line bg-mist px-4 py-3 text-xs text-slate-600">
-              <p className="font-semibold text-slate-800">Answer source guide</p>
-              <p className="mt-1 leading-5">
-                OpenAI: AI-assisted response using the configured API.<br />
-                Knowledge: local training content match from the LMX knowledge base.<br />
-                Local: fallback response when confidence is low or no external API is configured.<br />
-                Claude: optional future Claude provider response.
-              </p>
-            </div>
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
