@@ -89,6 +89,7 @@ const trackableTopicCount = issueCategories.filter((category) => category !== "O
 export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [hasAiProvider, setHasAiProvider] = useState(false);
   const [username, setUsername] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -105,9 +106,10 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/auth")
       .then((response) => response.json())
-      .then((data: { authenticated: boolean; username?: string }) => {
+      .then((data: { authenticated: boolean; username?: string; hasAiProvider?: boolean }) => {
         setAuthenticated(data.authenticated);
         setUsername(data.username ?? "");
+        setHasAiProvider(data.hasAiProvider ?? false);
       })
       .catch(() => setAuthenticated(false))
       .finally(() => setAuthChecked(true));
@@ -473,14 +475,16 @@ export default function Home() {
                   ))}
                 </div>
               ) : null}
-              <input
-                ref={attachmentInputRef}
-                type="file"
-                multiple
-                accept=".csv,.txt,.md,.json,.pdf,.doc,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
-                onChange={(event) => handleAttachmentChange(event.target.files)}
-                className="hidden"
-              />
+              {hasAiProvider ? (
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  multiple
+                  accept=".csv,.txt,.md,.json,.pdf,.doc,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                  onChange={(event) => handleAttachmentChange(event.target.files)}
+                  className="hidden"
+                />
+              ) : null}
               <button
                 type="submit"
                 disabled={loading || (!input.trim() && attachments.length === 0)}
@@ -489,14 +493,16 @@ export default function Home() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
                 Send
               </button>
-              <button
-                type="button"
-                onClick={() => attachmentInputRef.current?.click()}
-                className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-signal hover:text-signal"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Attach file
-              </button>
+              {hasAiProvider ? (
+                <button
+                  type="button"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-signal hover:text-signal"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Attach file
+                </button>
+              ) : null}
             </form>
           </section>
 

@@ -39,7 +39,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     authenticated,
     configured: true,
-    username: authenticated ? usernameFromCookie(cookie) : ""
+    username: authenticated ? usernameFromCookie(cookie) : "",
+    hasAiProvider: Boolean(process.env.CLAUDE_API_KEY || process.env.OPENAI_API_KEY)
   });
 }
 
