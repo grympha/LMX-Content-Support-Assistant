@@ -19,21 +19,54 @@ function faqTokens(text: string): string[] {
     .filter(w => w.length > 2 && !FAQ_STOP_WORDS.has(w));
 }
 
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 2) return 99;
+  const dp: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function fuzzyIntersection(msgTokens: string[], faqTokens: string[]): number {
+  let count = 0;
+  for (const m of msgTokens) {
+    for (const f of faqTokens) {
+      if (m === f || (m.length >= 7 && f.length >= 7 && levenshtein(m, f) <= 1)) {
+        count++;
+        break;
+      }
+    }
+  }
+  return count;
+}
+
 function matchFaq(message: string) {
-  const msgSet = new Set(faqTokens(message));
-  if (msgSet.size === 0) return null;
+  const msgToks = faqTokens(message);
+  if (msgToks.length === 0) return null;
 
   let best: (typeof commonQuestions)[number] | null = null;
   let bestScore = 0;
 
   for (const faq of commonQuestions) {
-    const faqSet = new Set(faqTokens(faq.question));
-    if (faqSet.size === 0) continue;
-    const intersection = [...faqSet].filter(t => msgSet.has(t)).length;
+    const fToks = faqTokens(faq.question);
+    if (fToks.length === 0) continue;
+    const intersection = fuzzyIntersection(msgToks, fToks);
     if (intersection < 2) continue;
-    const score = intersection / Math.min(msgSet.size, faqSet.size);
-    if (score >= 0.6 && score > bestScore) {
-      bestScore = score;
+    // F1: harmonic mean of precision and recall — penalises long FAQ questions
+    // that share only a few generic words with the query
+    const precision = intersection / msgToks.length;
+    const recall = intersection / fToks.length;
+    const f1 = (2 * precision * recall) / (precision + recall);
+    if (f1 >= 0.5 && f1 > bestScore) {
+      bestScore = f1;
       best = faq;
     }
   }
