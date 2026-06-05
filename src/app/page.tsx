@@ -30,6 +30,27 @@ import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowle
 
 type ChatSource = "openai" | "knowledge" | "local" | "claude";
 
+const topicSourceLinks: Record<string, SourceLink[]> = {
+  "Dashboard Overview": [{ label: "Dashboard Overview", url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ" }],
+  "Create Network": [{ label: "Create a Network", url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ" }],
+  "Create Location": [{ label: "Create a Location", url: "https://movingwallshub.atlassian.net/wiki/x/a4GKCQ" }],
+  "Create Playlist": [{ label: "Playlist Creation", url: "https://movingwallshub.atlassian.net/wiki/x/goGKCQ" }],
+  "Create Layout": [{ label: "Layout Creation", url: "https://movingwallshub.atlassian.net/wiki/x/mYGKCQ" }],
+  "Create Device": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }],
+  "Device Pairing": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }, { label: "Pair LMX Inventory to Devices", url: "https://movingwallshub.atlassian.net/wiki/x/GA6MCQ" }],
+  "Storage Management": [{ label: "Storage", url: "https://movingwallshub.atlassian.net/wiki/x/74GKCQ" }],
+  "Default Playlist": [{ label: "Default Playlist Guide", url: "https://movingwallshub.atlassian.net/wiki/x/h4KKCQ" }],
+  "Schedule Content": [{ label: "How to Schedule Content", url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ" }],
+  "Bundle Scheduling": [{ label: "Scheduling Bundles", url: "https://movingwallshub.atlassian.net/wiki/x/R4OKCQ" }],
+  "Publish Content": [{ label: "Unable to Publish – Error Guide", url: "https://movingwallshub.atlassian.net/wiki/x/zwCXDw" }],
+  "Playlogs": [{ label: "Playlogs (General & Device Level)", url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ" }],
+  "User Management": [{ label: "How to Create a User", url: "https://movingwallshub.atlassian.net/wiki/x/FIOKCQ" }, { label: "User Roles & Permissions", url: "https://movingwallshub.atlassian.net/wiki/x/KIOKCQ" }],
+  "Basic Troubleshooting": [{ label: "LMX Troubleshooting Guide", url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ" }],
+  "Installation of LMX Content App": [{ label: "Installation Guide (Android & Windows)", url: "https://movingwallshub.atlassian.net/wiki/x/AoCTDw" }, { label: "Download MW Content App", url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw" }],
+  "Supported Operating Systems & Hardware": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Device & Platform Technical Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw" }],
+  "Programmatic / VAST": [{ label: "Schedule URL & Google IMA (VAST)", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }]
+};
+
 type SourceLink = { label: string; url: string };
 
 type ChatMessage = {
@@ -272,7 +293,7 @@ export default function Home() {
     setIntake((current) => ({ ...current, issueCategory: "", description: selected.question }));
     setMessages([
       { id: crypto.randomUUID(), role: "user", content: selected.question },
-      { id: crypto.randomUUID(), role: "assistant", content: selected.answer, source: "local" }
+      { id: crypto.randomUUID(), role: "assistant", content: selected.answer, source: "local", sourceLinks: selected.sourceLinks ?? [] }
     ]);
 
     try {
@@ -562,7 +583,27 @@ export default function Home() {
               <div ref={messagesEndRef} />
             </div>
           ) : (
-            <TopicContent selectedTopic={selectedTopic} />
+            <>
+              <TopicContent selectedTopic={selectedTopic} />
+              {selectedTopic && (topicSourceLinks[selectedTopic.category] ?? []).length > 0 ? (
+                <div className="mt-4 rounded-lg border border-line bg-white p-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(topicSourceLinks[selectedTopic.category] ?? []).map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
+                      >
+                        {link.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </div>
