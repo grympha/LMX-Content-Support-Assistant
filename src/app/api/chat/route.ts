@@ -3,6 +3,43 @@ import { assistantSystemPrompt, type IssueIntake } from "@/lib/lmxKnowledge";
 import { buildLocalSearchResponse, localMatchesToDocumentContext } from "@/lib/localSearchEngine";
 import { logProgressEvent } from "@/lib/progressLog";
 import { getPreferredChatProvider } from "@/lib/chatProviders";
+import { commonQuestions } from "@/lib/commonQuestions";
+
+const FAQ_STOP_WORDS = new Set([
+  "the","a","an","is","are","do","does","did","how","why","what","when","where","who",
+  "can","my","i","to","in","on","of","for","with","be","it","this","that","at","by",
+  "from","or","and","not","still","if","was","has","have","had","its","get","use",
+  "using","will","should","would","could","need","just","also","some","any","but"
+]);
+
+function faqTokens(text: string): string[] {
+  return text.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !FAQ_STOP_WORDS.has(w));
+}
+
+function matchFaq(message: string) {
+  const msgSet = new Set(faqTokens(message));
+  if (msgSet.size === 0) return null;
+
+  let best: (typeof commonQuestions)[number] | null = null;
+  let bestScore = 0;
+
+  for (const faq of commonQuestions) {
+    const faqSet = new Set(faqTokens(faq.question));
+    if (faqSet.size === 0) continue;
+    const intersection = [...faqSet].filter(t => msgSet.has(t)).length;
+    if (intersection < 2) continue;
+    const score = intersection / Math.min(msgSet.size, faqSet.size);
+    if (score >= 0.6 && score > bestScore) {
+      bestScore = score;
+      best = faq;
+    }
+  }
+
+  return best;
+}
 
 const cookieName = "lmx-support-session";
 const userCookieName = "lmx-support-user";
@@ -202,6 +239,25 @@ export async function POST(request: Request) {
   const attachmentContext = await buildAttachmentContext(attachments);
   const imageAttachments = attachments.filter(isImageAttachment);
   const messageForSearch = [message, attachmentContext].filter(Boolean).join("\n\n");
+
+  // Return FAQ answer directly when the question clearly matches a known FAQ entry
+  if (!attachmentContext) {
+    const faqMatch = matchFaq(messageForSearch || message);
+    if (faqMatch) {
+      await logProgressEvent({
+        eventType: "quick_answer_selected",
+        username,
+        fullName: body.intake?.clientTenant,
+        question: message
+      });
+      return NextResponse.json({
+        reply: faqMatch.answer,
+        source: "knowledge",
+        sourceLinks: faqMatch.sourceLinks ?? []
+      });
+    }
+  }
+
   const localSearch = buildLocalSearchResponse(messageForSearch || message, body.intake);
   const localKnowledgeContext = localMatchesToDocumentContext(localSearch.matches);
 

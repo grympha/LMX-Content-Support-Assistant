@@ -501,7 +501,7 @@ export default function Home() {
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <h2 className="mb-3 font-semibold text-ink">Common Questions & Quick Answers</h2>
+            <h2 className="mb-3 font-semibold text-ink">Frequently Asked Questions (FAQ)</h2>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-slate-700">Question</span>
               <select
