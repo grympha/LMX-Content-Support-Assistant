@@ -165,7 +165,8 @@ const topicLinks: Record<string, SourceLink[]> = {
   "Imported Cricket Widget Guide": [{ label: "Cricket Widget Guide", url: "https://movingwallshub.atlassian.net/wiki/x/wA6MCQ" }],
   "Imported Pull To Content Resolution Fix For Programmatic Campaigns": [{ label: "Programmatic Resolution Fix", url: "https://movingwallshub.atlassian.net/wiki/x/GQANDg" }],
   "Imported Auto Boot Shutdown Configuration Guide": [{ label: "Auto Boot/Shutdown Configuration", url: "https://movingwallshub.atlassian.net/wiki/x/BYCYDg" }],
-  "Imported Heartbeat Mechanism In Lmx Content Cms": [{ label: "Heartbeat Mechanism in CMS", url: "https://movingwallshub.atlassian.net/wiki/x/SYGKCQ" }]
+  "Imported Heartbeat Mechanism In Lmx Content Cms": [{ label: "Heartbeat Mechanism in CMS", url: "https://movingwallshub.atlassian.net/wiki/x/SYGKCQ" }],
+  "Imported Pull To Content": [{ label: "LMX Content – Pull To Content", url: "https://movingwallshub.atlassian.net/wiki/x/FICAEQ" }]
 };
 
 // Platform-specific links used in hardware requirement answers
@@ -237,7 +238,8 @@ const synonymGroups = [
   ["ad tag", "vast tag", "ad url", "ima sdk", "ima tag", "ad server"],
   ["bundle scheduling", "content bundle", "multi schedule", "bundle content"],
   ["media format", "file format", "supported format", "video format", "image format"],
-  ["webview version", "webview update", "chrome version", "browser version", "webview"]
+  ["webview version", "webview update", "chrome version", "browser version", "webview"],
+  ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
