@@ -5,6 +5,8 @@ import { logLowConfidenceQuery } from "@/lib/searchDiagnostics";
 
 export type SearchIntent = "how_to" | "troubleshooting" | "definition" | "requirements" | "reporting" | "general";
 
+export type SourceLink = { label: string; url: string };
+
 export type LocalSearchMatch = {
   topic: IssueCategory | string;
   heading: string;
@@ -19,6 +21,7 @@ export type LocalSearchResult = {
   matches: LocalSearchMatch[];
   confidence: "high" | "medium" | "low";
   answer: string;
+  sourceLinks: SourceLink[];
 };
 
 type SupportPlaybook = {
@@ -69,6 +72,122 @@ const topicFiles: Partial<Record<IssueCategory, string>> = {
 };
 
 const fileTopics = new Map(Object.entries(topicFiles).map(([topic, file]) => [file, topic]));
+
+// Maps topic label (as it appears in LocalSearchMatch.topic) → Confluence source links
+const topicLinks: Record<string, SourceLink[]> = {
+  // Native topics
+  "Dashboard Overview": [{ label: "Dashboard Overview", url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ" }],
+  "Create Network": [{ label: "Create a Network", url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ" }],
+  "Create Location": [{ label: "Create a Location", url: "https://movingwallshub.atlassian.net/wiki/x/a4GKCQ" }],
+  "Create Playlist": [{ label: "Playlist Creation", url: "https://movingwallshub.atlassian.net/wiki/x/goGKCQ" }],
+  "Create Layout": [{ label: "Layout Creation", url: "https://movingwallshub.atlassian.net/wiki/x/mYGKCQ" }],
+  "Create Device": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }],
+  "Device Pairing": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }, { label: "Pair LMX Inventory to Devices", url: "https://movingwallshub.atlassian.net/wiki/x/GA6MCQ" }],
+  "Storage Management": [{ label: "Storage", url: "https://movingwallshub.atlassian.net/wiki/x/74GKCQ" }],
+  "Default Playlist": [{ label: "Default Playlist Guide", url: "https://movingwallshub.atlassian.net/wiki/x/h4KKCQ" }],
+  "Schedule Content": [{ label: "How to Schedule Content", url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ" }],
+  "Bundle Scheduling": [{ label: "Scheduling Bundles", url: "https://movingwallshub.atlassian.net/wiki/x/R4OKCQ" }],
+  "Publish Content": [{ label: "Unable to Publish – Error Guide", url: "https://movingwallshub.atlassian.net/wiki/x/zwCXDw" }],
+  "Playlogs": [{ label: "Playlogs (General & Device Level)", url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ" }],
+  "User Management": [{ label: "How to Create a User", url: "https://movingwallshub.atlassian.net/wiki/x/FIOKCQ" }, { label: "User Roles & Permissions", url: "https://movingwallshub.atlassian.net/wiki/x/KIOKCQ" }],
+  "Basic Troubleshooting": [{ label: "LMX Troubleshooting Guide", url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ" }],
+  "Installation of LMX Content App": [{ label: "Installation Guide (Android & Windows)", url: "https://movingwallshub.atlassian.net/wiki/x/AoCTDw" }, { label: "Download MW Content App", url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw" }],
+  "Supported Operating Systems & Hardware": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Device & Platform Technical Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw" }],
+  "Programmatic / VAST": [{ label: "Schedule URL & Google IMA (VAST)", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }],
+  // Imported Confluence topics (titleCaseFromFile names)
+  "Imported Dashboard": [{ label: "Dashboard Overview", url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ" }],
+  "Imported Create A Network": [{ label: "Create a Network", url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ" }],
+  "Imported Create A Location": [{ label: "Create a Location", url: "https://movingwallshub.atlassian.net/wiki/x/a4GKCQ" }],
+  "Imported Playlist Creation": [{ label: "Playlist Creation", url: "https://movingwallshub.atlassian.net/wiki/x/goGKCQ" }],
+  "Imported Layout Creation": [{ label: "Layout Creation", url: "https://movingwallshub.atlassian.net/wiki/x/mYGKCQ" }],
+  "Imported Create A Device": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }],
+  "Imported Playlogs General And Device Level": [{ label: "Playlogs (General & Device Level)", url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ" }],
+  "Imported Playlog Template Options": [{ label: "Playlogs Guide", url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ" }],
+  "Imported Storage": [{ label: "Storage", url: "https://movingwallshub.atlassian.net/wiki/x/74GKCQ" }],
+  "Imported How To Delete Content In The Storage": [{ label: "How to Delete Content in Storage", url: "https://movingwallshub.atlassian.net/wiki/x/EoKKCQ" }],
+  "Imported Playlist Management": [{ label: "Playlist Management", url: "https://movingwallshub.atlassian.net/wiki/x/bYKKCQ" }],
+  "Imported How To Add Remove Content In The Default Playlist": [{ label: "Default Playlist Guide", url: "https://movingwallshub.atlassian.net/wiki/x/h4KKCQ" }],
+  "Imported How To Schedule Content": [{ label: "How to Schedule Content", url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ" }],
+  "Imported How To Schedule Content On Lmx Content": [{ label: "How to Schedule Content", url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ" }],
+  "Imported How To Create A User": [{ label: "How to Create a User", url: "https://movingwallshub.atlassian.net/wiki/x/FIOKCQ" }],
+  "Imported User Roles And Permissions": [{ label: "User Roles & Permissions", url: "https://movingwallshub.atlassian.net/wiki/x/KIOKCQ" }],
+  "Imported Scheduling Bundles": [{ label: "Scheduling Bundles", url: "https://movingwallshub.atlassian.net/wiki/x/R4OKCQ" }],
+  "Imported How To Delete Inactive Devices": [{ label: "How to Delete Inactive Devices", url: "https://movingwallshub.atlassian.net/wiki/x/hoOKCQ" }],
+  "Imported Impact Of Deleting Devices": [{ label: "Impact of Deleting Devices", url: "https://movingwallshub.atlassian.net/wiki/x/sIOKCQ" }],
+  "Imported Playlist Metrics For Scheduled Content In Lmx Content": [{ label: "Playlist Metrics", url: "https://movingwallshub.atlassian.net/wiki/x/bYA6DQ" }],
+  "Imported How To Schedule Url And Google Ima Vast": [{ label: "Schedule URL & Google IMA (VAST)", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }],
+  "Imported How To Schedule Vast And Url": [{ label: "Schedule VAST & URL", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }],
+  "Imported How To Schedule Weather Temperature Trigger Widgets": [{ label: "Weather/Temperature Trigger Widgets", url: "https://movingwallshub.atlassian.net/wiki/x/bACXDw" }],
+  "Imported How To Schedule Place Exchange Widget": [{ label: "Place Exchange Widget Guide", url: "https://movingwallshub.atlassian.net/wiki/x/sQCXDw" }],
+  "Imported How To Schedule Place Exchange Widgets": [{ label: "Place Exchange Widget Guide", url: "https://movingwallshub.atlassian.net/wiki/x/sQCXDw" }],
+  "Imported How To Schedule Hivestack Widget": [{ label: "Hivestack Widget Guide", url: "https://movingwallshub.atlassian.net/wiki/x/AwDUCw" }],
+  "Imported Unable To Publish Due To Error Message": [{ label: "Unable to Publish – Error Guide", url: "https://movingwallshub.atlassian.net/wiki/x/zwCXDw" }],
+  "Imported Guides Unable To Publish Due To Error Message": [{ label: "Unable to Publish – Guide", url: "https://movingwallshub.atlassian.net/wiki/x/Hw_MCQ" }],
+  "Imported Installations Guide For Android And Windows": [{ label: "Installation Guide (Android & Windows)", url: "https://movingwallshub.atlassian.net/wiki/x/AoCTDw" }],
+  "Imported Download Mw Content App": [{ label: "Download MW Content App", url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw" }],
+  "Imported How To Download Lmx Content App": [{ label: "Download LMX Content App", url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw" }],
+  "Imported Mw Content Software Supported And System Requirements": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }],
+  "Imported Recommended Android Devices For Mw Content": [{ label: "Recommended Android Devices", url: "https://movingwallshub.atlassian.net/wiki/x/hwqMCQ" }],
+  "Imported Recommended Lg Webos Devices For Mw Content": [{ label: "Recommended LG webOS Devices", url: "https://movingwallshub.atlassian.net/wiki/x/kgqMCQ" }],
+  "Imported Recommended Brightsign Devices For Mw Content": [{ label: "Recommended BrightSign Devices", url: "https://movingwallshub.atlassian.net/wiki/x/nQqMCQ" }],
+  "Imported Recommended Windows Devices For Lmx Content": [{ label: "Recommended Windows Devices", url: "https://movingwallshub.atlassian.net/wiki/x/qAqMCQ" }],
+  "Imported Recommended Linux Devices For Mw Content": [{ label: "Recommended Linux Devices", url: "https://movingwallshub.atlassian.net/wiki/x/wAqMCQ" }],
+  "Imported Device And Platform Technical Requirements": [{ label: "Device & Platform Technical Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw" }],
+  "Imported Lmx Content Linux Installation Guide": [{ label: "Linux Installation Guide", url: "https://movingwallshub.atlassian.net/wiki/x/GQCjE" }],
+  "Imported Lmx Troubleshooting Guide Internal": [{ label: "LMX Troubleshooting Guide", url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ" }],
+  "Imported How To Schedule Trigger Widgets": [{ label: "Schedule Trigger Widgets", url: "https://movingwallshub.atlassian.net/wiki/x/eQeMCQ" }],
+  "Imported Lmx Content Black Screen Logo Issue": [{ label: "Black Screen / Logo Issue Guide", url: "https://movingwallshub.atlassian.net/wiki/x/SQiMCQ" }],
+  "Imported Lmx Content Black Screen Logo Issue Old Copy": [{ label: "Black Screen / Logo Issue Guide", url: "https://movingwallshub.atlassian.net/wiki/x/SQiMCQ" }],
+  "Imported Anydesk Remote Access": [{ label: "AnyDesk Remote Access Guide", url: "https://movingwallshub.atlassian.net/wiki/x/4geMCQ" }],
+  "Imported Cms Platform Stuck On Loading Page": [{ label: "CMS Stuck on Loading Page", url: "https://movingwallshub.atlassian.net/wiki/x/AAiMCQ" }],
+  "Imported Adb Connect Pc To Android Devices": [{ label: "ADB Connect PC to Android", url: "https://movingwallshub.atlassian.net/wiki/x/FAiMCQ" }],
+  "Imported Adb Over Wi Fi For Unrooted Android Tv Termux Method": [{ label: "ADB Over Wi-Fi (Termux Method)", url: "https://movingwallshub.atlassian.net/wiki/x/JQiMCQ" }],
+  "Imported How To Generate Device Playlog": [{ label: "Generate Device Playlog", url: "https://movingwallshub.atlassian.net/wiki/x/5giMCQ" }],
+  "Imported Unable To Delete Content": [{ label: "Unable to Delete Content", url: "https://movingwallshub.atlassian.net/wiki/x/FAmMCQ" }],
+  "Imported Android Apk Troubleshooting Steps For Lmx Content": [{ label: "Android APK Troubleshooting", url: "https://movingwallshub.atlassian.net/wiki/x/IQmMCQ" }],
+  "Imported Troubleshooting Unable To Add Sub Content": [{ label: "Unable to Add Sub-content", url: "https://movingwallshub.atlassian.net/wiki/x/vgmMCQ" }],
+  "Imported Troubleshooting Guide Content Not Syncing In Cms": [{ label: "Content Not Syncing in CMS", url: "https://movingwallshub.atlassian.net/wiki/x/4QmMCQ" }],
+  "Imported Root Cause Analysis Old Content Still Playing On Cms Connected Screens": [{ label: "Old Content Still Playing – RCA", url: "https://movingwallshub.atlassian.net/wiki/x/CAqMCQ" }],
+  "Imported Troubleshooting Missing Playlog Windows": [{ label: "Missing Playlog (Windows)", url: "https://movingwallshub.atlassian.net/wiki/x/KQqMCQ" }],
+  "Imported How To Download Playlogs From Old Inactive Devices": [{ label: "Download Playlogs from Inactive Devices", url: "https://movingwallshub.atlassian.net/wiki/x/TAqMCQ" }],
+  "Imported Guide How To Stream Youtube Link In Lmx Content": [{ label: "Stream YouTube Link in LMX Content", url: "https://movingwallshub.atlassian.net/wiki/x/ywqMCQ" }],
+  "Imported Placeholder Feature In Lmx Content": [{ label: "Placeholder Feature Guide", url: "https://movingwallshub.atlassian.net/wiki/x/DwuMCQ" }],
+  "Imported How To Avoid Wrongly Scheduling Content In Lmx": [{ label: "Avoid Wrong Scheduling", url: "https://movingwallshub.atlassian.net/wiki/x/TgyMCQ" }],
+  "Imported How To Set Device Time": [{ label: "Set Device Time", url: "https://movingwallshub.atlassian.net/wiki/x/1AyMCQ" }],
+  "Imported Lmx Content Account Creation Info Needed From Csms": [{ label: "Account Creation in LMX Content", url: "https://movingwallshub.atlassian.net/wiki/x/CQ2MCQ" }],
+  "Imported Step By Step To Replace Devices In Lmx Content": [{ label: "Replace Devices in LMX Content", url: "https://movingwallshub.atlassian.net/wiki/x/ZA2MCQ" }],
+  "Imported Enable Multi Factor Authentication Mfa Tenant Level": [{ label: "Enable MFA (Tenant Level)", url: "https://movingwallshub.atlassian.net/wiki/x/ng2MCQ" }],
+  "Imported Devices Showing As Offline But Playing Content Troubleshooting Guide": [{ label: "Offline but Still Playing Guide", url: "https://movingwallshub.atlassian.net/wiki/x/9w2MCQ" }],
+  "Imported How To Pair Lmx Inventory Billboard To Lmxc Devices": [{ label: "Pair LMX Inventory to Devices", url: "https://movingwallshub.atlassian.net/wiki/x/GA6MCQ" }],
+  "Imported Device Mapping Issue How To Remap Device To Correct Network And Location": [{ label: "Device Mapping / Remap Guide", url: "https://movingwallshub.atlassian.net/wiki/x/Vw6MCQ" }],
+  "Imported Troubleshooting Guide Fluctuating Online Offline Device Status In Dashboard": [{ label: "Fluctuating Online/Offline Status Guide", url: "https://movingwallshub.atlassian.net/wiki/x/hA6MCQ" }],
+  "Imported Cms Platform Downtime Incident Backend Server Error Or Timeout": [{ label: "CMS Downtime / Backend Error Guide", url: "https://movingwallshub.atlassian.net/wiki/x/sw6MCQ" }],
+  "Imported Cricket Widget Guide": [{ label: "Cricket Widget Guide", url: "https://movingwallshub.atlassian.net/wiki/x/wA6MCQ" }],
+  "Imported Pull To Content Resolution Fix For Programmatic Campaigns": [{ label: "Programmatic Resolution Fix", url: "https://movingwallshub.atlassian.net/wiki/x/GQANDg" }],
+  "Imported Auto Boot Shutdown Configuration Guide": [{ label: "Auto Boot/Shutdown Configuration", url: "https://movingwallshub.atlassian.net/wiki/x/BYCYDg" }],
+  "Imported Heartbeat Mechanism In Lmx Content Cms": [{ label: "Heartbeat Mechanism in CMS", url: "https://movingwallshub.atlassian.net/wiki/x/SYGKCQ" }]
+};
+
+// Platform-specific links used in hardware requirement answers
+const platformSourceLinks: Record<string, SourceLink[]> = {
+  "Android": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Recommended Android Devices", url: "https://movingwallshub.atlassian.net/wiki/x/hwqMCQ" }],
+  "Windows": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Recommended Windows Devices", url: "https://movingwallshub.atlassian.net/wiki/x/qAqMCQ" }],
+  "Linux": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Recommended Linux Devices", url: "https://movingwallshub.atlassian.net/wiki/x/wAqMCQ" }, { label: "Linux Installation Guide", url: "https://movingwallshub.atlassian.net/wiki/x/GQCjE" }],
+  "LG webOS": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Recommended LG webOS Devices", url: "https://movingwallshub.atlassian.net/wiki/x/kgqMCQ" }],
+  "BrightSign": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Recommended BrightSign Devices", url: "https://movingwallshub.atlassian.net/wiki/x/nQqMCQ" }]
+};
+
+function getSourceLinks(matches: LocalSearchMatch[]): SourceLink[] {
+  const seen = new Set<string>();
+  return matches.slice(0, 3).flatMap((match) => {
+    const links = topicLinks[String(match.topic)] ?? [];
+    return links.filter((link) => {
+      if (seen.has(link.url)) return false;
+      seen.add(link.url);
+      return true;
+    });
+  }).slice(0, 3);
+}
 
 const stopWords = new Set([
   "a",
@@ -832,17 +951,23 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       queryTerms,
       matches,
       confidence: "high",
-      answer: buildPlatformRequirementAnswer(platformRequirement)
+      answer: buildPlatformRequirementAnswer(platformRequirement),
+      sourceLinks: platformSourceLinks[platformRequirement.platform] ?? []
     };
   }
 
   if (intent === "requirements") {
+    const generalLinks: SourceLink[] = [
+      { label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" },
+      { label: "Device & Platform Technical Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw" }
+    ];
     return {
       intent,
       queryTerms,
       matches,
       confidence: "high",
-      answer: buildGeneralRequirementsAnswer()
+      answer: buildGeneralRequirementsAnswer(),
+      sourceLinks: generalLinks
     };
   }
 
@@ -865,7 +990,8 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       queryTerms,
       matches,
       confidence,
-      answer: buildClarifyingAnswer(matches)
+      answer: buildClarifyingAnswer(matches),
+      sourceLinks: getSourceLinks(matches)
     };
   }
 
@@ -881,7 +1007,8 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
     queryTerms,
     matches,
     confidence,
-    answer
+    answer,
+    sourceLinks: getSourceLinks(matches)
   };
 }
 

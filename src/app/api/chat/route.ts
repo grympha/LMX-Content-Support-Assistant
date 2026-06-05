@@ -224,13 +224,15 @@ export async function POST(request: Request) {
     if (imageAttachments.length > 0 && !message && !attachmentContext) {
       return NextResponse.json({
         reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
-        source: "local"
+        source: "local",
+        sourceLinks: []
       });
     }
 
     return NextResponse.json({
       reply: localReply,
-      source: localSearch.confidence === "low" ? "local" : "knowledge"
+      source: localSearch.confidence === "low" ? "local" : "knowledge",
+      sourceLinks: localSearch.sourceLinks
     });
   }
 
@@ -267,6 +269,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
+      sourceLinks: localSearch.sourceLinks,
       warning: `AI unavailable. Used local knowledge fallback.`
     });
   }
@@ -285,7 +288,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       reply,
-      source: provider
+      source: provider,
+      sourceLinks: localSearch.sourceLinks
     });
   } catch (error) {
     console.error(error);
@@ -298,7 +302,8 @@ export async function POST(request: Request) {
         if (reply) {
           return NextResponse.json({
             reply,
-            source: "openai"
+            source: "openai",
+            sourceLinks: localSearch.sourceLinks
           });
         }
       } catch (fallbackError) {

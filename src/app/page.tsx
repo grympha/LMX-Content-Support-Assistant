@@ -30,11 +30,14 @@ import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowle
 
 type ChatSource = "openai" | "knowledge" | "local" | "claude";
 
+type SourceLink = { label: string; url: string };
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
   source?: ChatSource;
+  sourceLinks?: SourceLink[];
 };
 
 type ChatAttachment = {
@@ -232,10 +235,10 @@ export default function Home() {
         throw new Error("Chat request failed.");
       }
 
-      const data = (await response.json()) as { reply: string; source: ChatSource };
+      const data = (await response.json()) as { reply: string; source: ChatSource; sourceLinks?: SourceLink[] };
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: data.reply, source: data.source }
+        { id: crypto.randomUUID(), role: "assistant", content: data.reply, source: data.source, sourceLinks: data.sourceLinks ?? [] }
       ]);
     } catch {
       setMessages((current) => [
@@ -524,7 +527,29 @@ export default function Home() {
                       </button>
                     ) : null}
                   </div>
-                  {message.role === "assistant" ? <FormattedResponse content={message.content} /> : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                  {message.role === "assistant" ? (
+                    <>
+                      <FormattedResponse content={message.content} />
+                      {message.sourceLinks && message.sourceLinks.length > 0 ? (
+                        <div className="mt-4 border-t border-line pt-3">
+                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
+                          <div className="flex flex-wrap gap-2">
+                            {message.sourceLinks.map((link) => (
+                              <a
+                                key={link.url}
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
+                              >
+                                {link.label} ↗
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
                 </article>
               ))}
 
