@@ -225,6 +225,17 @@ export const commonQuestions: CommonQuestion[] = [
     ]
   },
   {
+    question: "Where can I download the LMX Content player?",
+    answer:
+      "Where can I download the LMX Content player?\n\nLatest versions:\n- Windows: V1.0.38\n- Linux / Ubuntu: V1.0.35\n- Android: V2.9.1.2 Native\n- BrightSign: V1.1.3\n\nClick the download links below to get the latest installer for your platform.\n\nImportant:\n- Install directly over the existing version.\n- Do NOT uninstall first — this preserves pairing, configuration, and cached content.\n- For Android, enable installation from unknown sources before installing the APK.",
+    sourceLinks: [
+      { label: "Windows V1.0.38 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/windows/1.0.38/MW+Content-setup-1.0.38.exe" },
+      { label: "Linux/Ubuntu V1.0.35 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/linux/1.0.35/mac-media-player-1.0.35.AppImage" },
+      { label: "Android V2.9.1.2 – Download APK", url: "https://s3.ap-south-1.amazonaws.com/player.movingwalls.com/android_app/apps/Android/webview/2.9.1.2/lmx_web_28_1_291.apk" },
+      { label: "BrightSign V1.1.3 – Download", url: "https://moving-walls-live.s3.ap-southeast-1.amazonaws.com/player-builds/updates/brightsign/update/LMX-Player.zip" }
+    ]
+  },
+  {
     question: "Still Need Help?",
     answer:
       "Still Need Help?\n\nIf the issue persists after troubleshooting, please contact the Moving Walls Support Team.\n\nInformation to Provide\n- Tenant Name\n- Device Name\n- Location Name\n- Screenshot/Error Message\n- Date & Time of Issue\n- Steps already performed\n\nProviding this information helps us investigate and resolve issues faster.",

@@ -166,7 +166,13 @@ const topicLinks: Record<string, SourceLink[]> = {
   "Imported Pull To Content Resolution Fix For Programmatic Campaigns": [{ label: "Programmatic Resolution Fix", url: "https://movingwallshub.atlassian.net/wiki/x/GQANDg" }],
   "Imported Auto Boot Shutdown Configuration Guide": [{ label: "Auto Boot/Shutdown Configuration", url: "https://movingwallshub.atlassian.net/wiki/x/BYCYDg" }],
   "Imported Heartbeat Mechanism In Lmx Content Cms": [{ label: "Heartbeat Mechanism in CMS", url: "https://movingwallshub.atlassian.net/wiki/x/SYGKCQ" }],
-  "Imported Pull To Content": [{ label: "LMX Content – Pull To Content", url: "https://movingwallshub.atlassian.net/wiki/x/FICAEQ" }]
+  "Imported Pull To Content": [{ label: "LMX Content – Pull To Content", url: "https://movingwallshub.atlassian.net/wiki/x/FICAEQ" }],
+  "Imported Download Links": [
+    { label: "Windows V1.0.38 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/windows/1.0.38/MW+Content-setup-1.0.38.exe" },
+    { label: "Linux/Ubuntu V1.0.35 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/linux/1.0.35/mac-media-player-1.0.35.AppImage" },
+    { label: "Android V2.9.1.2 – Download APK", url: "https://s3.ap-south-1.amazonaws.com/player.movingwalls.com/android_app/apps/Android/webview/2.9.1.2/lmx_web_28_1_291.apk" },
+    { label: "BrightSign V1.1.3 – Download", url: "https://moving-walls-live.s3.ap-southeast-1.amazonaws.com/player-builds/updates/brightsign/update/LMX-Player.zip" }
+  ]
 };
 
 // Platform-specific links used in hardware requirement answers
@@ -239,7 +245,8 @@ const synonymGroups = [
   ["bundle scheduling", "content bundle", "multi schedule", "bundle content"],
   ["media format", "file format", "supported format", "video format", "image format"],
   ["webview version", "webview update", "chrome version", "browser version", "webview"],
-  ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"]
+  ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"],
+  ["download", "download link", "apk", "installer", "setup", "appimage", "app download", "player download", "install app", "get app", "latest version", "update player", "new version", "exe", "zip"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
