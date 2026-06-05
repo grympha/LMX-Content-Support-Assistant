@@ -355,16 +355,17 @@ function detectIntent(message: string): SearchIntent {
     }
   }
 
+  // Troubleshooting signals must win over requirements keywords (e.g. "android device offline")
+  if (/\b(why|error|issue|problem|not|fail|failed|offline|black|blank|wrong|missing|stuck|cannot|can't|unable)\b/.test(normalized)) {
+    return "troubleshooting";
+  }
+
   if (/\b(requirement|requirements|spec|hardware|os|operating system|support|supported|format|formats|webview|android|windows)\b/.test(normalized)) {
     return "requirements";
   }
 
   if (/\b(playlog|playlogs|report|proof of play|log)\b/.test(normalized)) {
     return "reporting";
-  }
-
-  if (/\b(why|error|issue|problem|not|fail|failed|offline|black|blank|wrong|missing|stuck|cannot|can't|unable)\b/.test(normalized)) {
-    return "troubleshooting";
   }
 
   if (/\b(how|create|setup|set up|install|pair|publish|schedule|upload|add|generate|download)\b/.test(normalized)) {
@@ -558,7 +559,7 @@ function bestKnowledgeEntry(topic: string, message: string, terms: string[]) {
   const normalizedTopic = normalize(topic);
   const normalizedMessage = normalize(message);
 
-  return lmxKnowledge
+  const best = lmxKnowledge
     .map((entry) => ({
       entry,
       score:
@@ -566,7 +567,10 @@ function bestKnowledgeEntry(topic: string, message: string, terms: string[]) {
         entry.keywords.reduce((total, keyword) => total + (normalizedMessage.includes(normalize(keyword)) ? 8 : 0), 0) +
         terms.reduce((total, term) => total + (entry.keywords.some((keyword) => normalize(keyword) === normalize(term)) ? 3 : 0), 0)
     }))
-    .sort((a, b) => b.score - a.score)[0]?.entry;
+    .sort((a, b) => b.score - a.score)[0];
+
+  // Require at least one keyword match to avoid returning an unrelated entry
+  return (best?.score ?? 0) >= 8 ? best?.entry : undefined;
 }
 
 function bulletLines(content: string) {
@@ -631,7 +635,9 @@ function findPlaybook(message: string, terms: string[]) {
 
 function findPlatformRequirement(message: string) {
   const normalizedMessage = normalize(message);
-  const asksRequirement = /\b(requirement|requirements|spec|specs|specification|hardware|os|operating system|ram|rom|processor|cpu|support|supported)\b/.test(normalizedMessage);
+
+  // Accept explicit requirement keywords OR platform names as sufficient signal
+  const asksRequirement = /\b(requirement|requirements|spec|specs|specification|hardware|os|operating system|ram|rom|processor|cpu|support|supported|recommend|recommended|minimum|compatible|android|windows|linux|webos|brightsign)\b/.test(normalizedMessage);
 
   if (!asksRequirement) {
     return undefined;
@@ -640,6 +646,33 @@ function findPlatformRequirement(message: string) {
   return platformRequirements.find((requirement) =>
     requirement.triggers.some((trigger) => normalizedMessage.includes(normalize(trigger)))
   );
+}
+
+function buildGeneralRequirementsAnswer() {
+  return `LMX Content System Requirements
+
+LMX Content supports the following platforms. Ask about a specific one for full hardware specs.
+
+Supported platforms
+- Android: Android 11 and above. Minimum 4 GB RAM / 64 GB ROM; recommended 8 GB RAM / 128 GB ROM.
+- Windows: Windows 10 and 11. Minimum 4 GB RAM; recommended Intel Core i5 or i7.
+- Linux: Ubuntu 18.04 LTS and above. Minimum 4 GB RAM.
+- LG webOS: webOS Signage 4.0.1. 2–4 GB RAM / 8–16 GB ROM.
+- BrightSign: Models HS123, XT1143, HD224.
+
+Recommended media formats
+- Images: PNG, JPG, JPEG
+- Videos: MP4 (supported on all platforms); MOV, WEBM, WMV on Windows/Linux
+
+What to check
+- Confirm the device OS and version meets the minimum requirement for its platform.
+- Confirm RAM, ROM, and processor class match at least the minimum — preferably the recommended spec.
+- For programmatic or HTML playback, confirm WebView version 100+ (Android) or a modern browser (Windows/Linux).
+
+Next step
+- Ask the client for the exact device model, OS version, CPU, RAM, and ROM.
+- Compare against the platform requirements above before approving the device.
+- For full hardware details, ask: "Android requirements", "Windows requirements", etc.`;
 }
 
 function buildPlatformRequirementAnswer(requirement: PlatformRequirement) {
@@ -728,7 +761,7 @@ Please ask again with the screen, module, or issue you are working on.`;
 function buildTroubleshootingAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[], message: string, terms: string[]) {
   const playbookMatch = findPlaybook(message, terms);
   const playbook = playbookMatch && playbookMatch.score >= 8 ? playbookMatch.playbook : undefined;
-  const issueSpecific = actionLines(matches, [
+  const issueSpecific = actionLines(matches.slice(0, 2), [
     /\b(check|confirm|verify|review|validate|ensure|open|go to|select|compare)\b/,
     /\b(republish|restart|reboot|sync|synchronization|publish|remove|clean|update|replace|trigger)\b/
   ]);
@@ -759,7 +792,7 @@ ${playbook?.clientResponse ?? "We are checking the CMS setup, device status, pub
 }
 
 function buildStandardAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[], intent: SearchIntent) {
-  const matchedBullets = actionLines(matches, [/\b(click|select|go to|enter|choose|save|approve|publish|download|upload|create|set|enable|verify|confirm|check)\b/]);
+  const matchedBullets = actionLines(matches.slice(0, 2), [/\b(click|select|go to|enter|choose|save|approve|publish|download|upload|create|set|enable|verify|confirm|check)\b/]);
   const steps = entry?.steps ?? [];
   const notes = entry?.importantNotes ?? [];
   const heading = intent === "requirements" ? "What to check" : "How to do it";
@@ -800,6 +833,16 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       matches,
       confidence: "high",
       answer: buildPlatformRequirementAnswer(platformRequirement)
+    };
+  }
+
+  if (intent === "requirements") {
+    return {
+      intent,
+      queryTerms,
+      matches,
+      confidence: "high",
+      answer: buildGeneralRequirementsAnswer()
     };
   }
 
