@@ -238,7 +238,7 @@ const synonymGroups = [
   ["storage", "upload", "media library", "main storage", "file upload"],
   ["default playlist", "fallback playlist", "default content", "fallback"],
   ["programmatic", "vast", "ssp", "dsp", "no fill", "no-fill", "webview", "ima"],
-  ["hardware", "requirements", "specification", "spec", "operating system", "os", "android", "windows"],
+  ["hardware", "requirements", "specification", "spec", "operating system", "supported platform"],
   ["user management", "user", "role", "roles", "permission", "permissions", "access"],
   ["not approved", "content approval", "approve content", "pending approval", "approval status"],
   ["ad tag", "vast tag", "ad url", "ima sdk", "ima tag", "ad server"],

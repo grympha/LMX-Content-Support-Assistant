@@ -225,6 +225,38 @@ export const commonQuestions: CommonQuestion[] = [
     ]
   },
   {
+    question: "How do I download the Android APK?",
+    answer:
+      "How do I download the Android APK?\n\nAndroid – V2.9.1.2 Native\n\nClick the download link below to get the latest Android APK.\n\nInstallation steps:\n- Enable installation from unknown sources on the device.\n- Download and install the APK.\n- Do NOT uninstall the existing version first.\n- Launch the player.\n\nInstalling over the existing version preserves device pairing, configuration, and cached content.",
+    sourceLinks: [
+      { label: "Android V2.9.1.2 – Download APK", url: "https://s3.ap-south-1.amazonaws.com/player.movingwalls.com/android_app/apps/Android/webview/2.9.1.2/lmx_web_28_1_291.apk" }
+    ]
+  },
+  {
+    question: "How do I download the Windows installer?",
+    answer:
+      "How do I download the Windows installer?\n\nWindows – V1.0.38\n\nClick the download link below to get the latest Windows installer.\n\nInstallation steps:\n- Download MW Content-setup-1.0.38.exe.\n- Run the installer and complete the wizard.\n- Do NOT uninstall the existing version first.\n- Launch the player.\n\nInstalling over the existing version preserves device pairing, configuration, and cached content.",
+    sourceLinks: [
+      { label: "Windows V1.0.38 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/windows/1.0.38/MW+Content-setup-1.0.38.exe" }
+    ]
+  },
+  {
+    question: "How do I download the Linux AppImage?",
+    answer:
+      "How do I download the Linux AppImage?\n\nLinux / Ubuntu – V1.0.35\n\nClick the download link below to get the latest Linux AppImage.\n\nInstallation steps:\n- Download the AppImage file.\n- Make the file executable: chmod +x mac-media-player-1.0.35.AppImage\n- Run the AppImage.\n- Launch the player.",
+    sourceLinks: [
+      { label: "Linux/Ubuntu V1.0.35 – Download", url: "https://mw-lmx-content-hosting.s3.ap-south-1.amazonaws.com/player-builds/updates/linux/1.0.35/mac-media-player-1.0.35.AppImage" }
+    ]
+  },
+  {
+    question: "How do I download the BrightSign player?",
+    answer:
+      "How do I download the BrightSign player?\n\nBrightSign – V1.1.3\n\nClick the download link below to get the latest BrightSign package.\n\nInstallation steps:\n- Download the ZIP file.\n- Extract the package.\n- Follow the BrightSign deployment process.\n- Launch the player.",
+    sourceLinks: [
+      { label: "BrightSign V1.1.3 – Download", url: "https://moving-walls-live.s3.ap-southeast-1.amazonaws.com/player-builds/updates/brightsign/update/LMX-Player.zip" }
+    ]
+  },
+  {
     question: "Where can I download the LMX Content player?",
     answer:
       "Where can I download the LMX Content player?\n\nLatest versions:\n- Windows: V1.0.38\n- Linux / Ubuntu: V1.0.35\n- Android: V2.9.1.2 Native\n- BrightSign: V1.1.3\n\nClick the download links below to get the latest installer for your platform.\n\nImportant:\n- Install directly over the existing version.\n- Do NOT uninstall first — this preserves pairing, configuration, and cached content.\n- For Android, enable installation from unknown sources before installing the APK.",
