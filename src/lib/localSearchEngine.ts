@@ -76,8 +76,6 @@ const stopWords = new Set([
   "and",
   "are",
   "can",
-  "cms",
-  "content",
   "do",
   "does",
   "for",
@@ -86,7 +84,6 @@ const stopWords = new Set([
   "in",
   "is",
   "it",
-  "lmx",
   "my",
   "of",
   "on",
@@ -116,7 +113,12 @@ const synonymGroups = [
   ["default playlist", "fallback playlist", "default content", "fallback"],
   ["programmatic", "vast", "ssp", "dsp", "no fill", "no-fill", "webview", "ima"],
   ["hardware", "requirements", "specification", "spec", "operating system", "os", "android", "windows"],
-  ["user management", "user", "role", "roles", "permission", "permissions", "access"]
+  ["user management", "user", "role", "roles", "permission", "permissions", "access"],
+  ["not approved", "content approval", "approve content", "pending approval", "approval status"],
+  ["ad tag", "vast tag", "ad url", "ima sdk", "ima tag", "ad server"],
+  ["bundle scheduling", "content bundle", "multi schedule", "bundle content"],
+  ["media format", "file format", "supported format", "video format", "image format"],
+  ["webview version", "webview update", "chrome version", "browser version", "webview"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
@@ -380,11 +382,17 @@ function expandTerms(message: string, intake?: IssueIntake) {
       .filter((word) => word.length > 2 && !stopWords.has(word))
   );
 
-  // Add adjacent bigrams to capture phrase matches like "black screen", "play logs"
+  // Add adjacent bigrams and trigrams to capture phrase matches like "black screen", "proof of play"
   for (let i = 0; i < words.length - 1; i++) {
     const bigram = `${words[i]} ${words[i + 1]}`;
     if (bigram.length > 4 && !stopWords.has(words[i]) && !stopWords.has(words[i + 1])) {
       terms.add(bigram);
+    }
+    if (i < words.length - 2) {
+      const trigram = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+      if (!stopWords.has(words[i]) && !stopWords.has(words[i + 2])) {
+        terms.add(trigram);
+      }
     }
   }
 
@@ -413,7 +421,7 @@ function expandTerms(message: string, intake?: IssueIntake) {
     }
   }
 
-  return Array.from(terms).slice(0, 120);
+  return Array.from(terms).slice(0, 200);
 }
 
 function markdownToPlainText(value: string) {
@@ -471,6 +479,15 @@ function readKnowledgeChunks() {
   });
 }
 
+let _chunkCache: ReturnType<typeof readKnowledgeChunks> | null = null;
+
+function getCachedChunks() {
+  if (!_chunkCache) {
+    _chunkCache = readKnowledgeChunks();
+  }
+  return _chunkCache;
+}
+
 function countOccurrences(haystack: string, term: string) {
   const normalizedTerm = normalize(term);
 
@@ -483,7 +500,7 @@ function countOccurrences(haystack: string, term: string) {
   }
 
   const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return haystack.match(new RegExp(`(^|\\s)${escaped}(\\s|$)`, "g"))?.length ?? 0;
+  return haystack.match(new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, "g"))?.length ?? 0;
 }
 
 function scoreChunk(chunk: { topic: string; heading: string; content: string }, terms: string[], intent: SearchIntent, intake?: IssueIntake) {
@@ -668,12 +685,19 @@ function confidenceFor(matches: LocalSearchMatch[]) {
   const best = matches[0]?.score ?? 0;
   const second = matches[1]?.score ?? 0;
 
-  if (best >= 90 || (best >= 60 && best - second >= 18)) {
+  if (best === 0) {
+    return "low";
+  }
+
+  const gap = best - second;
+  // Ratio of the gap to the best score — stable as corpus grows
+  const gapRatio = second > 0 ? gap / best : 1;
+
+  if (best >= 80 || (best >= 45 && gapRatio >= 0.25)) {
     return "high";
   }
 
-  // Lower the medium threshold slightly to surface helpful results sooner
-  if (best >= 20) {
+  if (best >= 18) {
     return "medium";
   }
 
@@ -761,12 +785,12 @@ ${formatBullets(nextSteps, 3)}`;
 export function buildLocalSearchResponse(message: string, intake?: IssueIntake): LocalSearchResult {
   const intent = detectIntent(message);
   const queryTerms = expandTerms(message, intake);
-  const chunks = readKnowledgeChunks();
+  const chunks = getCachedChunks();
   const matches = chunks
     .map((chunk) => scoreChunk(chunk, queryTerms, intent, intake))
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .slice(0, 8);
   const platformRequirement = intent === "requirements" ? findPlatformRequirement(message) : undefined;
 
   if (platformRequirement) {

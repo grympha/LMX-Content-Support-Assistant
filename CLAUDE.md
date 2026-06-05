@@ -30,27 +30,36 @@ The `/api/chat` route should:
 ## Possible environment variables
 
 - `CLAUDE_API_KEY` – Anthropic API key for Claude access
-- `CLAUDE_MODEL` – optional model override such as `claude-3.5`
-- `CLAUDE_API_URL` – optional base URL if using a proxy or Anthropic hosted endpoint
+- `CLAUDE_MODEL` – optional model override (default: `claude-haiku-4-5`)
+- `CLAUDE_API_URL` – optional base URL if using a proxy or alternative endpoint
 
 ## Sample Claude request
 
+Anthropic's Messages API differs from OpenAI's — note the endpoint, auth header, required `anthropic-version` header, `max_tokens`, and response shape.
+
 ```js
-const response = await fetch(process.env.CLAUDE_API_URL || "https://api.anthropic.com/v1/chat/completions", {
+// System goes as a top-level param, not a message role.
+// Consecutive same-role user messages must be merged before sending.
+const response = await fetch(process.env.CLAUDE_API_URL || "https://api.anthropic.com/v1/messages", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${process.env.CLAUDE_API_KEY}`
+    "x-api-key": process.env.CLAUDE_API_KEY,
+    "anthropic-version": "2023-06-01"
   },
   body: JSON.stringify({
-    model: process.env.CLAUDE_MODEL || "claude-3.5",
-    temperature: 0.2,
+    model: process.env.CLAUDE_MODEL || "claude-haiku-4-5",
+    max_tokens: 2048,
+    system: "Use the local LMX Content training knowledge as the primary source.",
     messages: [
-      { role: "system", content: "Use the local LMX Content training knowledge as the primary source." },
       { role: "user", content: "..." }
     ]
   })
 });
+
+// Response shape: { content: [{ type: "text", text: "..." }] }
+const data = await response.json();
+const reply = data.content?.find(b => b.type === "text")?.text;
 ```
 
 ## Notes

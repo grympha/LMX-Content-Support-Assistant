@@ -40,17 +40,36 @@ async function callOpenAI(messages: OpenAiMessage[]) {
 }
 
 async function callClaude(messages: OpenAiMessage[]) {
-  const url = process.env.CLAUDE_API_URL ?? "https://api.anthropic.com/v1/chat/completions";
+  const url = process.env.CLAUDE_API_URL ?? "https://api.anthropic.com/v1/messages";
+
+  // Anthropic's Messages API takes system as a top-level string, not a message role
+  const systemParts = messages.filter(m => m.role === "system").map(m => m.content);
+  const system = systemParts.join("\n\n") || undefined;
+
+  // Anthropic requires strictly alternating user/assistant roles — merge consecutive same-role messages
+  const nonSystem = messages.filter(m => m.role !== "system");
+  const anthropicMessages: { role: "user" | "assistant"; content: string }[] = [];
+  for (const msg of nonSystem) {
+    const last = anthropicMessages[anthropicMessages.length - 1];
+    if (last && last.role === msg.role) {
+      last.content += "\n\n" + msg.content;
+    } else {
+      anthropicMessages.push({ role: msg.role as "user" | "assistant", content: msg.content });
+    }
+  }
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.CLAUDE_API_KEY}`
+      "x-api-key": process.env.CLAUDE_API_KEY ?? "",
+      "anthropic-version": "2023-06-01"
     },
     body: JSON.stringify({
-      model: process.env.CLAUDE_MODEL ?? "claude-3.5",
-      messages,
-      temperature: 0.2
+      model: process.env.CLAUDE_MODEL ?? "claude-haiku-4-5",
+      max_tokens: 2048,
+      system,
+      messages: anthropicMessages
     })
   });
 
@@ -58,7 +77,11 @@ async function callClaude(messages: OpenAiMessage[]) {
     throw new Error(`Claude request failed with ${response.status}`);
   }
 
-  return (await response.json()) as { choices?: Array<{ message?: { content?: string } }>; completion?: string };
+  const data = await response.json() as { content?: Array<{ type: string; text: string }> };
+  const text = data.content?.find(block => block.type === "text")?.text ?? null;
+
+  // Normalize to OpenAI-compatible shape so downstream parsing is unchanged
+  return { choices: [{ message: { content: text } }] };
 }
 
 function readCookie(cookieHeader: string, name: string) {
@@ -254,7 +277,7 @@ export async function POST(request: Request) {
         ? await callClaude(messages)
         : await callOpenAI(messages);
 
-    const reply = data.choices?.[0]?.message?.content || (data as { completion?: string }).completion;
+    const reply = data.choices?.[0]?.message?.content;
 
     if (!reply) {
       return await fallbackToLocal(`No reply returned from ${provider}.`);
