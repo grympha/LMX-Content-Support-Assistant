@@ -378,7 +378,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">LMX Content CMS</p>
-            <h1 className="text-2xl font-semibold text-ink">Training Assistant</h1>
+            <h1 className="text-2xl font-semibold text-ink">Support & Training Assistant</h1>
             <p className="mt-1 text-xs text-slate-500">Signed in as {username}</p>
           </div>
           <button
@@ -701,7 +701,7 @@ function TrainingOverview() {
       <div className="mb-4">
         <h2 className="text-base font-semibold text-ink">Overview</h2>
         <p className="mt-2">
-          The LMX Content CMS Training Assistant is an internal learning and support tool designed to help users understand and operate the LMX Content CMS platform.
+          The LMX Content CMS Support & Training Assistant is an internal support and training tool designed to help users understand and operate the LMX Content CMS platform.
         </p>
       </div>
 
