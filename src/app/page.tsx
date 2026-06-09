@@ -334,7 +334,7 @@ export default function Home() {
               <Lock className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-ink">LMX Content Training Assistant</h1>
+              <h1 className="text-xl font-semibold text-ink">LMX Content Support & Training Assistant</h1>
               <p className="text-sm text-slate-600">Internal training access</p>
             </div>
           </div>
