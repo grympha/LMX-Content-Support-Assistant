@@ -555,6 +555,7 @@ function expandTerms(message: string, intake?: IssueIntake) {
 
 function markdownToPlainText(value: string) {
   return value
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, link, alias) => alias ?? link)
     .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, ""))
     .replace(/^\s*\|(.+)\|\s*$/gm, "$1")
     .replace(/[#*_`>]/g, "")
@@ -594,16 +595,36 @@ function chunkMarkdown(topic: string, content: string) {
   return chunks;
 }
 
-function readKnowledgeChunks() {
-  const files = existsSync(topicRoot) ? readdirSync(topicRoot).filter((file) => file.endsWith(".md")) : [];
+const SKIP_DIRS = new Set(["knowledge-map"]);
+const SKIP_ROOT_FILES = new Set(["HOME.md", "lmx-content-training-module.md"]);
 
-  return files.flatMap((file) => {
-    const filePath = path.join(topicRoot, file);
-    if (!existsSync(filePath)) {
-      return [];
+function walkMarkdownFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  const results: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!entry.name.startsWith(".") && !SKIP_DIRS.has(entry.name)) {
+        results.push(...walkMarkdownFiles(path.join(dir, entry.name)));
+      }
+    } else if (entry.name.endsWith(".md")) {
+      results.push(path.join(dir, entry.name));
     }
+  }
+  return results;
+}
 
-    const topic = fileTopics.get(file) ?? titleCaseFromFile(file);
+function topicLabelFromPath(filePath: string) {
+  const relative = path.relative(knowledgeRoot, filePath);
+  const parts = relative.replace(/\.md$/i, "").split(path.sep);
+  return titleCaseFromFile(parts[parts.length - 1] + ".md");
+}
+
+function readKnowledgeChunks() {
+  return walkMarkdownFiles(knowledgeRoot).flatMap((filePath) => {
+    const fileName = path.basename(filePath);
+    const depth = path.relative(knowledgeRoot, filePath).split(path.sep).length;
+    if (depth === 1 && SKIP_ROOT_FILES.has(fileName)) return [];
+    const topic = fileTopics.get(fileName) ?? topicLabelFromPath(filePath);
     return chunkMarkdown(topic, readFileSync(filePath, "utf8"));
   });
 }
