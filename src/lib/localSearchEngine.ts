@@ -13,7 +13,11 @@ export type LocalSearchMatch = {
   content: string;
   score: number;
   matchedTerms: string[];
+  sourceFile: string;
+  sourceFolder: string;
 };
+
+export type SourceNote = { file: string; folder: string; heading: string };
 
 export type LocalSearchResult = {
   intent: SearchIntent;
@@ -22,6 +26,7 @@ export type LocalSearchResult = {
   confidence: "high" | "medium" | "low";
   answer: string;
   sourceLinks: SourceLink[];
+  sourceNotes: SourceNote[];
 };
 
 type SupportPlaybook = {
@@ -246,7 +251,9 @@ const synonymGroups = [
   ["media format", "file format", "supported format", "video format", "image format"],
   ["webview version", "webview update", "chrome version", "browser version", "webview"],
   ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"],
-  ["download", "download link", "apk", "installer", "setup", "appimage", "app download", "player download", "install app", "get app", "latest version", "update player", "new version", "exe", "zip"]
+  ["download", "download link", "apk", "installer", "setup", "appimage", "app download", "player download", "install app", "get app", "latest version", "update player", "new version", "exe", "zip"],
+  ["max dsp", "demand side platform", "advertiser", "buyer", "explore mode", "instant mode", "conventional mode", "campaign planning", "signals", "media inventories"],
+  ["ssp overview", "supply side platform", "publisher", "inventory management", "deal management", "deal id", "pmp", "dv360", "place exchange", "viooh", "programmatic workflow"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
@@ -564,8 +571,8 @@ function markdownToPlainText(value: string) {
     .trim();
 }
 
-function chunkMarkdown(topic: string, content: string) {
-  const chunks: Array<{ topic: string; heading: string; content: string }> = [];
+function chunkMarkdown(topic: string, content: string, sourceFile: string, sourceFolder: string) {
+  const chunks: Array<{ topic: string; heading: string; content: string; sourceFile: string; sourceFolder: string }> = [];
   const lines = content.replace(/\r/g, "").split("\n");
   let currentHeading = topic;
   let buffer: string[] = [];
@@ -573,7 +580,7 @@ function chunkMarkdown(topic: string, content: string) {
   function flush() {
     const text = markdownToPlainText(buffer.join("\n"));
     if (text.length > 30) {
-      chunks.push({ topic, heading: currentHeading, content: text });
+      chunks.push({ topic, heading: currentHeading, content: text, sourceFile, sourceFolder });
     }
     buffer = [];
   }
@@ -597,6 +604,20 @@ function chunkMarkdown(topic: string, content: string) {
 
 const SKIP_DIRS = new Set(["knowledge-map"]);
 const SKIP_ROOT_FILES = new Set(["HOME.md", "lmx-content-training-module.md"]);
+
+const FOLDER_PRIORITY: Record<string, number> = {
+  faq: 200,
+  troubleshooting: 150,
+  "common-support-questions": 120,
+  rca: 100,
+  "incident-library": 80,
+  ssp: 60,
+  "max-dsp": 60,
+  "deployment-checklists": 40,
+  topics: 30,
+  "customer-training": 20,
+  "lmx-content-training-module": 10
+};
 
 function walkMarkdownFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -622,10 +643,12 @@ function topicLabelFromPath(filePath: string) {
 function readKnowledgeChunks() {
   return walkMarkdownFiles(knowledgeRoot).flatMap((filePath) => {
     const fileName = path.basename(filePath);
-    const depth = path.relative(knowledgeRoot, filePath).split(path.sep).length;
-    if (depth === 1 && SKIP_ROOT_FILES.has(fileName)) return [];
+    const relative = path.relative(knowledgeRoot, filePath);
+    const parts = relative.split(path.sep);
+    if (parts.length === 1 && SKIP_ROOT_FILES.has(fileName)) return [];
+    const sourceFolder = parts.length > 1 ? parts[0] : "root";
     const topic = fileTopics.get(fileName) ?? topicLabelFromPath(filePath);
-    return chunkMarkdown(topic, readFileSync(filePath, "utf8"));
+    return chunkMarkdown(topic, readFileSync(filePath, "utf8"), fileName, sourceFolder);
   });
 }
 
@@ -653,7 +676,7 @@ function countOccurrences(haystack: string, term: string) {
   return haystack.match(new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, "g"))?.length ?? 0;
 }
 
-function scoreChunk(chunk: { topic: string; heading: string; content: string }, terms: string[], intent: SearchIntent, intake?: IssueIntake) {
+function scoreChunk(chunk: { topic: string; heading: string; content: string; sourceFile: string; sourceFolder: string }, terms: string[], intent: SearchIntent, intake?: IssueIntake) {
   const body = normalize(chunk.content);
   const heading = normalize(chunk.heading);
   const topic = normalize(chunk.topic);
@@ -668,11 +691,15 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string }, 
 
     if (bodyHits || headingHits || topicHits) {
       matchedTerms.push(term);
-      // Tuned weights: prefer phrase matches, but give more weight to headings/topics
       score += bodyHits * (normalizedTerm.includes(" ") ? 10 : 4);
       score += headingHits * 18;
       score += topicHits * 22;
     }
+  }
+
+  // Apply folder priority only when there is at least one term match
+  if (score > 0) {
+    score += FOLDER_PRIORITY[chunk.sourceFolder] ?? 0;
   }
 
   if (intake?.issueCategory && intake.issueCategory !== "Other" && chunk.topic === intake.issueCategory) {
@@ -699,6 +726,8 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string }, 
     topic: chunk.topic,
     heading: chunk.heading,
     content: chunk.content,
+    sourceFile: chunk.sourceFile,
+    sourceFolder: chunk.sourceFolder,
     score,
     matchedTerms: Array.from(new Set(matchedTerms)).slice(0, 12)
   };
@@ -886,25 +915,23 @@ function confidenceFor(matches: LocalSearchMatch[]) {
   return "low";
 }
 
-function buildClarifyingAnswer(matches: LocalSearchMatch[]) {
+function buildEscalationAnswer(matches: LocalSearchMatch[]) {
   const topics = Array.from(new Set(matches.slice(0, 3).map((match) => match.topic)));
+  const possibleTopics = topics.length > 0
+    ? `\nPossible matches\n${topics.map((topic) => `- ${topic}`).join("\n")}\n`
+    : "";
 
-  if (topics.length === 0) {
-    return `I could not find a clear answer in the available LMX Content training knowledge.
+  return `No confident answer found${possibleTopics}
+Try asking with more detail
+- The CMS module or screen you are working on (e.g. Playlist, Device Manager, Publish)
+- The device OS or model (e.g. Android 11, Windows 10)
+- The exact error message or what you are seeing on screen
 
-Please ask with the module or issue included, for example:
-- How do I pair a device?
-- Why is my screen black?
-- How do I publish content?
-- How do I generate playlogs?`;
-  }
-
-  return `I found a few possible matches, but I need one more detail to answer accurately.
-
-Possible topics
-${topics.map((topic) => `- ${topic}`).join("\n")}
-
-Please ask again with the screen, module, or issue you are working on.`;
+If this is urgent, escalate to the LMX Content support team with
+- Device name, OS version, and CMS network / location
+- Steps you have already tried
+- Screenshot of the error or current screen state
+- Campaign or playlist name if content-related`;
 }
 
 function buildTroubleshootingAnswer(topic: string, entry: KnowledgeEntry | undefined, matches: LocalSearchMatch[], message: string, terms: string[]) {
@@ -964,6 +991,17 @@ Next step
 ${formatBullets(nextSteps, 3)}`;
 }
 
+function buildSourceNotes(matches: LocalSearchMatch[]): SourceNote[] {
+  const seen = new Set<string>();
+  return matches.slice(0, 3).flatMap((match) => {
+    if (!match.sourceFile || !match.sourceFolder) return [];
+    const key = `${match.sourceFolder}/${match.sourceFile}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ file: match.sourceFile, folder: match.sourceFolder, heading: match.heading }];
+  });
+}
+
 export function buildLocalSearchResponse(message: string, intake?: IssueIntake): LocalSearchResult {
   const intent = detectIntent(message);
   const queryTerms = expandTerms(message, intake);
@@ -982,7 +1020,8 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       matches,
       confidence: "high",
       answer: buildPlatformRequirementAnswer(platformRequirement),
-      sourceLinks: platformSourceLinks[platformRequirement.platform] ?? []
+      sourceLinks: platformSourceLinks[platformRequirement.platform] ?? [],
+      sourceNotes: buildSourceNotes(matches)
     };
   }
 
@@ -997,7 +1036,8 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       matches,
       confidence: "high",
       answer: buildGeneralRequirementsAnswer(),
-      sourceLinks: generalLinks
+      sourceLinks: generalLinks,
+      sourceNotes: buildSourceNotes(matches)
     };
   }
 
@@ -1020,8 +1060,9 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
       queryTerms,
       matches,
       confidence,
-      answer: buildClarifyingAnswer(matches),
-      sourceLinks: getSourceLinks(matches)
+      answer: buildEscalationAnswer(matches),
+      sourceLinks: getSourceLinks(matches),
+      sourceNotes: buildSourceNotes(matches)
     };
   }
 
@@ -1038,7 +1079,8 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
     matches,
     confidence,
     answer,
-    sourceLinks: getSourceLinks(matches)
+    sourceLinks: getSourceLinks(matches),
+    sourceNotes: buildSourceNotes(matches)
   };
 }
 

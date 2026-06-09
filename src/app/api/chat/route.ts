@@ -286,7 +286,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         reply: faqMatch.answer,
         source: "knowledge",
-        sourceLinks: faqMatch.sourceLinks ?? []
+        sourceLinks: faqMatch.sourceLinks ?? [],
+        sourceNotes: []
       });
     }
   }
@@ -314,14 +315,16 @@ export async function POST(request: Request) {
       return NextResponse.json({
         reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
         source: "local",
-        sourceLinks: []
+        sourceLinks: [],
+        sourceNotes: []
       });
     }
 
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
-      sourceLinks: localSearch.sourceLinks
+      sourceLinks: localSearch.sourceLinks,
+      sourceNotes: localSearch.sourceNotes
     });
   }
 
@@ -359,6 +362,7 @@ export async function POST(request: Request) {
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
       sourceLinks: localSearch.sourceLinks,
+      sourceNotes: localSearch.sourceNotes,
       warning: `AI unavailable. Used local knowledge fallback.`
     });
   }
@@ -378,7 +382,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       reply,
       source: provider,
-      sourceLinks: localSearch.sourceLinks
+      sourceLinks: localSearch.sourceLinks,
+      sourceNotes: localSearch.sourceNotes
     });
   } catch (error) {
     console.error(error);
@@ -392,7 +397,8 @@ export async function POST(request: Request) {
           return NextResponse.json({
             reply,
             source: "openai",
-            sourceLinks: localSearch.sourceLinks
+            sourceLinks: localSearch.sourceLinks,
+            sourceNotes: localSearch.sourceNotes
           });
         }
       } catch (fallbackError) {

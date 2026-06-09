@@ -30,6 +30,8 @@ import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowle
 
 type ChatSource = "openai" | "knowledge" | "local" | "claude";
 
+type SourceNote = { file: string; folder: string; heading: string };
+
 const topicSourceLinks: Record<string, SourceLink[]> = {
   "Dashboard Overview": [{ label: "Dashboard Overview", url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ" }],
   "Create Network": [{ label: "Create a Network", url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ" }],
@@ -59,6 +61,7 @@ type ChatMessage = {
   content: string;
   source?: ChatSource;
   sourceLinks?: SourceLink[];
+  sourceNotes?: SourceNote[];
 };
 
 type ChatAttachment = {
@@ -258,10 +261,10 @@ export default function Home() {
         throw new Error("Chat request failed.");
       }
 
-      const data = (await response.json()) as { reply: string; source: ChatSource; sourceLinks?: SourceLink[] };
+      const data = (await response.json()) as { reply: string; source: ChatSource; sourceLinks?: SourceLink[]; sourceNotes?: SourceNote[] };
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: data.reply, source: data.source, sourceLinks: data.sourceLinks ?? [] }
+        { id: crypto.randomUUID(), role: "assistant", content: data.reply, source: data.source, sourceLinks: data.sourceLinks ?? [], sourceNotes: data.sourceNotes ?? [] }
       ]);
     } catch {
       setMessages((current) => [
@@ -539,7 +542,7 @@ export default function Home() {
                       <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
                       {message.role === "assistant" && message.source ? (
                         <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-signal">
-                          {message.source === "openai" ? "OpenAI" : message.source === "knowledge" ? "Knowledge" : "Local"}
+                          {message.source === "openai" ? "OpenAI" : message.source === "claude" ? "Claude" : message.source === "knowledge" ? "Knowledge" : "Local"}
                         </span>
                       ) : null}
                     </div>
@@ -557,6 +560,20 @@ export default function Home() {
                   {message.role === "assistant" ? (
                     <>
                       <FormattedResponse content={message.content} />
+                      {message.sourceNotes && message.sourceNotes.length > 0 ? (
+                        <div className="mt-3 border-t border-line pt-3">
+                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Sources used</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {message.sourceNotes.map((note, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 rounded border border-line bg-mist px-2 py-0.5 text-[11px] text-slate-500">
+                                <span className="text-slate-400">{note.folder}</span>
+                                <span className="text-slate-300 mx-0.5">/</span>
+                                <span className="font-medium text-slate-600">{note.file.replace(/\.md$/i, "")}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                       {message.sourceLinks && message.sourceLinks.length > 0 ? (
                         <div className="mt-4 border-t border-line pt-3">
                           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
