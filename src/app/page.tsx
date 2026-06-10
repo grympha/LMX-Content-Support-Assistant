@@ -233,7 +233,11 @@ export default function Home() {
 
     setSelectedCommonQuestion("");
     setIntake(questionIntake);
-    setMessages([
+
+    const historyToSend = messages.map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((prev) => [
+      ...prev,
       {
         id: crypto.randomUUID(),
         role: "user",
@@ -253,7 +257,7 @@ export default function Home() {
           message: messageText,
           attachments: submittedAttachments,
           intake: questionIntake,
-          history: []
+          history: historyToSend
         })
       });
 

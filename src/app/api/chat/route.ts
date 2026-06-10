@@ -354,7 +354,7 @@ export async function POST(request: Request) {
     {
       role: "system",
       content:
-        "Use the uploaded LMX Content Training Module context and any attached file context as the primary sources. Answer using the compact topic-card template: topic title, one short explanation paragraph, then 'Key steps' with bullet points. Do not paste long excerpts from the uploaded knowledge or attached files. If neither the training knowledge nor attachments contain a clear answer, return the approved fallback response instead of guessing."
+        "Use the LMX Content Training Module context and any attached file context as your primary sources. Answer naturally and conversationally — no rigid templates or formal headers. If neither the training knowledge nor attachments contain a clear answer, honestly say so and ask for more context rather than guessing."
     },
     {
       role: "user",
