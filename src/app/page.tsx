@@ -11,7 +11,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppInstallationTrainingPage } from "@/components/AppInstallationTrainingPage";
 import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrainingPage";
 import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
@@ -28,7 +28,7 @@ import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, Networ
 import { commonQuestions } from "@/lib/commonQuestions";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 
-type ChatSource = "openai" | "knowledge" | "local" | "claude";
+type ChatSource = "openai" | "knowledge" | "local" | "claude" | "mistral";
 
 type SourceNote = { file: string; folder: string; heading: string };
 
@@ -105,6 +105,7 @@ export default function Home() {
   const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -121,6 +122,13 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    const el = replyTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 128) + "px";
+  }, [input]);
 
   const learnerCompleteness = useMemo(() => {
     const required: Array<keyof IssueIntake> = ["clientTenant", "issueCategory"];
@@ -181,7 +189,7 @@ export default function Home() {
     setAttachments((current) => current.filter((attachment) => attachment.name !== name));
   }
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: { preventDefault(): void }) {
     event.preventDefault();
     setAuthError("");
 
@@ -533,105 +541,168 @@ export default function Home() {
           </section>
         </aside>
 
-        <section className="min-h-[760px] rounded-lg border border-line bg-mist/50 p-4 shadow-panel">
-          {messages.length > 0 ? (
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-              {messages.map((message) => (
-                <article
-                  key={message.id}
-                  className={message.role === "user" ? "w-full rounded-lg bg-slatePanel p-4 text-white" : "w-full rounded-lg border border-line bg-white p-4 text-ink"}
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold">{message.role === "user" ? "Question" : "Answer"}</p>
-                      {message.role === "assistant" && message.source ? (
-                        <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-signal">
-                          {message.source === "openai" ? "OpenAI" : message.source === "claude" ? "Claude" : message.source === "knowledge" ? "Knowledge" : "Local"}
-                        </span>
+        <section className="flex h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-lg border border-line bg-mist/50 shadow-panel lg:sticky lg:top-4">
+          {/* Scrollable messages area */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {messages.length > 0 ? (
+              <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+                {messages.map((message) => (
+                  <article
+                    key={message.id}
+                    className={message.role === "user" ? "w-full rounded-lg bg-slatePanel p-4 text-white" : "w-full rounded-lg border border-line bg-white p-4 text-ink"}
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold">{message.role === "user" ? "You" : "Assistant"}</p>
+                        {message.role === "assistant" && message.source ? (
+                          <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-signal">
+                            {message.source === "openai" ? "OpenAI" : message.source === "claude" ? "Claude" : message.source === "mistral" ? "Mistral" : message.source === "knowledge" ? "Knowledge" : "Local"}
+                          </span>
+                        ) : null}
+                      </div>
+                      {message.role === "assistant" ? (
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(message.content)}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
+                          title="Copy response"
+                        >
+                          <Clipboard className="h-4 w-4" aria-hidden="true" />
+                        </button>
                       ) : null}
                     </div>
                     {message.role === "assistant" ? (
+                      <>
+                        <FormattedResponse content={message.content} />
+                        {message.sourceNotes && message.sourceNotes.length > 0 ? (
+                          <div className="mt-3 border-t border-line pt-3">
+                            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Sources used</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {message.sourceNotes.map((note, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 rounded border border-line bg-mist px-2 py-0.5 text-[11px] text-slate-500">
+                                  <span className="text-slate-400">{note.folder}</span>
+                                  <span className="mx-0.5 text-slate-300">/</span>
+                                  <span className="font-medium text-slate-600">{note.file.replace(/\.md$/i, "")}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        {message.sourceLinks && message.sourceLinks.length > 0 ? (
+                          <div className="mt-4 border-t border-line pt-3">
+                            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
+                            <div className="flex flex-wrap gap-2">
+                              {message.sourceLinks.map((link) => (
+                                <a
+                                  key={link.url}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
+                                >
+                                  {link.label} ↗
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                  </article>
+                ))}
+
+                {loading ? (
+                  <div className="flex w-full items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Searching all training topics...
+                  </div>
+                ) : null}
+                <div ref={messagesEndRef} />
+              </div>
+            ) : (
+              <>
+                <TopicContent selectedTopic={selectedTopic} />
+                {selectedTopic && (topicSourceLinks[selectedTopic.category] ?? []).length > 0 ? (
+                  <div className="mt-4 rounded-lg border border-line bg-white p-4">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(topicSourceLinks[selectedTopic.category] ?? []).map((link) => (
+                        <a
+                          key={link.url}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
+                        >
+                          {link.label} ↗
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+
+          {/* Sticky reply bar — shown once the conversation has started */}
+          {messages.length > 0 ? (
+            <div className="border-t border-line bg-white p-3">
+              {attachments.length > 0 ? (
+                <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.name} className="flex items-center gap-1.5 rounded border border-line bg-mist px-2.5 py-1 text-xs text-slate-600">
+                      <span className="max-w-[180px] truncate">{attachment.name}</span>
                       <button
                         type="button"
-                        onClick={() => navigator.clipboard.writeText(message.content)}
-                        className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
-                        title="Copy response"
+                        onClick={() => removeAttachment(attachment.name)}
+                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 hover:text-signal"
                       >
-                        <Clipboard className="h-4 w-4" aria-hidden="true" />
+                        <X className="h-3 w-3" aria-hidden="true" />
                       </button>
-                    ) : null}
-                  </div>
-                  {message.role === "assistant" ? (
-                    <>
-                      <FormattedResponse content={message.content} />
-                      {message.sourceNotes && message.sourceNotes.length > 0 ? (
-                        <div className="mt-3 border-t border-line pt-3">
-                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Sources used</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {message.sourceNotes.map((note, i) => (
-                              <span key={i} className="inline-flex items-center gap-1 rounded border border-line bg-mist px-2 py-0.5 text-[11px] text-slate-500">
-                                <span className="text-slate-400">{note.folder}</span>
-                                <span className="text-slate-300 mx-0.5">/</span>
-                                <span className="font-medium text-slate-600">{note.file.replace(/\.md$/i, "")}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                      {message.sourceLinks && message.sourceLinks.length > 0 ? (
-                        <div className="mt-4 border-t border-line pt-3">
-                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
-                          <div className="flex flex-wrap gap-2">
-                            {message.sourceLinks.map((link) => (
-                              <a
-                                key={link.url}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
-                              >
-                                {link.label} ↗
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
-                </article>
-              ))}
-
-              {loading ? (
-                <div className="flex w-full items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
-                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                  Searching all training topics...
+                    </div>
+                  ))}
                 </div>
               ) : null}
-              <div ref={messagesEndRef} />
+              <form
+                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                className="mx-auto flex max-w-3xl items-end gap-2"
+              >
+                <textarea
+                  ref={replyTextareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  rows={1}
+                  disabled={loading}
+                  className="flex-1 resize-none overflow-hidden rounded-lg border border-line px-3 py-2.5 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20 disabled:bg-slate-50"
+                  placeholder="Reply or ask a follow-up… (Shift+Enter for new line)"
+                />
+                {hasAiProvider ? (
+                  <button
+                    type="button"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    title="Attach file"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line text-slate-600 transition hover:border-signal hover:text-signal"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={loading || (!input.trim() && attachments.length === 0)}
+                  title="Send"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-signal text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </form>
             </div>
-          ) : (
-            <>
-              <TopicContent selectedTopic={selectedTopic} />
-              {selectedTopic && (topicSourceLinks[selectedTopic.category] ?? []).length > 0 ? (
-                <div className="mt-4 rounded-lg border border-line bg-white p-4">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(topicSourceLinks[selectedTopic.category] ?? []).map((link) => (
-                      <a
-                        key={link.url}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
-                      >
-                        {link.label} ↗
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
+          ) : null}
         </section>
       </div>
     </main>
