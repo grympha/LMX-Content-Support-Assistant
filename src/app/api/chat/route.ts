@@ -154,6 +154,27 @@ async function callClaude(messages: OpenAiMessage[]) {
   return { choices: [{ message: { content: text } }] };
 }
 
+async function callMistral(messages: OpenAiMessage[]) {
+  const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: process.env.MISTRAL_MODEL ?? "mistral-small-latest",
+      temperature: 0.2,
+      messages
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Mistral request failed with ${response.status}`);
+  }
+
+  return (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+}
+
 function readCookie(cookieHeader: string, name: string) {
   return cookieHeader
     .split(";")
@@ -371,7 +392,9 @@ export async function POST(request: Request) {
     const data =
       provider === "claude"
         ? await callClaude(messages)
-        : await callOpenAI(messages);
+        : provider === "mistral"
+          ? await callMistral(messages)
+          : await callOpenAI(messages);
 
     const reply = data.choices?.[0]?.message?.content;
 
@@ -388,22 +411,29 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error(error);
 
-    if (provider === "claude" && process.env.OPENAI_API_KEY) {
-      try {
-        const data = await callOpenAI(messages);
-        const reply = data.choices?.[0]?.message?.content;
-
-        if (reply) {
-          return NextResponse.json({
-            reply,
-            source: "openai",
-            sourceLinks: localSearch.sourceLinks,
-            sourceNotes: localSearch.sourceNotes
-          });
-        }
-      } catch (fallbackError) {
-        console.error(fallbackError);
+    if (provider === "claude") {
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const data = await callOpenAI(messages);
+          const reply = data.choices?.[0]?.message?.content;
+          if (reply) return NextResponse.json({ reply, source: "openai", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+        } catch (fallbackError) { console.error(fallbackError); }
       }
+      if (process.env.MISTRAL_API_KEY) {
+        try {
+          const data = await callMistral(messages);
+          const reply = data.choices?.[0]?.message?.content;
+          if (reply) return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+        } catch (fallbackError) { console.error(fallbackError); }
+      }
+    }
+
+    if (provider === "openai" && process.env.MISTRAL_API_KEY) {
+      try {
+        const data = await callMistral(messages);
+        const reply = data.choices?.[0]?.message?.content;
+        if (reply) return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+      } catch (fallbackError) { console.error(fallbackError); }
     }
 
     return await fallbackToLocal(`AI request failed for provider ${provider}.`);
