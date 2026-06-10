@@ -292,7 +292,13 @@ export async function POST(request: Request) {
   const username = usernameFromRequest(request);
   const attachmentContext = await buildAttachmentContext(attachments);
   const imageAttachments = attachments.filter(isImageAttachment);
-  const messageForSearch = [message, attachmentContext].filter(Boolean).join("\n\n");
+
+  // Include recent history in search so short follow-ups (e.g. "after that") find contextually relevant knowledge
+  const recentHistoryText = (body.history ?? [])
+    .slice(-4)
+    .map(m => m.content)
+    .join("\n");
+  const messageForSearch = [recentHistoryText, message, attachmentContext].filter(Boolean).join("\n\n");
 
   // Return FAQ answer directly when the question clearly matches a known FAQ entry
   if (!attachmentContext) {
