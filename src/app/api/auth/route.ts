@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     authenticated,
     configured: true,
     username: authenticated ? usernameFromCookie(cookie) : "",
-    hasAiProvider: Boolean(process.env.CLAUDE_API_KEY || process.env.OPENAI_API_KEY)
+    hasAiProvider: Boolean(process.env.CLAUDE_API_KEY || process.env.OPENAI_API_KEY || process.env.MISTRAL_API_KEY)
   });
 }
 
