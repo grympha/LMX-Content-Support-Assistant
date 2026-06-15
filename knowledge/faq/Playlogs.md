@@ -1,3 +1,22 @@
+---
+category: "Playlogs"
+keywords:
+  - playlogs
+  - playlog
+  - proof of play
+  - playback report
+  - general playlog
+  - device playlog
+  - campaign verification
+  - 30 day limit
+  - playback history
+description: "Overview of playlog types, date range limits, and how to use them for proof of play and campaign verification."
+search_priority: "high"
+related_topics:
+  - "Playlogs"
+  - "Basic Troubleshooting"
+---
+
 # Playlogs
 
 ## What are Playlogs?

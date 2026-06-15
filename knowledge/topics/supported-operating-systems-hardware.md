@@ -1,3 +1,14 @@
+---
+category: "Supported Operating Systems & Hardware"
+keywords: [requirements, spec, hardware, "operating system", os, webview, ram, storage, "android 11", "windows 10", "windows 11", linux, webos, brightsign]
+confluence_urls:
+  - label: "System Requirements"
+    url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ"
+  - label: "Device & Platform Technical Requirements"
+    url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw"
+next_step: "Install the player application, pair the device, and verify playback."
+---
+
 # Supported Operating Systems & Hardware
 
 ## Overview

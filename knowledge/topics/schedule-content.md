@@ -1,3 +1,12 @@
+---
+category: "Schedule Content"
+keywords: [schedule, scheduling, campaign, daypart, spot]
+confluence_urls:
+  - label: "How to Schedule Content"
+    url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ"
+next_step: "Approve Campaign, Publish Content, and verify device playback."
+---
+
 # Schedule Content
 
 Scheduling content assigns media or campaigns to the correct playlist, location, date, time, and playback rule.

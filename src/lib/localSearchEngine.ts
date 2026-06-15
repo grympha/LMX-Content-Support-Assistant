@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import matter from "gray-matter";
 import { lmxKnowledge, type IssueCategory, type IssueIntake, type KnowledgeEntry } from "@/lib/lmxKnowledge";
+import { loadVaultData, compareVaultWithHardcoded } from "@/lib/knowledgeVaultLoader";
 import { logLowConfidenceQuery } from "@/lib/searchDiagnostics";
 
 export type SearchIntent = "how_to" | "troubleshooting" | "definition" | "requirements" | "reporting" | "general";
@@ -18,6 +20,8 @@ export type LocalSearchMatch = {
 };
 
 export type SourceNote = { file: string; folder: string; heading: string };
+
+type ScoredChunk = LocalSearchMatch & { rawScore: number; folderBoost: number };
 
 export type LocalSearchResult = {
   intent: SearchIntent;
@@ -532,7 +536,10 @@ function expandTerms(message: string, intake?: IssueIntake) {
     }
   }
 
-  for (const group of synonymGroups) {
+  // Prefer vault synonyms.md as live source of truth; fall back to hardcoded if vault is empty.
+  const vaultSynonymGroups = loadVaultData().synonymGroups;
+  const activeSynonymGroups = vaultSynonymGroups.length > 0 ? vaultSynonymGroups : synonymGroups;
+  for (const group of activeSynonymGroups) {
     if (group.some((phrase) => normalized.includes(phrase))) {
       for (const phrase of group) {
         terms.add(phrase);
@@ -545,7 +552,14 @@ function expandTerms(message: string, intake?: IssueIntake) {
     }
   }
 
-  for (const entry of lmxKnowledge) {
+  // When VAULT_KB is active use the vault topic map (verified in sync with hardcoded data).
+  // Fallback: iterate lmxKnowledge directly — identical result while drift is zero.
+  const topicSource: Array<{ category: string; keywords: string[] }> =
+    process.env["VAULT_KB"] === "true"
+      ? Array.from(loadVaultData().topics.values())
+      : lmxKnowledge;
+
+  for (const entry of topicSource) {
     const category = normalize(entry.category);
     const hasCategoryHit = normalized.includes(category) || entry.keywords.some((keyword) => normalized.includes(normalize(keyword)));
 
@@ -604,18 +618,33 @@ function chunkMarkdown(topic: string, content: string, sourceFile: string, sourc
 
 const SKIP_DIRS = new Set(["knowledge-map"]);
 const SKIP_ROOT_FILES = new Set(["HOME.md", "lmx-content-training-module.md"]);
+// Stale, duplicate, or template files excluded from chunk indexing regardless of folder.
+const SKIP_FILES = new Set([
+  "imported-lmx-content-black-screen-logo-issue-old-copy.md",           // duplicate — Sprint 1
+  "imported-how-to-schedule-place-exchange-widget.md",                  // duplicate of imported-how-to-schedule-place-exchange-widgets.md
+  "imported-how-to-schedule-vast-and-url.md",                           // duplicate of imported-how-to-schedule-url-and-google-ima-vast.md
+  "imported-guides-unable-to-publish-due-to-error-message.md",          // duplicate of imported-unable-to-publish-due-to-error-message.md
+  "imported-download-mw-content-app.md",                                // duplicate of imported-how-to-download-lmx-content-app.md
+  "FAQ Template.md",           // unfilled template — pollutes search results
+  "RCA Template.md",           // unfilled template — pollutes search results
+  "Troubleshooting Template.md", // unfilled template — pollutes search results
+  "Incident Template.md"       // unfilled template — pollutes search results
+]);
 
+// "support-playbooks" in the priority spec maps to the actual folder name "playbooks"
 const FOLDER_PRIORITY: Record<string, number> = {
-  faq: 200,
+  playbooks: 300,
+  platforms: 250,
+  rca: 250,
+  "incident-library": 200,
   troubleshooting: 150,
-  "common-support-questions": 120,
-  rca: 100,
-  "incident-library": 80,
+  faq: 120,
+  "common-support-questions": 100,
+  "customer-training": 80,
+  topics: 40,
   ssp: 60,
   "max-dsp": 60,
   "deployment-checklists": 40,
-  topics: 30,
-  "customer-training": 20,
   "lmx-content-training-module": 10
 };
 
@@ -646,9 +675,21 @@ function readKnowledgeChunks() {
     const relative = path.relative(knowledgeRoot, filePath);
     const parts = relative.split(path.sep);
     if (parts.length === 1 && SKIP_ROOT_FILES.has(fileName)) return [];
+    if (SKIP_FILES.has(fileName)) return [];
     const sourceFolder = parts.length > 1 ? parts[0] : "root";
-    const topic = fileTopics.get(fileName) ?? topicLabelFromPath(filePath);
-    return chunkMarkdown(topic, readFileSync(filePath, "utf8"), fileName, sourceFolder);
+    // rawContent is intentional — frontmatter YAML text is indexed as body keywords.
+    const rawContent = readFileSync(filePath, "utf8");
+    // Native topics/ files use the registered IssueCategory label — skip frontmatter parse.
+    const registeredTopic = fileTopics.get(fileName);
+    if (registeredTopic) {
+      return chunkMarkdown(registeredTopic, rawContent, fileName, sourceFolder);
+    }
+    // For all other vault files, use frontmatter category when present.
+    // This enables the +100 intake category bonus in scoreChunk() for rca/, troubleshooting/,
+    // faq/, and incident-library/ files that declare a matching IssueCategory.
+    const { data } = matter(rawContent);
+    const topic = data["category"] ? String(data["category"]) : topicLabelFromPath(filePath);
+    return chunkMarkdown(topic, rawContent, fileName, sourceFolder);
   });
 }
 
@@ -676,12 +717,12 @@ function countOccurrences(haystack: string, term: string) {
   return haystack.match(new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, "g"))?.length ?? 0;
 }
 
-function scoreChunk(chunk: { topic: string; heading: string; content: string; sourceFile: string; sourceFolder: string }, terms: string[], intent: SearchIntent, intake?: IssueIntake) {
+function scoreChunk(chunk: { topic: string; heading: string; content: string; sourceFile: string; sourceFolder: string }, terms: string[], intent: SearchIntent, intake?: IssueIntake): ScoredChunk {
   const body = normalize(chunk.content);
   const heading = normalize(chunk.heading);
   const topic = normalize(chunk.topic);
   const matchedTerms: string[] = [];
-  let score = 0;
+  let rawScore = 0;
 
   for (const term of terms) {
     const normalizedTerm = normalize(term);
@@ -691,16 +732,14 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string; so
 
     if (bodyHits || headingHits || topicHits) {
       matchedTerms.push(term);
-      score += bodyHits * (normalizedTerm.includes(" ") ? 10 : 4);
-      score += headingHits * 18;
-      score += topicHits * 22;
+      rawScore += bodyHits * (normalizedTerm.includes(" ") ? 10 : 4);
+      rawScore += headingHits * 18;
+      rawScore += topicHits * 22;
     }
   }
 
-  // Apply folder priority only when there is at least one term match
-  if (score > 0) {
-    score += FOLDER_PRIORITY[chunk.sourceFolder] ?? 0;
-  }
+  const folderBoost = rawScore > 0 ? (FOLDER_PRIORITY[chunk.sourceFolder] ?? 0) : 0;
+  let score = rawScore + folderBoost;
 
   if (intake?.issueCategory && intake.issueCategory !== "Other" && chunk.topic === intake.issueCategory) {
     score += 100;
@@ -729,6 +768,8 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string; so
     sourceFile: chunk.sourceFile,
     sourceFolder: chunk.sourceFolder,
     score,
+    rawScore,
+    folderBoost,
     matchedTerms: Array.from(new Set(matchedTerms)).slice(0, 12)
   };
 }
@@ -737,9 +778,17 @@ function bestKnowledgeEntry(topic: string, message: string, terms: string[]) {
   const normalizedTopic = normalize(topic);
   const normalizedMessage = normalize(message);
 
-  const best = lmxKnowledge
+  // When VAULT_KB is active, score using vault keywords (verified in sync with hardcoded data).
+  // Always resolve the winning category back to a full KnowledgeEntry so downstream
+  // builders (buildTroubleshootingAnswer, buildStandardAnswer) get overview/steps/etc.
+  const scoreCandidates: Array<{ category: string; keywords: string[] }> =
+    process.env["VAULT_KB"] === "true"
+      ? Array.from(loadVaultData().topics.values())
+      : lmxKnowledge;
+
+  const best = scoreCandidates
     .map((entry) => ({
-      entry,
+      category: entry.category,
       score:
         (normalize(entry.category) === normalizedTopic ? 100 : 0) +
         entry.keywords.reduce((total, keyword) => total + (normalizedMessage.includes(normalize(keyword)) ? 8 : 0), 0) +
@@ -748,7 +797,9 @@ function bestKnowledgeEntry(topic: string, message: string, terms: string[]) {
     .sort((a, b) => b.score - a.score)[0];
 
   // Require at least one keyword match to avoid returning an unrelated entry
-  return (best?.score ?? 0) >= 8 ? best?.entry : undefined;
+  if ((best?.score ?? 0) < 8) return undefined;
+
+  return lmxKnowledge.find((e) => e.category === best.category);
 }
 
 function bulletLines(content: string) {
@@ -794,7 +845,14 @@ function findPlaybook(message: string, terms: string[]) {
   const normalizedMessage = normalize(message);
   const normalizedTerms = terms.map(normalize);
 
-  return supportPlaybooks
+  // When VAULT_KB=true, use vault playbooks as the live source; fall back to hardcoded array.
+  const vaultPlaybooks = loadVaultData().playbooks;
+  const playbookSource: SupportPlaybook[] =
+    process.env["VAULT_KB"] === "true" && vaultPlaybooks.length > 0
+      ? vaultPlaybooks
+      : supportPlaybooks;
+
+  return playbookSource
     .map((playbook) => ({
       playbook,
       score: playbook.triggers.reduce((total, trigger) => {
@@ -892,26 +950,30 @@ function actionLines(matches: LocalSearchMatch[], patterns: RegExp[]) {
   return preferred.length > 0 ? preferred : lines;
 }
 
-function confidenceFor(matches: LocalSearchMatch[]) {
+function confidenceFor(matches: LocalSearchMatch[], intake?: IssueIntake): "high" | "medium" | "low" {
   const best = matches[0]?.score ?? 0;
   const second = matches[1]?.score ?? 0;
 
-  if (best === 0) {
-    return "low";
-  }
+  if (best === 0) return "low";
+
+  // High: direct category match from intake + score confirms it is relevant
+  const hasCategoryMatch =
+    intake?.issueCategory &&
+    intake.issueCategory !== "Other" &&
+    matches[0]?.topic === intake.issueCategory;
+
+  if (hasCategoryMatch && best >= 40) return "high";
 
   const gap = best - second;
   // Ratio of the gap to the best score — stable as corpus grows
   const gapRatio = second > 0 ? gap / best : 1;
 
-  if (best >= 80 || (best >= 45 && gapRatio >= 0.25)) {
-    return "high";
-  }
+  if (best >= 80 || (best >= 45 && gapRatio >= 0.25)) return "high";
 
-  if (best >= 18) {
-    return "medium";
-  }
+  // Medium: partial match — at least one term found but no dominant winner
+  if (best >= 18) return "medium";
 
+  // Low: no direct knowledge found
   return "low";
 }
 
@@ -1006,11 +1068,48 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
   const intent = detectIntent(message);
   const queryTerms = expandTerms(message, intake);
   const chunks = getCachedChunks();
-  const matches = chunks
+  const allScored = chunks
     .map((chunk) => scoreChunk(chunk, queryTerms, intent, intake))
-    .filter((match) => match.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const matches: LocalSearchMatch[] = allScored.slice(0, 8).map((m): LocalSearchMatch => ({
+    topic: m.topic,
+    heading: m.heading,
+    content: m.content,
+    sourceFile: m.sourceFile,
+    sourceFolder: m.sourceFolder,
+    score: m.score,
+    matchedTerms: m.matchedTerms,
+  }));
+
+  // Search diagnostics — computed after matches so confidence is available in the log
+  const diagConfidence = confidenceFor(matches, intake);
+  const top10 = allScored.slice(0, 10);
+  if (top10.length > 0) {
+    const winner = top10[0];
+    const candidateLines = top10
+      .map((m, i) =>
+        `  ${i + 1}. [${m.sourceFolder}] ${m.topic} > ${m.heading}\n` +
+        `     raw=${m.rawScore}  folder_boost=${m.folderBoost}  final=${m.score}` +
+        (m.matchedTerms.length > 0 ? `  terms=[${m.matchedTerms.slice(0, 5).join(", ")}]` : "")
+      )
+      .join("\n");
+    console.log(
+      `[search:diagnostics]\n` +
+      `  query="${message.slice(0, 120)}"\n` +
+      `  intent=${intent}  confidence=${diagConfidence}  candidates=${top10.length}\n` +
+      `Top candidates:\n${candidateLines}\n` +
+      `  >> Winner: [${winner.sourceFolder}/${winner.sourceFile}] ${winner.topic} > ${winner.heading}  score=${winner.score}`
+    );
+  } else {
+    console.log(
+      `[search:diagnostics]\n` +
+      `  query="${message.slice(0, 120)}"\n` +
+      `  intent=${intent}  confidence=low  candidates=0  >> No matching chunks found`
+    );
+  }
+
   const platformRequirement = intent === "requirements" ? findPlatformRequirement(message) : undefined;
 
   if (platformRequirement) {
@@ -1041,7 +1140,7 @@ export function buildLocalSearchResponse(message: string, intake?: IssueIntake):
     };
   }
 
-  const confidence = confidenceFor(matches);
+  const confidence = confidenceFor(matches, intake);
 
   if (confidence === "low") {
     try {
@@ -1088,4 +1187,21 @@ export function localMatchesToDocumentContext(matches: LocalSearchMatch[]) {
   return matches
     .map((match) => `${match.topic} - ${match.heading}\n${match.content.slice(0, 900)}`)
     .join("\n\n");
+}
+
+// ─── Vault drift detection (Phase 1) + Phase 2A active lookups ───────────────
+// Set VAULT_KB=true to enable vault-backed expandTerms/bestKnowledgeEntry lookups
+// and to run the drift log at startup.  loadVaultData() is memoized — file reads
+// happen once, then the in-memory cache is shared across all callers.
+if (process.env["VAULT_KB"] === "true") {
+  try {
+    compareVaultWithHardcoded({
+      hardcodedTopics: lmxKnowledge.map((e) => ({ category: e.category, keywords: e.keywords })),
+      hardcodedSynonymGroupCount: synonymGroups.length,
+      hardcodedPlaybookIds: supportPlaybooks.map((p) => p.id),
+      hardcodedPlatformNames: platformRequirements.map((p) => p.platform)
+    });
+  } catch (err) {
+    console.error("[vault] Drift detection failed:", err);
+  }
 }

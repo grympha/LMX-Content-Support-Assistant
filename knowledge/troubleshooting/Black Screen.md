@@ -1,3 +1,22 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - black screen
+  - blank screen
+  - no content displayed
+  - screen shows nothing
+  - device online but black
+  - unsupported format black screen
+  - player stopped black screen
+  - resolution mismatch black screen
+description: "Troubleshooting guide for a black or blank screen on a device that is online in CMS — covers format, playlist assignment, player restart, and resolution."
+search_priority: "high"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Default Playlist"
+  - "Supported Operating Systems & Hardware"
+---
+
 # Black Screen
 
 ## Symptoms

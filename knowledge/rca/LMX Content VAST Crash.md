@@ -1,3 +1,23 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - vast crash
+  - lmx content crash
+  - force close vast
+  - webview outdated
+  - android system webview
+  - webview 106
+  - programmatic not playing
+  - update webview
+  - webview 120 required
+description: "RCA for LMX Content crashing during VAST playback — outdated Android System WebView (106) required update to 120+."
+search_priority: "high"
+related_topics:
+  - "Programmatic / VAST"
+  - "Basic Troubleshooting"
+  - "Supported Operating Systems & Hardware"
+---
+
 # LMX Content VAST Crash
 
 ## Issue
@@ -52,4 +72,5 @@ before onboarding programmatic devices.
 
 [[VAST Issues]]  
 [[Programmatic Issues]]  
-[[System Requirements]]
+[[System Requirements]]  
+[[Update-Android-WebView]]

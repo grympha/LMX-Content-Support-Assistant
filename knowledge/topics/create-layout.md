@@ -1,3 +1,12 @@
+---
+category: "Create Layout"
+keywords: [layout, tag, zone, "split screen", "screen type", resolution]
+confluence_urls:
+  - label: "Layout Creation"
+    url: "https://movingwallshub.atlassian.net/wiki/x/mYGKCQ"
+next_step: "Create Device, Schedule Content, Publish Campaign, and verify playback."
+---
+
 # Create Layout
 
 A Layout divides a screen into zones, called tags, with each tag linked to a playlist.

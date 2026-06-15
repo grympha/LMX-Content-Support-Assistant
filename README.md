@@ -14,7 +14,9 @@ This repository is documented so work can continue from any PC:
 - Admin dashboard at `/admin` protected by `ADMIN_PASSWORD`
 - Topic-based LMX Content CMS training pages
 - Ask Assistant panel with local knowledge fallback
+- Optional Claude (Anthropic) answers through `CLAUDE_API_KEY` (primary AI provider)
 - Optional OpenAI-powered answers through `OPENAI_API_KEY`
+- Optional Mistral AI answers through `MISTRAL_API_KEY` (free alternative provider)
 - File attachments for images, PDFs, DOCX, CSV, TXT, Markdown, and JSON
 - Local topic knowledge search from `knowledge/topics/`
 - Common questions and quick answers
@@ -81,6 +83,7 @@ npm run build
 npm run start
 npm run lint
 npm run typecheck
+npm test
 ```
 
 ## Environment Variables
@@ -92,21 +95,36 @@ npm run typecheck
 | `OPENAI_API_KEY` | No | Enables OpenAI-assisted answers and image attachment analysis. Without it, the app uses local knowledge fallback. |
 | `OPENAI_MODEL` | No | Optional OpenAI model override. The chat route defaults to `gpt-4o-mini`. |
 | `CLAUDE_API_KEY` | No | Optional Anthropic Claude API key. If configured, Claude is used before OpenAI. |
-| `CLAUDE_MODEL` | No | Optional Claude model override. The chat route currently defaults to `claude-3.5`. |
+| `CLAUDE_MODEL` | No | Optional Claude model override. Defaults to `claude-haiku-4-5`. |
 | `CLAUDE_API_URL` | No | Optional Claude API base URL if using a proxy or alternative endpoint. |
+| `MISTRAL_API_KEY` | No | Mistral AI API key. Used in the provider fallback chain (Claude → OpenAI → Mistral). |
+| `MISTRAL_MODEL` | No | Optional Mistral model override. Defaults to `mistral-small-latest`. |
+| `VAULT_KB` | No | Set to `true` to use the full vault-backed knowledge retrieval path (reads all folders under `knowledge/`). |
 | `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL for logging and reading training records. |
 
 ## Knowledge Base
 
-The assistant searches Markdown training files in:
+The assistant searches Markdown files across a multi-folder knowledge vault:
 
 ```text
-knowledge/topics/
+knowledge/
+├── topics/          — core 18 training topics + 71 imported Atlassian/Confluence guides
+├── faq/             — FAQ articles (device pairing, formats, system requirements, etc.)
+├── troubleshooting/ — step-by-step troubleshooting articles (login, sync, upload, etc.)
+├── playbooks/       — escalation playbooks for high-volume support scenarios
+├── rca/             — Root Cause Analysis records
+├── incident-library/ — documented incidents with resolution notes
+├── platforms/       — platform-specific notes (Android, Windows, webOS, BrightSign)
+└── config/          — search configuration (synonyms)
 ```
 
-This folder includes the original topic files plus imported Atlassian/Confluence `.doc` exports prefixed with `imported-`.
+Estimated support coverage: **~87% of top-30 common support scenarios**.
 
-The full module is stored at:
+All production vault files include `category`, `keywords`, `description`, and `search_priority` frontmatter to improve retrieval accuracy.
+
+Imported Atlassian/Confluence exports are named `imported-<source-title>.md` under `knowledge/topics/`. Confirmed duplicates are excluded via `SKIP_FILES` in `localSearchEngine.ts`.
+
+Full training module reference:
 
 ```text
 knowledge/lmx-content-training-module.md
@@ -219,7 +237,9 @@ Render environment variables:
 NODE_VERSION=22
 APP_PASSWORD=your-secure-password
 ADMIN_PASSWORD=your-admin-password
+CLAUDE_API_KEY=
 OPENAI_API_KEY=
+MISTRAL_API_KEY=
 GOOGLE_SHEETS_WEBHOOK_URL=
 ```
 

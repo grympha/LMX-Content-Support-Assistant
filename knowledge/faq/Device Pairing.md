@@ -1,3 +1,22 @@
+---
+category: "Device Pairing"
+keywords:
+  - device pairing
+  - pair device
+  - verification code
+  - pair code
+  - register device
+  - add device to cms
+  - pairing steps
+  - how to pair
+description: "Step-by-step guide to pairing a new device with LMX Content using the verification code."
+search_priority: "high"
+related_topics:
+  - "Device Pairing"
+  - "Create Device"
+  - "Basic Troubleshooting"
+---
+
 # Device Pairing
 
 ## How do I pair a device?
@@ -41,6 +60,8 @@ If pairing fails:
 
 ## Related Notes
 
+[[Device-Pairing-Troubleshooting]]  
 [[Device Offline]]  
 [[Device Replacement]]  
+[[Change-Device-Orientation]]  
 [[Pull To Content]]

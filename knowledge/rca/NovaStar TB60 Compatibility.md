@@ -1,3 +1,21 @@
+---
+category: "Supported Operating Systems & Hardware"
+keywords:
+  - novastar
+  - novastar tb60
+  - tb60
+  - incompatible device
+  - unsupported hardware
+  - display controller
+  - novastar not compatible
+  - novastar pairing failed
+description: "RCA for LMX Content deployment failure on NovaStar TB60 — device is a display controller not suitable for LMX Content installation."
+search_priority: "low"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Device Pairing"
+---
+
 # NovaStar TB60 Compatibility
 
 ## Issue

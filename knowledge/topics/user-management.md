@@ -1,3 +1,14 @@
+---
+category: "User Management"
+keywords: [user, roles, permissions, rbac]
+confluence_urls:
+  - label: "How to Create a User"
+    url: "https://movingwallshub.atlassian.net/wiki/x/FIOKCQ"
+  - label: "User Roles & Permissions"
+    url: "https://movingwallshub.atlassian.net/wiki/x/KIOKCQ"
+next_step: "Verify the user can log in and access the required module."
+---
+
 # User Management
 
 User Management controls who can access LMX Content CMS and what modules, networks, and permissions they can use.

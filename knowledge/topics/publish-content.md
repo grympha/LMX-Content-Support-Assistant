@@ -1,3 +1,12 @@
+---
+category: "Publish Content"
+keywords: [publish, publishing, "unable to publish", error]
+confluence_urls:
+  - label: "Unable to Publish – Error Guide"
+    url: "https://movingwallshub.atlassian.net/wiki/x/zwCXDw"
+next_step: "Verify Device Playback, Monitor Synchronization, and Check Playlogs."
+---
+
 # Publish Content
 
 Publishing sends approved schedules and playlist changes to the relevant devices.

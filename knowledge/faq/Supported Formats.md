@@ -1,3 +1,26 @@
+---
+category: "Supported Operating Systems & Hardware"
+keywords:
+  - media format
+  - file format
+  - supported format
+  - mp4
+  - h.264
+  - png
+  - jpg
+  - webm
+  - zip content
+  - html package
+  - vast url
+  - gif supported
+description: "Supported media formats for LMX Content including images, videos, HTML packages, and programmatic content types."
+search_priority: "medium"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Basic Troubleshooting"
+  - "Programmatic / VAST"
+---
+
 # Supported Formats
 
 ## What media formats are supported?
@@ -55,4 +78,6 @@ For best performance:
 
 [[Resolution Mismatch]]  
 [[Black Screen]]  
-[[Content Compatibility]]
+[[Content Compatibility]]  
+[[HTML-ZIP-Content]]  
+[[Upload-Errors]]

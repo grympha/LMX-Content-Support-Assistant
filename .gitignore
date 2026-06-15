@@ -10,3 +10,14 @@ yarn-error.log*
 pnpm-debug.log*
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Obsidian vault settings (local tool config)
+.obsidian/
+
+# Local session and scratch files
+.gitmsg
+Project Dashboard.md
+Solum VAST Crash.md
+
+# VS Code workspace files (developer-local)
+*.code-workspace

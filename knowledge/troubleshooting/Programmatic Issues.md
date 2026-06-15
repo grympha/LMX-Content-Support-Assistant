@@ -1,3 +1,22 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - programmatic not playing
+  - vast content fails
+  - empty ad slots
+  - no fill
+  - android 11 programmatic
+  - webview 120
+  - ssp integration issue
+  - inventory configuration
+  - vast url inaccessible
+description: "Troubleshooting guide for programmatic content not playing — covers WebView version, VAST URL testing, and SSP integration checks."
+search_priority: "high"
+related_topics:
+  - "Programmatic / VAST"
+  - "Supported Operating Systems & Hardware"
+---
+
 # Programmatic Issues
 
 ## Symptoms
@@ -68,4 +87,5 @@ Collect:
 
 [[VAST Issues]]  
 [[Supported Devices]]  
-[[Programmatic Requirements]]
+[[Programmatic Requirements]]  
+[[Update-Android-WebView]]

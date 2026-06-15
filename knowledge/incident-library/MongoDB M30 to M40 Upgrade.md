@@ -1,3 +1,20 @@
+---
+category: "Historical Incident"
+keywords:
+  - mongodb upgrade
+  - database performance
+  - cms slow
+  - platform performance degradation
+  - database resource constraints
+  - mongodb m30
+  - mongodb m40
+  - infrastructure upgrade
+description: "Incident record for MongoDB cluster upgrade from M30 to M40 — database resource constraints caused CMS slowness and deployment delays."
+search_priority: "low"
+related_topics:
+  - "Basic Troubleshooting"
+---
+
 # MongoDB M30 to M40 Upgrade
 
 ## Incident Summary

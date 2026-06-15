@@ -112,9 +112,15 @@ async function callOpenAI(messages: OpenAiMessage[]) {
 async function callClaude(messages: OpenAiMessage[]) {
   const url = process.env.CLAUDE_API_URL ?? "https://api.anthropic.com/v1/messages";
 
-  // Anthropic's Messages API takes system as a top-level string, not a message role
+  // Anthropic's Messages API takes system as a top-level param, not a message role.
+  // Pass it as a content-block array so we can add cache_control — the system prompt
+  // is identical on every request, making it the best candidate for prompt caching.
+  // No extra headers needed; prompt caching is GA on the Anthropic API.
   const systemParts = messages.filter(m => m.role === "system").map(m => m.content);
-  const system = systemParts.join("\n\n") || undefined;
+  const systemText = systemParts.join("\n\n");
+  const system = systemText
+    ? [{ type: "text" as const, text: systemText, cache_control: { type: "ephemeral" as const } }]
+    : undefined;
 
   // Anthropic requires strictly alternating user/assistant roles — merge consecutive same-role messages
   const nonSystem = messages.filter(m => m.role !== "system");

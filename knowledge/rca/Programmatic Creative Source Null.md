@@ -1,3 +1,21 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - creative rejected
+  - no impressions
+  - delivery failure
+  - dv360
+  - gam configuration
+  - advertiser field missing
+  - programmaticCreativeSource null
+  - creative validation failed
+  - google ad manager
+description: "RCA for programmatic campaign delivery failure — missing Advertiser field in GAM caused programmaticCreativeSource to return null."
+search_priority: "medium"
+related_topics:
+  - "Programmatic / VAST"
+---
+
 # Programmatic Creative Source Null
 
 ## Issue

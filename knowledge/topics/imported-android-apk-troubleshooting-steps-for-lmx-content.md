@@ -1,3 +1,26 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - android apk
+  - apk troubleshooting
+  - android app crash
+  - content loading android
+  - network issue android
+  - storage android player
+  - device compatibility android
+  - android installation issues
+  - android player issues
+  - do not clear storage
+  - re-registration android
+  - android force close
+description: "Comprehensive Android APK troubleshooting guide — covers app crashes, content loading failures, network issues, storage management, and device compatibility verification for LMX Content."
+search_priority: "high"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Installation of LMX Content App"
+  - "Device Pairing"
+---
+
 # Android APK Troubleshooting Steps for LMX Content
 
 Source document: `Android+APK+Troubleshooting+Steps+for+LMX+Content.doc`

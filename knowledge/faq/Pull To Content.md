@@ -1,3 +1,22 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - pull to content
+  - pull-to-content
+  - ptc
+  - inventory mapping
+  - ssp campaign
+  - programmatic delivery
+  - windows 1.0.34
+  - android 2.9.1.2
+  - player version requirement
+description: "Pull To Content version requirements, setup checklist, and troubleshooting for inventory mapping failures."
+search_priority: "medium"
+related_topics:
+  - "Programmatic / VAST"
+  - "Device Pairing"
+---
+
 # Pull To Content
 
 ## What version supports Pull To Content?

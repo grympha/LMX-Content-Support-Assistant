@@ -1,3 +1,21 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - programmatic service outage
+  - vast content not displayed
+  - programmatic delivery interrupted
+  - empty ad slots
+  - fallback content showing
+  - programmatic impressions affected
+  - place exchange
+  - viooh
+  - service interruption
+description: "Incident record for programmatic delivery service interruption — VAST content stopped displaying and fallback content appeared until service was restored."
+search_priority: "medium"
+related_topics:
+  - "Programmatic / VAST"
+---
+
 # Programmatic Service Outage
 
 ## Incident Summary

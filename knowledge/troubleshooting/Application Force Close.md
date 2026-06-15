@@ -1,3 +1,24 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - app crash
+  - application crash
+  - force close
+  - app keeps closing
+  - player restarts
+  - low ram
+  - storage full
+  - corrupted cache
+  - reinstall app
+  - clear cache
+description: "Troubleshooting guide for LMX Content application force closing or restarting repeatedly."
+search_priority: "high"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Storage Management"
+  - "Installation of LMX Content App"
+---
+
 # Application Force Close
 
 ## Symptoms
@@ -52,4 +73,5 @@ Collect:
 
 [[Black Screen]]  
 [[Device Offline]]  
-[[Supported Devices]]
+[[Supported Devices]]  
+[[imported-android-apk-troubleshooting-steps-for-lmx-content]]

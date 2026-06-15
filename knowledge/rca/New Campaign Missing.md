@@ -1,3 +1,21 @@
+---
+category: "Schedule Content"
+keywords:
+  - campaign not showing
+  - campaign missing
+  - campaign active but not playing
+  - location tag mismatch
+  - inventory targeting wrong
+  - campaign not on screen
+  - schedule not working
+description: "RCA for a new campaign not appearing on screens — caused by location tag mismatch between campaign targeting and assigned inventory."
+search_priority: "medium"
+related_topics:
+  - "Schedule Content"
+  - "Publish Content"
+  - "Basic Troubleshooting"
+---
+
 # New Campaign Missing
 
 ## Issue

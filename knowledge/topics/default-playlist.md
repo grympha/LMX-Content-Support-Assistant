@@ -1,3 +1,12 @@
+---
+category: "Default Playlist"
+keywords: ["default playlist", fallback, image, video]
+confluence_urls:
+  - label: "Default Playlist Guide"
+    url: "https://movingwallshub.atlassian.net/wiki/x/h4KKCQ"
+next_step: "Schedule Campaign, Publish Content, and verify playback."
+---
+
 # Default Playlist
 
 Default Playlist is mandatory fallback content and is required before scheduling and publishing workflows.

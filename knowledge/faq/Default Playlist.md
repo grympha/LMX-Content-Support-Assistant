@@ -1,3 +1,22 @@
+---
+category: "Default Playlist"
+keywords:
+  - default playlist
+  - fallback playlist
+  - fallback content
+  - no active schedule
+  - schedule expired
+  - blank screen prevention
+  - house ads
+  - emergency content
+description: "The Default Playlist acts as fallback content when no active schedule is running on a device."
+search_priority: "medium"
+related_topics:
+  - "Default Playlist"
+  - "Basic Troubleshooting"
+  - "Publish Content"
+---
+
 # Default Playlist
 
 ## What is the purpose of Default Playlist?

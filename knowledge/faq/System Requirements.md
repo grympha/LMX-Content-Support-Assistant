@@ -1,3 +1,24 @@
+---
+category: "Supported Operating Systems & Hardware"
+keywords:
+  - system requirements
+  - hardware requirements
+  - windows requirements
+  - android requirements
+  - webview 120
+  - programmatic requirements
+  - minimum requirements
+  - recommended specs
+  - 4gb ram
+  - 8gb ram
+description: "System and hardware requirements for Windows and Android devices running LMX Content, including programmatic requirements."
+search_priority: "high"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Programmatic / VAST"
+  - "Installation of LMX Content App"
+---
+
 # System Requirements
 
 ## Windows
@@ -51,4 +72,5 @@
 
 [[Programmatic Issues]]  
 [[VAST Issues]]  
-[[Supported Devices]]
+[[Supported Devices]]  
+[[Update-Android-WebView]]

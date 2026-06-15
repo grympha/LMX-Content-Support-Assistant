@@ -1,3 +1,14 @@
+---
+category: "Installation of LMX Content App"
+keywords: [android, windows, install, installation, apk, installer, "verification code", "software render", "sr build"]
+confluence_urls:
+  - label: "Installation Guide (Android & Windows)"
+    url: "https://movingwallshub.atlassian.net/wiki/x/AoCTDw"
+  - label: "Download MW Content App"
+    url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw"
+next_step: "Pair Device, Publish Content, and verify playback."
+---
+
 # Installation of LMX Content App
 
 ## Overview

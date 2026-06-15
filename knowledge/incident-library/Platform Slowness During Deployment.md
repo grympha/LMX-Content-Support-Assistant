@@ -1,3 +1,20 @@
+---
+category: "Historical Incident"
+keywords:
+  - platform slowness
+  - cms slow
+  - slow page loading
+  - deployment performance
+  - backend load
+  - database bottleneck
+  - schedule updates delayed
+  - device status delayed
+description: "Incident record for platform slowness during deployment — backend load combined with database bottlenecks caused slow CMS response and delayed device status updates."
+search_priority: "low"
+related_topics:
+  - "Basic Troubleshooting"
+---
+
 # Platform Slowness During Deployment
 
 ## Incident Summary

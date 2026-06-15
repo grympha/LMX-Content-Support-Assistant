@@ -546,6 +546,10 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length > 0 ? (
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Current Topic Conversation</span>
+                  <div className="flex-1 border-t border-line" />
+                </div>
                 {messages.map((message) => (
                   <article
                     key={message.id}
@@ -647,6 +651,10 @@ export default function Home() {
           {/* Sticky reply bar — shown once the conversation has started */}
           {messages.length > 0 ? (
             <div className="border-t border-line bg-white p-3">
+              <div className="mx-auto mb-3 max-w-3xl">
+                <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Follow-up Questions</p>
+                <p className="text-xs text-slate-400">Continue discussing the current topic. To start a new question or topic, use <span className="font-medium text-slate-500">Ask Assistant</span> on the left.</p>
+              </div>
               {attachments.length > 0 ? (
                 <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
                   {attachments.map((attachment) => (
@@ -680,7 +688,7 @@ export default function Home() {
                   rows={1}
                   disabled={loading}
                   className="flex-1 resize-none overflow-hidden rounded-lg border border-line px-3 py-2.5 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20 disabled:bg-slate-50"
-                  placeholder="Reply or ask a follow-up… (Shift+Enter for new line)"
+                  placeholder="Continue this conversation… (Shift+Enter for new line)"
                 />
                 {hasAiProvider ? (
                   <button

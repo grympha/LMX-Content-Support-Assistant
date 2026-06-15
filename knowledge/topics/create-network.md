@@ -1,3 +1,12 @@
+---
+category: "Create Network"
+keywords: [network, "playlog interval", "background download"]
+confluence_urls:
+  - label: "Create a Network"
+    url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ"
+next_step: "Create Locations under the Network."
+---
+
 # Create Network
 
 A Network is the primary structure used to organize devices, users, content rules, playback hours, and reporting behavior.

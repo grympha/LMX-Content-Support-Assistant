@@ -1,3 +1,12 @@
+---
+category: "Bundle Scheduling"
+keywords: [bundle, "bundle schedule"]
+confluence_urls:
+  - label: "Scheduling Bundles"
+    url: "https://movingwallshub.atlassian.net/wiki/x/R4OKCQ"
+next_step: "Publish Campaign, verify playback, and monitor synchronization."
+---
+
 # Bundle Scheduling
 
 Bundle scheduling helps manage grouped schedules or multiple related content items together.
@@ -26,3 +35,9 @@ Bundle scheduling helps manage grouped schedules or multiple related content ite
 - Missing approval.
 - Schedule timing outside playback hours.
 - Publishing before default content is ready.
+
+## Related Notes
+
+[[Bundle-Scheduling-Issues]]
+[[Schedule-Not-Applying]]
+[[imported-scheduling-bundles]]

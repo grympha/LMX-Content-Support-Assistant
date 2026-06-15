@@ -1,3 +1,25 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - heartbeat
+  - device heartbeat
+  - ping mechanism
+  - socket connection
+  - cms connection
+  - heartbeat interval
+  - device status mechanism
+  - ping server
+  - 10 second ping
+  - persistent socket
+  - device online detection
+  - heartbeat failure
+description: "Technical explanation of the LMX Content heartbeat mechanism — how 10-second socket pings maintain device online status and how heartbeat failures cause devices to appear offline."
+search_priority: "medium"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Device Pairing"
+---
+
 # Heartbeat Mechanism in LMX Content CMS
 
 Source document: `Heartbeat+Mechanism+in+LMX+Content+CMS.doc`

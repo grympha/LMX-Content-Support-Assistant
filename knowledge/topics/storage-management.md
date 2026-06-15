@@ -1,3 +1,12 @@
+---
+category: "Storage Management"
+keywords: [storage, upload, media, folder]
+confluence_urls:
+  - label: "Storage"
+    url: "https://movingwallshub.atlassian.net/wiki/x/74GKCQ"
+next_step: "Assign uploaded content to a playlist or schedule."
+---
+
 # Storage Management
 
 Storage is used to upload, organize, manage, and clean up media files.

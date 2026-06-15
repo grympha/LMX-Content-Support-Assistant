@@ -1,3 +1,19 @@
+---
+category: "Historical Incident"
+keywords:
+  - deployment window
+  - deployment best practice
+  - controlled deployment
+  - deployment schedule
+  - deployment communication
+  - change management
+  - deployment validation
+description: "Best practice guidance for deployment windows — covers scheduling, communication, and validation based on lessons from past platform incidents."
+search_priority: "low"
+related_topics:
+  - "Basic Troubleshooting"
+---
+
 # Deployment Window Best Practice
 
 ## Purpose

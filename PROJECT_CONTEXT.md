@@ -6,10 +6,11 @@ Use this file as the project handoff note when continuing work from another PC.
 
 LMX Content Support Assistant is an internal training and support app for LMX Content CMS. It gives learners guided topic pages, lets them ask CMS workflow questions, supports file review, and records progress for admins when Google Sheets logging is enabled.
 
-The app is designed to work in two modes:
+The app is designed to work in three modes:
 
-- Local fallback mode: no OpenAI key required. Answers come from structured local training knowledge.
-- OpenAI-assisted mode: `OPENAI_API_KEY` enables richer answers and image attachment analysis while still grounding responses in local LMX training context.
+- Local fallback mode: no API key required. Answers come from structured local training knowledge.
+- AI-assisted mode: `CLAUDE_API_KEY` (primary), `OPENAI_API_KEY`, or `MISTRAL_API_KEY` enables richer natural language answers. Provider priority: Claude → OpenAI → Mistral → Local.
+- Vault KB mode: set `VAULT_KB=true` to load all files from the full multi-folder knowledge vault instead of only `knowledge/topics/`.
 
 ## Repository
 
@@ -55,6 +56,7 @@ Core knowledge and logging libraries:
 src/lib/lmxKnowledge.ts
 src/lib/documentKnowledge.ts
 src/lib/localSearchEngine.ts
+src/lib/knowledgeVaultLoader.ts
 src/lib/commonQuestions.ts
 src/lib/progressLog.ts
 ```
@@ -65,14 +67,22 @@ Training topic components:
 src/components/
 ```
 
-Markdown knowledge:
+Markdown knowledge vault:
 
 ```text
-knowledge/lmx-content-training-module.md
-knowledge/topics/
+knowledge/
+├── topics/           — 18 core training topics + 71 imported Atlassian/Confluence guides
+├── faq/              — FAQ articles
+├── troubleshooting/  — troubleshooting articles
+├── playbooks/        — escalation playbooks
+├── rca/              — Root Cause Analysis records
+├── incident-library/ — incident documentation
+├── platforms/        — platform-specific notes
+├── config/           — search synonyms config
+└── lmx-content-training-module.md
 ```
 
-The Atlassian/Confluence imports currently add 71 topic Markdown files under `knowledge/topics/` using the `imported-` prefix. Each imported file includes the original source filename near the top.
+Atlassian/Confluence imports are named `imported-<source-title>.md` under `knowledge/topics/`. Confirmed duplicate imports are excluded from indexing via `SKIP_FILES` in `localSearchEngine.ts`. Set `VAULT_KB=true` to load the full vault instead of only `knowledge/topics/`.
 
 Static screenshots:
 
@@ -117,21 +127,13 @@ The chat route:
 3. Keeps image attachments as data URLs for OpenAI vision analysis when enabled.
 4. Searches `knowledge/topics/` through the local search engine.
 5. Logs the question through `logProgressEvent`.
-6. Uses local search and template answers if there is no `OPENAI_API_KEY`.
-7. Calls the OpenAI Chat Completions API if `OPENAI_API_KEY` is configured.
-8. Falls back to local knowledge if the OpenAI request fails.
+6. Uses local search and template answers if no AI provider is configured.
+7. Calls Claude (`CLAUDE_API_KEY`) if configured — default model `claude-haiku-4-5`, override via `CLAUDE_MODEL`.
+8. Falls back to OpenAI (`OPENAI_API_KEY`) if Claude is not configured or fails — default model `gpt-4o-mini`, override via `OPENAI_MODEL`.
+9. Falls back to Mistral (`MISTRAL_API_KEY`) if OpenAI is also unavailable — default model `mistral-small-latest`, override via `MISTRAL_MODEL`.
+10. Falls back to local knowledge if all API calls fail.
 
-The default model is currently:
-
-```text
-gpt-4o-mini
-```
-
-It can be overridden with:
-
-```text
-OPENAI_MODEL
-```
+Provider priority: **Claude → OpenAI → Mistral → Local fallback**.
 
 ## Knowledge Retrieval
 
@@ -293,13 +295,13 @@ Current deployment assumptions:
 - start command: `npm run start`
 - required env var: `APP_PASSWORD`
 - recommended env var: `ADMIN_PASSWORD`
-- optional env vars: `OPENAI_API_KEY`, `GOOGLE_SHEETS_WEBHOOK_URL`, `OPENAI_MODEL`
+- optional env vars: `CLAUDE_API_KEY`, `CLAUDE_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `VAULT_KB`, `GOOGLE_SHEETS_WEBHOOK_URL`
 
 ## Known Technical Notes
 
 - `npm run lint` uses `next lint`, but modern Next.js versions may require migrating to the ESLint CLI if `next lint` is removed or unavailable.
 - The app currently uses the Chat Completions endpoint directly in `src/app/api/chat/route.ts`.
-- There are no automated tests yet.
+- Vitest test suite: 20 tests across 6 files in `src/__tests__/`. Run with `npm test`. Coverage: auth route, chat provider selection, local search E2E, vault KB parity, diagnostics analyzer, progress logging.
 - Authentication is simple password-based access, not full user identity management.
 - Google Sheets is used as a lightweight activity log, not a database.
 - Knowledge retrieval is local weighted keyword and synonym scoring, not embeddings/vector search.
@@ -312,8 +314,9 @@ Before making changes from a new PC:
 2. Run `npm install`.
 3. Create `.env.local` from `.env.example`.
 4. Run `npm run typecheck`.
-5. Run `npm run build`.
-6. Test learner login, Ask Assistant, topic completion, and admin login locally.
+5. Run `npm test`.
+6. Run `npm run build`.
+7. Test learner login, Ask Assistant, topic completion, and admin login locally.
 
 Before pushing:
 

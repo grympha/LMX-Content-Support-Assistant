@@ -1,3 +1,12 @@
+---
+category: "Programmatic / VAST"
+keywords: [programmatic, vast, url, ima, hivestack, dv360, ssp, dsp, "no-fill", impression, webview, html, "online zip", "offline zip"]
+confluence_urls:
+  - label: "Schedule URL & Google IMA (VAST)"
+    url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw"
+next_step: "After configuring Programmatic/VAST playback, verify playback, monitor SSP delivery, validate playlogs, and troubleshoot playback issues."
+---
+
 # Programmatic / VAST
 
 ## Overview

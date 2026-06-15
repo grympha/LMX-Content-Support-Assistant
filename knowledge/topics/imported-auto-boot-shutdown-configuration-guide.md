@@ -1,3 +1,26 @@
+---
+category: "Installation of LMX Content App"
+keywords:
+  - auto boot
+  - auto start
+  - auto launch on startup
+  - kiosk mode
+  - startup configuration
+  - boot on power
+  - shutdown schedule
+  - auto restart windows
+  - windows registry boot
+  - power settings cms
+  - auto power on off
+  - device auto launch
+description: "Guide for configuring automatic boot and scheduled shutdown on Windows and Android devices running LMX Content — covers registry settings, power configuration, and auto-launch setup."
+search_priority: "high"
+related_topics:
+  - "Installation of LMX Content App"
+  - "Basic Troubleshooting"
+  - "Supported Operating Systems & Hardware"
+---
+
 # Auto Boot Shutdown Configuration Guide
 
 Source document: `Auto+Boot+_+Shutdown+Configuration+Guide.doc`

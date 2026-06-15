@@ -1,3 +1,20 @@
+---
+category: "Default Playlist"
+keywords:
+  - default playlist showing unexpectedly
+  - wrong content playing
+  - scheduled content not visible
+  - inventory assignment wrong
+  - content not assigned
+  - default playlist when it should not
+description: "RCA for default playlist displaying instead of scheduled campaign — caused by incorrect inventory assignment."
+search_priority: "medium"
+related_topics:
+  - "Default Playlist"
+  - "Schedule Content"
+  - "Publish Content"
+---
+
 # Default Playlist Issue
 
 ## Issue

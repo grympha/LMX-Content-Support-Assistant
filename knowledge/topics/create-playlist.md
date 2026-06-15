@@ -1,3 +1,12 @@
+---
+category: "Create Playlist"
+keywords: [playlist, normal, fixed, prime, dependent]
+confluence_urls:
+  - label: "Playlist Creation"
+    url: "https://movingwallshub.atlassian.net/wiki/x/goGKCQ"
+next_step: "Upload Content, Schedule Content, Approve Campaign, and Publish Content."
+---
+
 # Create Playlist
 
 A Playlist is a sequence of media files that plays on screens assigned to a location.

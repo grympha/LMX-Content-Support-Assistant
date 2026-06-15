@@ -1,3 +1,25 @@
+---
+category: "Publish Content"
+keywords:
+  - content not syncing
+  - sync failed
+  - content sync issue
+  - content not downloading
+  - firewall blocking sync
+  - cms sync troubleshooting
+  - schedule sync issue
+  - windows sync cms
+  - android sync cms
+  - content not updating device
+  - sync diagnostic steps
+description: "Step-by-step troubleshooting guide for content syncing failures on Windows and Android devices — covers connectivity, firewall, scheduling, and storage causes."
+search_priority: "high"
+related_topics:
+  - "Publish Content"
+  - "Basic Troubleshooting"
+  - "Schedule Content"
+---
+
 # Troubleshooting Guide Content Not Syncing in CMS
 
 Source document: `Troubleshooting+Guide_+Content+Not+Syncing+in+CMS.doc`

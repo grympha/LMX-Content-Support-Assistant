@@ -1,3 +1,20 @@
+---
+category: "Programmatic / VAST"
+keywords:
+  - pull to content not working
+  - ptc not working
+  - inventory mapping mismatch
+  - inventory name mismatch
+  - ptc campaign not playing
+  - ssp campaign not showing
+  - pull to content mapping
+description: "RCA for Pull To Content failure — inventory name mismatch between campaign and expected configuration."
+search_priority: "medium"
+related_topics:
+  - "Programmatic / VAST"
+  - "Device Pairing"
+---
+
 # Pull To Content Mapping Issue
 
 ## Issue

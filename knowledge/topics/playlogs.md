@@ -1,3 +1,12 @@
+---
+category: "Playlogs"
+keywords: [playlog, playlogs, report, "proof of play"]
+confluence_urls:
+  - label: "Playlogs (General & Device Level)"
+    url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ"
+next_step: "Validate campaign delivery and export client reports."
+---
+
 # Playlogs
 
 Playlogs help confirm what content played on devices for reporting, audit, and validation.

@@ -1,3 +1,23 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - resolution mismatch
+  - content cropped
+  - content stretched
+  - black borders
+  - layout not aligned
+  - wrong screen resolution
+  - content resolution wrong
+  - led processor scaling
+  - screen processor settings
+  - re-upload correct dimensions
+description: "Troubleshooting guide for content displaying cropped, stretched, or with black borders — covers screen resolution verification, layout comparison, and content re-upload."
+search_priority: "medium"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Supported Operating Systems & Hardware"
+---
+
 # Resolution Mismatch
 
 ## Symptoms

@@ -1,3 +1,24 @@
+---
+category: "Basic Troubleshooting"
+keywords:
+  - device offline
+  - device shows offline
+  - heartbeat missing
+  - no heartbeat
+  - device disconnected
+  - device not connecting
+  - internet disconnected device
+  - firewall blocking cms
+  - dns issue device
+  - player stopped offline
+  - device pairing status
+description: "Troubleshooting guide for devices showing offline in CMS — covers network, device, and CMS-side causes including internet, firewall, DNS, player state, and pairing."
+search_priority: "high"
+related_topics:
+  - "Basic Troubleshooting"
+  - "Device Pairing"
+---
+
 # Device Offline
 
 ## Symptoms
@@ -69,5 +90,8 @@ Collect:
 ## Related Notes
 
 [[Device Pairing]]  
+[[Device-Pairing-Troubleshooting]]  
+[[Firewall-And-Network-Requirements]]  
 [[Online Offline Status]]  
-[[Black Screen]]
+[[Black Screen]]  
+[[imported-heartbeat-mechanism-in-lmx-content-cms]]

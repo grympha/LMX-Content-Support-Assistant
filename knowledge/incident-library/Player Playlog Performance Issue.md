@@ -1,3 +1,20 @@
+---
+category: "Playlogs"
+keywords:
+  - playlog performance
+  - slow report generation
+  - report generation delay
+  - dashboard slow reporting
+  - playlog processing
+  - database load playlogs
+  - playlogs delayed
+  - report not generating
+description: "Incident record for playlog processing causing platform performance degradation — high playlog volume created excessive database load, resolved by infrastructure optimization."
+search_priority: "low"
+related_topics:
+  - "Playlogs"
+---
+
 # Player Playlog Performance Issue
 
 ## Incident Summary

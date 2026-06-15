@@ -1,3 +1,25 @@
+---
+category: "User Management"
+keywords:
+  - user roles
+  - permissions
+  - tenant admin
+  - project admin
+  - content creator
+  - content approver
+  - media partner
+  - monitor user
+  - user access levels
+  - role management
+  - cms user permissions
+  - user types lmx
+description: "Reference guide for all LMX Content user role types — defines permissions for Tenant Admin, Project Admin, Content Creator, Content Approver, Media Partner, and Monitor User."
+search_priority: "high"
+related_topics:
+  - "User Management"
+  - "Dashboard Overview"
+---
+
 # User Roles & Permissions
 
 Source document: `User+Roles+&+Permissions.doc`

@@ -1,3 +1,12 @@
+---
+category: "Create Device"
+keywords: [device, "device manager", "verification code"]
+confluence_urls:
+  - label: "Create a Device"
+    url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ"
+next_step: "Upload Content, Schedule Content, Approve Campaign, and Publish Content."
+---
+
 # Create Device
 
 A Device is the CMS record for the physical screen or player that displays scheduled content.

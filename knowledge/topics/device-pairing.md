@@ -1,3 +1,14 @@
+---
+category: "Device Pairing"
+keywords: [pair, pairing, verification, code]
+confluence_urls:
+  - label: "Create a Device"
+    url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ"
+  - label: "Pair LMX Inventory to Devices"
+    url: "https://movingwallshub.atlassian.net/wiki/x/GA6MCQ"
+next_step: "Publish test content and validate playback."
+---
+
 # Device Pairing
 
 Device pairing links the physical player app to the CMS device record using a verification code.

@@ -1,3 +1,12 @@
+---
+category: "Dashboard Overview"
+keywords: [dashboard, online, offline, storage, status]
+confluence_urls:
+  - label: "Dashboard Overview"
+    url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ"
+next_step: "Continue with Network, Location, Playlist, Device, or Schedule setup."
+---
+
 # Dashboard Overview
 
 Use the Dashboard as the first page to understand the current CMS and device status.

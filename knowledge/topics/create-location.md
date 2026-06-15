@@ -1,3 +1,12 @@
+---
+category: "Create Location"
+keywords: [location, timezone, zone, subzone]
+confluence_urls:
+  - label: "Create a Location"
+    url: "https://movingwallshub.atlassian.net/wiki/x/a4GKCQ"
+next_step: "Create playlists and devices for the location."
+---
+
 # Create Location
 
 A Location represents where screens are deployed, such as a building, branch, floor, zone, or screen group.

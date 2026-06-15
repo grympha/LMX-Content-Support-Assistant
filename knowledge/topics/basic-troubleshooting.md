@@ -1,3 +1,12 @@
+---
+category: "Basic Troubleshooting"
+keywords: [troubleshoot, troubleshooting, "black screen", offline, "not playing", "wrong content", "old content", "missing playlog", "sync failure", synchronization, "programmatic failure"]
+confluence_urls:
+  - label: "LMX Troubleshooting Guide"
+    url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ"
+next_step: "After troubleshooting, verify playback recovery, monitor device stability, validate playlogs, and escalate backend issues if required."
+---
+
 # Basic Troubleshooting
 
 ## Overview

@@ -1,3 +1,21 @@
+---
+category: "Storage Management"
+keywords:
+  - storage full
+  - storage capacity
+  - storage limit reached
+  - deployment delay
+  - content processing failed
+  - upload failed storage
+  - media storage
+  - 8gb to 20gb
+description: "Incident record for storage reaching critical capacity — expanded from 8 GB to 20 GB to restore normal deployment operations."
+search_priority: "low"
+related_topics:
+  - "Storage Management"
+  - "Basic Troubleshooting"
+---
+
 # Storage Capacity Upgrade
 
 ## Incident Summary
