@@ -27,6 +27,7 @@ synonyms:
   - [download, download link, apk, installer, setup, appimage, app download, player download, install app, get app, latest version, update player, new version, exe, zip]
   - [max dsp, demand side platform, advertiser, buyer, explore mode, instant mode, conventional mode, campaign planning, signals, media inventories]
   - [ssp overview, supply side platform, publisher, inventory management, deal management, deal id, pmp, dv360, place exchange, viooh, programmatic workflow]
+  - [orientation, portrait, landscape, screen rotation, vertical screen, horizontal screen, rotate screen, change orientation, device orientation]
 ---
 
 # Synonym Groups

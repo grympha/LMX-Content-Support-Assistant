@@ -257,7 +257,8 @@ const synonymGroups = [
   ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"],
   ["download", "download link", "apk", "installer", "setup", "appimage", "app download", "player download", "install app", "get app", "latest version", "update player", "new version", "exe", "zip"],
   ["max dsp", "demand side platform", "advertiser", "buyer", "explore mode", "instant mode", "conventional mode", "campaign planning", "signals", "media inventories"],
-  ["ssp overview", "supply side platform", "publisher", "inventory management", "deal management", "deal id", "pmp", "dv360", "place exchange", "viooh", "programmatic workflow"]
+  ["ssp overview", "supply side platform", "publisher", "inventory management", "deal management", "deal id", "pmp", "dv360", "place exchange", "viooh", "programmatic workflow"],
+  ["orientation", "portrait", "landscape", "screen rotation", "vertical screen", "horizontal screen", "rotate screen", "change orientation", "device orientation"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
@@ -638,7 +639,7 @@ const FOLDER_PRIORITY: Record<string, number> = {
   rca: 250,
   "incident-library": 200,
   troubleshooting: 150,
-  faq: 120,
+  faq: 190,
   "common-support-questions": 100,
   "customer-training": 80,
   topics: 40,
