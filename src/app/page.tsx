@@ -262,7 +262,14 @@ export default function Home() {
 
   // --- Chat ---
 
-  async function sendMessage(text = input) {
+  // Core send function used by both Ask Assistant and the follow-up reply bar.
+  // forceConversationId: when provided, overrides activeConversationId (bypasses stale closure).
+  // historyOverride: when provided, used instead of current messages state (bypasses stale closure).
+  async function sendMessage(
+    text = input,
+    forceConversationId?: string | null,
+    historyOverride?: Array<{ role: "user" | "assistant"; content: string }>
+  ) {
     const messageText = text.trim();
 
     if ((!messageText && attachments.length === 0) || loading) {
@@ -278,7 +285,9 @@ export default function Home() {
     setSelectedCommonQuestion("");
     setIntake(questionIntake);
 
-    const historyToSend = messages.map((m) => ({ role: m.role, content: m.content }));
+    const historyToSend = historyOverride !== undefined
+      ? historyOverride
+      : messages.map((m) => ({ role: m.role, content: m.content }));
 
     setMessages((prev) => [
       ...prev,
@@ -293,7 +302,9 @@ export default function Home() {
     setAttachments([]);
     setLoading(true);
 
-    const convIdForRequest = activeConversationId;
+    const convIdForRequest = forceConversationId !== undefined
+      ? forceConversationId
+      : activeConversationId;
 
     try {
       const response = await fetch("/api/chat", {
@@ -351,6 +362,38 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Called by IntakeSidebar's "Ask Assistant" Send button.
+  // Always starts a fresh conversation — never appends to the current active one.
+  async function sendAsNewTopic() {
+    if (!input.trim() && attachments.length === 0) return;
+
+    let newConvId: string | null = null;
+
+    if (historyAvailable) {
+      try {
+        const res = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "New Conversation" }),
+        });
+        if (res.ok) {
+          const newConv = (await res.json()) as ConversationSummary;
+          setConversations((prev) => [newConv, ...prev]);
+          setActiveConversationId(newConv.id);
+          newConvId = newConv.id;
+        }
+      } catch {
+        // Silently ignore — message will still be sent, just without history saving.
+      }
+    } else {
+      setActiveConversationId(null);
+    }
+
+    // Clear current thread and pass empty history so old context is not sent.
+    setMessages([]);
+    await sendMessage(input, newConvId, []);
   }
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
@@ -543,7 +586,7 @@ export default function Home() {
           loading={loading}
           input={input}
           onInputChange={setInput}
-          onSend={sendMessage}
+          onSend={sendAsNewTopic}
           attachments={attachments}
           onRemoveAttachment={removeAttachment}
           onAttachClick={() => attachmentInputRef.current?.click()}
