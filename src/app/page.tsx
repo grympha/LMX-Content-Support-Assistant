@@ -262,115 +262,25 @@ export default function Home() {
 
   // --- Chat ---
 
-  // Core send function used by both Ask Assistant and the follow-up reply bar.
-  // forceConversationId: when provided, overrides activeConversationId (bypasses stale closure).
-  // historyOverride: when provided, used instead of current messages state (bypasses stale closure).
-  async function sendMessage(
-    text = input,
-    forceConversationId?: string | null,
-    historyOverride?: Array<{ role: "user" | "assistant"; content: string }>
-  ) {
-    const messageText = text.trim();
-
-    if ((!messageText && attachments.length === 0) || loading) {
-      return;
-    }
+  // Ask Assistant — always starts a fresh conversation, never continues the current one.
+  // All state values are captured at the top before any await to avoid stale closure issues.
+  async function sendNewTopicMessage() {
+    const messageText = input.trim();
+    if ((!messageText && attachments.length === 0) || loading) return;
 
     const questionIntake: IssueIntake = {
       ...intake,
       issueCategory: intake.issueCategory || "",
-      description: messageText
+      description: messageText,
     };
+    const submittedAttachments = [...attachments];
+    const userContent = [
+      messageText || "Please review the attached file.",
+      ...submittedAttachments.map((a) => `Attached: ${a.name}`),
+    ].join("\n");
 
-    setSelectedCommonQuestion("");
-    setIntake(questionIntake);
-
-    const historyToSend = historyOverride !== undefined
-      ? historyOverride
-      : messages.map((m) => ({ role: m.role, content: m.content }));
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: [messageText || "Please review the attached file.", ...attachments.map((attachment) => `Attached: ${attachment.name}`)].join("\n")
-      }
-    ]);
-    setInput("");
-    const submittedAttachments = attachments;
-    setAttachments([]);
-    setLoading(true);
-
-    const convIdForRequest = forceConversationId !== undefined
-      ? forceConversationId
-      : activeConversationId;
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: messageText,
-          attachments: submittedAttachments,
-          intake: questionIntake,
-          history: historyToSend,
-          conversationId: convIdForRequest ?? undefined
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Chat request failed.");
-      }
-
-      const data = (await response.json()) as {
-        reply: string;
-        source: ChatSource;
-        sourceLinks?: SourceLink[];
-        sourceNotes?: SourceNote[];
-      };
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: data.reply,
-          source: data.source,
-          sourceLinks: data.sourceLinks ?? [],
-          sourceNotes: data.sourceNotes ?? []
-        }
-      ]);
-
-      // Keep the drawer list fresh after a successful exchange
-      if (convIdForRequest) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === convIdForRequest ? { ...c, updatedAt: new Date().toISOString() } : c
-          )
-        );
-      }
-    } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          source: "local",
-          content: "Please refresh the page and ask the training question again. If it still fails, check the app server logs."
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Called by IntakeSidebar's "Ask Assistant" Send button.
-  // Always starts a fresh conversation — never appends to the current active one.
-  async function sendAsNewTopic() {
-    if (!input.trim() && attachments.length === 0) return;
-
-    let newConvId: string | null = null;
-
+    // Create a DB conversation before touching any UI state.
+    let convId: string | null = null;
     if (historyAvailable) {
       try {
         const res = await fetch("/api/conversations", {
@@ -381,19 +291,149 @@ export default function Home() {
         if (res.ok) {
           const newConv = (await res.json()) as ConversationSummary;
           setConversations((prev) => [newConv, ...prev]);
-          setActiveConversationId(newConv.id);
-          newConvId = newConv.id;
+          convId = newConv.id;
         }
       } catch {
-        // Silently ignore — message will still be sent, just without history saving.
+        // No DB save this round — message still sends.
       }
-    } else {
-      setActiveConversationId(null);
     }
 
-    // Clear current thread and pass empty history so old context is not sent.
-    setMessages([]);
-    await sendMessage(input, newConvId, []);
+    // Reset UI to a clean thread with only the new user message.
+    setSelectedCommonQuestion("");
+    setIntake(questionIntake);
+    setActiveConversationId(convId);
+    setMessages([{ id: crypto.randomUUID(), role: "user" as const, content: userContent }]);
+    setInput("");
+    setAttachments([]);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageText,
+          attachments: submittedAttachments,
+          intake: questionIntake,
+          history: [],
+          conversationId: convId ?? undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Chat request failed.");
+      const data = (await res.json()) as {
+        reply: string;
+        source: ChatSource;
+        sourceLinks?: SourceLink[];
+        sourceNotes?: SourceNote[];
+      };
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          content: data.reply,
+          source: data.source,
+          sourceLinks: data.sourceLinks ?? [],
+          sourceNotes: data.sourceNotes ?? [],
+        },
+      ]);
+      if (convId) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === convId ? { ...c, updatedAt: new Date().toISOString() } : c))
+        );
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          source: "local" as ChatSource,
+          content: "Please refresh the page and ask the training question again. If it still fails, check the app server logs.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Bottom reply bar — continues the currently active conversation.
+  // All state values are captured at the top before any await to avoid stale closure issues.
+  async function sendFollowUpMessage() {
+    const messageText = input.trim();
+    if ((!messageText && attachments.length === 0) || loading) return;
+
+    const questionIntake: IssueIntake = {
+      ...intake,
+      issueCategory: intake.issueCategory || "",
+      description: messageText,
+    };
+    const historyToSend = messages.map((m) => ({ role: m.role, content: m.content }));
+    const submittedAttachments = [...attachments];
+    const convId = activeConversationId;
+    const userContent = [
+      messageText || "Please review the attached file.",
+      ...submittedAttachments.map((a) => `Attached: ${a.name}`),
+    ].join("\n");
+
+    setSelectedCommonQuestion("");
+    setIntake(questionIntake);
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user" as const, content: userContent },
+    ]);
+    setInput("");
+    setAttachments([]);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageText,
+          attachments: submittedAttachments,
+          intake: questionIntake,
+          history: historyToSend,
+          conversationId: convId ?? undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Chat request failed.");
+      const data = (await res.json()) as {
+        reply: string;
+        source: ChatSource;
+        sourceLinks?: SourceLink[];
+        sourceNotes?: SourceNote[];
+      };
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          content: data.reply,
+          source: data.source,
+          sourceLinks: data.sourceLinks ?? [],
+          sourceNotes: data.sourceNotes ?? [],
+        },
+      ]);
+      if (convId) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === convId ? { ...c, updatedAt: new Date().toISOString() } : c))
+        );
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          source: "local" as ChatSource,
+          content: "Please refresh the page and ask the training question again. If it still fails, check the app server logs.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
@@ -586,7 +626,7 @@ export default function Home() {
           loading={loading}
           input={input}
           onInputChange={setInput}
-          onSend={sendAsNewTopic}
+          onSend={sendNewTopicMessage}
           attachments={attachments}
           onRemoveAttachment={removeAttachment}
           onAttachClick={() => attachmentInputRef.current?.click()}
@@ -605,7 +645,7 @@ export default function Home() {
           loading={loading}
           input={input}
           onInputChange={setInput}
-          onSend={sendMessage}
+          onSend={sendFollowUpMessage}
           attachments={attachments}
           onRemoveAttachment={removeAttachment}
           onAttachClick={() => attachmentInputRef.current?.click()}

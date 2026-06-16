@@ -44,7 +44,7 @@ export const commonQuestions: CommonQuestion[] = [
   {
     question: "Can 2GB RAM Android devices support LMX Content?",
     answer:
-      "Can 2GB RAM Android devices support LMX Content?\n\nYes, 2GB RAM devices can support basic image and video playback.\n\nSuitable for:\n- Images\n- Basic MP4 videos\n- Simple scheduling\n\nNot recommended for:\n- HTML content\n- VAST campaigns\n- Programmatic campaigns\n- Multi-zone layouts\n\nFor production deployments, use at least 4GB RAM.",
+      "Can 2GB RAM Android devices support LMX Content?\n\n2GB RAM Android devices can support basic image and video playback only. They are not recommended for HTML, VAST, programmatic, or multi-zone deployments.\n\nSuitable for:\n- Images\n- Basic MP4 videos\n- Simple scheduling\n\nNot recommended for:\n- HTML content\n- VAST campaigns\n- Programmatic campaigns\n- Multi-zone layouts\n\nProduction recommendation: use at least 4GB RAM.",
     sourceLinks: [
       { label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" },
       { label: "Recommended Android Devices", url: "https://movingwallshub.atlassian.net/wiki/x/hwqMCQ" }
@@ -209,7 +209,7 @@ export const commonQuestions: CommonQuestion[] = [
   {
     question: "Why is my campaign showing in Playlog but not on screen?",
     answer:
-      "Why is my campaign showing in Playlog but not on screen?\n\nPlayback was recorded, but the display may have a hardware, connection, or configuration issue.\n\nBasic Troubleshooting\n- Check screen power.\n- Check display connection.\n- Verify layout resolution.\n- Verify display source input.",
+      "Why is my campaign showing in Playlog but not on screen?\n\nPlaylog entries confirm the player recorded playback — the campaign IS running on the player. If content is not visible on the physical screen, the issue is with the display output, not the campaign itself.\n\nCommon causes:\n- Screen is powered off or in standby\n- Incorrect display input or source selected (HDMI 1 / HDMI 2 / DisplayPort)\n- HDMI cable disconnected or faulty\n- LED processor or controller not receiving signal\n- Layout resolution does not match screen resolution\n- Screen orientation mismatch\n\nBasic Troubleshooting\n- Verify the screen is powered on.\n- Check the display input source selection.\n- Inspect HDMI and power cables.\n- Check LED processor signal and configuration.\n- Verify layout resolution matches the screen.\n- Verify screen orientation setting.",
     sourceLinks: [
       { label: "LMX Troubleshooting Guide", url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ" },
       { label: "Black Screen / Logo Issue Guide", url: "https://movingwallshub.atlassian.net/wiki/x/SQiMCQ" }

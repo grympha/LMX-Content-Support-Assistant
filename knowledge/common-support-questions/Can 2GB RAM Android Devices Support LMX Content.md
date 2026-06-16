@@ -2,7 +2,7 @@
 
 ## Answer
 
-Yes, but performance may be limited depending on content complexity.
+2GB RAM Android devices can support basic image and video playback only. They are not recommended for HTML, VAST, programmatic, or multi-zone deployments.
 
 ## Recommended Usage
 
@@ -10,23 +10,25 @@ Suitable for:
 
 - Images
     
-- Basic videos
+- Basic MP4 videos
     
 - Simple schedules
     
 
 Not recommended for:
 
-- Programmatic content
+- HTML content
     
-- Multiple zones
+- VAST campaigns
     
-- Heavy HTML content
+- Programmatic campaigns
+    
+- Multi-zone layouts
     
 
 ## Recommendation
 
-4GB RAM or higher is recommended for production environments.
+Production recommendation: use at least 4GB RAM.
 
 ## Related Notes
 
