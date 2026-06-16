@@ -1,4 +1,24 @@
 ---
+keywords:
+  - lg webos
+  - webos
+  - lg signage
+  - webos signage
+  - lg display
+  - webos player
+  - lg screen
+  - lg webos requirements
+  - lg webos installation
+  - lg webos setup
+  - webos 4.0
+  - lmx content lg
+  - lg webos lmx
+description: "Hardware and system requirements for running LMX Content on LG webOS Signage displays — covers supported OS version, processor, memory, media formats, and programmatic limitations."
+search_priority: "medium"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Installation of LMX Content App"
+# Platform-specific spec fields
 platform: "LG webOS"
 triggers: [lg webos, webos, lg]
 os_version: "LG webOS Signage 4.0.1"

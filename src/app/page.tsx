@@ -1,78 +1,17 @@
 "use client";
 
-import {
-  Clipboard,
-  Loader2,
-  Lock,
-  LogOut,
-  Plus,
-  Send,
-  ShieldCheck,
-  Trash2,
-  X
-} from "lucide-react";
+import { History, Loader2, Lock, LogOut, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppInstallationTrainingPage } from "@/components/AppInstallationTrainingPage";
-import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrainingPage";
-import { DefaultPlaylistTrainingPage } from "@/components/DefaultPlaylistTrainingPage";
-import { DevicePairingTrainingPage } from "@/components/DevicePairingTrainingPage";
-import { DeviceTrainingPage } from "@/components/DeviceTrainingPage";
-import { PlaylogTrainingPage } from "@/components/PlaylogTrainingPage";
-import { ProgressPanel } from "@/components/ProgressPanel";
-import { PublishContentTrainingPage } from "@/components/PublishContentTrainingPage";
-import { ScheduleContentTrainingPage } from "@/components/ScheduleContentTrainingPage";
-import { StorageManagementTrainingPage } from "@/components/StorageManagementTrainingPage";
-import { SupportedHardwareTrainingPage } from "@/components/SupportedHardwareTrainingPage";
-import { UserManagementTrainingPage } from "@/components/UserManagementTrainingPage";
-import { DashboardTrainingPage, LayoutTrainingPage, LocationTrainingPage, NetworkTrainingPage, PlaylistTrainingPage } from "@/components/TrainingTopicPages";
+import { ChatThread } from "@/components/ChatThread";
+import {
+  ConversationHistoryDrawer,
+  type ConversationSummary,
+} from "@/components/ConversationHistoryDrawer";
+import { IntakeSidebar } from "@/components/IntakeSidebar";
 import { commonQuestions } from "@/lib/commonQuestions";
-import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
-
-type ChatSource = "openai" | "knowledge" | "local" | "claude" | "mistral";
-
-type SourceNote = { file: string; folder: string; heading: string };
-
-const topicSourceLinks: Record<string, SourceLink[]> = {
-  "Dashboard Overview": [{ label: "Dashboard Overview", url: "https://movingwallshub.atlassian.net/wiki/x/JoGKCQ" }],
-  "Create Network": [{ label: "Create a Network", url: "https://movingwallshub.atlassian.net/wiki/x/VIGKCQ" }],
-  "Create Location": [{ label: "Create a Location", url: "https://movingwallshub.atlassian.net/wiki/x/a4GKCQ" }],
-  "Create Playlist": [{ label: "Playlist Creation", url: "https://movingwallshub.atlassian.net/wiki/x/goGKCQ" }],
-  "Create Layout": [{ label: "Layout Creation", url: "https://movingwallshub.atlassian.net/wiki/x/mYGKCQ" }],
-  "Create Device": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }],
-  "Device Pairing": [{ label: "Create a Device", url: "https://movingwallshub.atlassian.net/wiki/x/sIGKCQ" }, { label: "Pair LMX Inventory to Devices", url: "https://movingwallshub.atlassian.net/wiki/x/GA6MCQ" }],
-  "Storage Management": [{ label: "Storage", url: "https://movingwallshub.atlassian.net/wiki/x/74GKCQ" }],
-  "Default Playlist": [{ label: "Default Playlist Guide", url: "https://movingwallshub.atlassian.net/wiki/x/h4KKCQ" }],
-  "Schedule Content": [{ label: "How to Schedule Content", url: "https://movingwallshub.atlassian.net/wiki/x/0IKKCQ" }],
-  "Bundle Scheduling": [{ label: "Scheduling Bundles", url: "https://movingwallshub.atlassian.net/wiki/x/R4OKCQ" }],
-  "Publish Content": [{ label: "Unable to Publish – Error Guide", url: "https://movingwallshub.atlassian.net/wiki/x/zwCXDw" }],
-  "Playlogs": [{ label: "Playlogs (General & Device Level)", url: "https://movingwallshub.atlassian.net/wiki/x/04GKCQ" }],
-  "User Management": [{ label: "How to Create a User", url: "https://movingwallshub.atlassian.net/wiki/x/FIOKCQ" }, { label: "User Roles & Permissions", url: "https://movingwallshub.atlassian.net/wiki/x/KIOKCQ" }],
-  "Basic Troubleshooting": [{ label: "LMX Troubleshooting Guide", url: "https://movingwallshub.atlassian.net/wiki/x/VweMCQ" }],
-  "Installation of LMX Content App": [{ label: "Installation Guide (Android & Windows)", url: "https://movingwallshub.atlassian.net/wiki/x/AoCTDw" }, { label: "Download MW Content App", url: "https://movingwallshub.atlassian.net/wiki/x/V4CTDw" }],
-  "Supported Operating Systems & Hardware": [{ label: "System Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/cgqMCQ" }, { label: "Device & Platform Technical Requirements", url: "https://movingwallshub.atlassian.net/wiki/x/aoCTDw" }],
-  "Programmatic / VAST": [{ label: "Schedule URL & Google IMA (VAST)", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }]
-};
-
-type SourceLink = { label: string; url: string };
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  source?: ChatSource;
-  sourceLinks?: SourceLink[];
-  sourceNotes?: SourceNote[];
-};
-
-type ChatAttachment = {
-  name: string;
-  type: string;
-  size: number;
-  dataUrl?: string;
-  text?: string;
-};
-
-type KnowledgeTopic = (typeof lmxKnowledge)[number];
+import { generateTitle } from "@/lib/conversationUtils";
+import { lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
+import type { ChatAttachment, ChatMessage, ChatSource, SourceLink, SourceNote } from "@/lib/chatTypes";
 
 const emptyIntake: IssueIntake = {
   clientTenant: "",
@@ -86,8 +25,6 @@ const emptyIntake: IssueIntake = {
   mediaLink: "",
   description: ""
 };
-
-const trackableTopicCount = issueCategories.filter((category) => category !== "Other").length;
 
 export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -103,9 +40,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Conversation history state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [historyAvailable, setHistoryAvailable] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -119,22 +61,23 @@ export default function Home() {
       .finally(() => setAuthChecked(true));
   }, []);
 
+  // Probe history availability once authenticated. 503 means DATABASE_URL is not set.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  useEffect(() => {
-    const el = replyTextareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 128) + "px";
-  }, [input]);
-
-  const learnerCompleteness = useMemo(() => {
-    const required: Array<keyof IssueIntake> = ["clientTenant", "issueCategory"];
-    const completed = required.filter((field) => Boolean(intake[field])).length;
-    return Math.round((completed / required.length) * 100);
-  }, [intake]);
+    if (!authenticated) return;
+    fetch("/api/conversations")
+      .then(async (res) => {
+        if (res.status === 503) {
+          setHistoryAvailable(false);
+          return;
+        }
+        if (res.ok) {
+          const data = (await res.json()) as ConversationSummary[];
+          setConversations(data);
+          setHistoryAvailable(true);
+        }
+      })
+      .catch(() => setHistoryAvailable(false));
+  }, [authenticated]);
 
   const selectedTopic = useMemo(
     () => lmxKnowledge.find((entry) => entry.category === intake.issueCategory),
@@ -224,7 +167,100 @@ export default function Home() {
     setUsername("");
     setIntake(emptyIntake);
     setMessages([]);
+    setConversations([]);
+    setActiveConversationId(null);
+    setHistoryAvailable(false);
+    setHistoryOpen(false);
   }
+
+  // --- Conversation history actions ---
+
+  async function fetchConversations() {
+    if (!historyAvailable) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/conversations");
+      if (res.ok) {
+        const data = (await res.json()) as ConversationSummary[];
+        setConversations(data);
+      }
+    } catch {
+      // silently ignore — drawer shows stale list
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function openConversation(id: string) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        id: string;
+        messages: Array<{ id: string; role: string; content: string }>;
+      };
+      const loaded: ChatMessage[] = data.messages.map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        source: m.role === "assistant" ? ("knowledge" as ChatSource) : undefined,
+      }));
+      setMessages(loaded);
+      setActiveConversationId(id);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function createNewConversation() {
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Conversation" })
+      });
+      if (!res.ok) return;
+      const newConv = (await res.json()) as ConversationSummary;
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+      setMessages([]);
+      setHistoryOpen(false);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function deleteConversation(id: string) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+      if (!res.ok) return;
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function renameConversation(id: string, newTitle: string) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle })
+      });
+      if (!res.ok) return;
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
+      );
+    } catch {
+      // silently ignore
+    }
+  }
+
+  // --- Chat ---
 
   async function sendMessage(text = input) {
     const messageText = text.trim();
@@ -257,6 +293,8 @@ export default function Home() {
     setAttachments([]);
     setLoading(true);
 
+    const convIdForRequest = activeConversationId;
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -265,7 +303,8 @@ export default function Home() {
           message: messageText,
           attachments: submittedAttachments,
           intake: questionIntake,
-          history: historyToSend
+          history: historyToSend,
+          conversationId: convIdForRequest ?? undefined
         })
       });
 
@@ -273,11 +312,32 @@ export default function Home() {
         throw new Error("Chat request failed.");
       }
 
-      const data = (await response.json()) as { reply: string; source: ChatSource; sourceLinks?: SourceLink[]; sourceNotes?: SourceNote[] };
+      const data = (await response.json()) as {
+        reply: string;
+        source: ChatSource;
+        sourceLinks?: SourceLink[];
+        sourceNotes?: SourceNote[];
+      };
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: data.reply, source: data.source, sourceLinks: data.sourceLinks ?? [], sourceNotes: data.sourceNotes ?? [] }
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.reply,
+          source: data.source,
+          sourceLinks: data.sourceLinks ?? [],
+          sourceNotes: data.sourceNotes ?? []
+        }
       ]);
+
+      // Keep the drawer list fresh after a successful exchange
+      if (convIdForRequest) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convIdForRequest ? { ...c, updatedAt: new Date().toISOString() } : c
+          )
+        );
+      }
     } catch {
       setMessages((current) => [
         ...current,
@@ -295,12 +355,18 @@ export default function Home() {
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
     setMessages([]);
+    setActiveConversationId(null);
     setSelectedCommonQuestion("");
-    setIntake((current) => ({ ...current, [field]: value, description: field === "issueCategory" ? "" : current.description }));
+    setIntake((current) => ({
+      ...current,
+      [field]: value,
+      description: field === "issueCategory" ? "" : current.description
+    }));
   }
 
   async function selectCommonQuestion(question: string) {
     setSelectedCommonQuestion(question);
+    setActiveConversationId(null);
 
     const selected = commonQuestions.find((item) => item.question === question);
     if (!selected) {
@@ -313,19 +379,41 @@ export default function Home() {
       { id: crypto.randomUUID(), role: "assistant", content: selected.answer, source: "local", sourceLinks: selected.sourceLinks ?? [] }
     ]);
 
-    try {
-      await fetch("/api/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventType: "quick_answer_selected",
-          username,
-          fullName: intake.clientTenant,
-          question: selected.question
-        })
-      });
-    } catch {
-      // The quick answer still works if progress logging is not configured.
+    // Progress logging — non-blocking
+    fetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventType: "quick_answer_selected",
+        username,
+        fullName: intake.clientTenant,
+        question: selected.question
+      })
+    }).catch(() => undefined);
+
+    // Persist as a new conversation if history is available.
+    // Always creates a fresh conversation — never attaches to the current active one.
+    if (historyAvailable) {
+      try {
+        const res = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: generateTitle(selected.question),
+            messages: [
+              { role: "user", content: selected.question },
+              { role: "assistant", content: selected.answer },
+            ],
+          })
+        });
+        if (res.ok) {
+          const newConv = (await res.json()) as ConversationSummary;
+          setConversations((prev) => [newConv, ...prev]);
+          setActiveConversationId(newConv.id);
+        }
+      } catch {
+        // Silently ignore — FAQ answer already displayed regardless.
+      }
     }
   }
 
@@ -360,6 +448,9 @@ export default function Home() {
                 className="w-full rounded-md border border-line bg-white px-3 py-2.5 text-ink outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                 autoFocus
               />
+              <p className="mt-1.5 text-xs text-slate-500">
+                Use your full name or work email. This keeps your conversation history separate.
+              </p>
             </label>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
@@ -386,6 +477,20 @@ export default function Home() {
 
   return (
     <main className="min-h-screen">
+      {historyAvailable && (
+        <ConversationHistoryDrawer
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          loading={historyLoading}
+          onOpen={openConversation}
+          onNewTopic={createNewConversation}
+          onRename={renameConversation}
+          onDelete={deleteConversation}
+        />
+      )}
+
       <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -393,479 +498,78 @@ export default function Home() {
             <h1 className="text-2xl font-semibold text-ink">Support & Training Assistant</h1>
             <p className="mt-1 text-xs text-slate-500">Signed in as {username}</p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-fit items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[380px_1fr]">
-        <aside className="space-y-5">
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-ink">Learner</h2>
-                <p className="text-sm text-slate-600">Used for training personalization</p>
-              </div>
-              <div className="min-w-14 rounded-md bg-mist px-2 py-1 text-center text-sm font-semibold text-slate-700">
-                {learnerCompleteness}%
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              <Input label="Full Name" value={intake.clientTenant} onChange={(value) => updateIntake("clientTenant", value)} placeholder="Person taking this training" />
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-700">Training Topic</span>
-                <select
-                  value={intake.issueCategory}
-                  onChange={(event) => updateIntake("issueCategory", event.target.value as IssueIntake["issueCategory"])}
-                  className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                >
-                  <option value="">Select topic</option>
-                  {issueCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {selectedTopic ? <TopicDetail topic={selectedTopic} /> : null}
-              <ProgressPanel
-                username={username}
-                fullName={intake.clientTenant}
-                selectedTopic={intake.issueCategory}
-                topicCount={trackableTopicCount}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-ink">Ask Assistant</h2>
+          <div className="flex items-center gap-2">
+            {historyAvailable && (
               <button
                 type="button"
                 onClick={() => {
-                  setMessages([]);
-                  setSelectedCommonQuestion("");
+                  setHistoryOpen(true);
+                  void fetchConversations();
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
-                title="Clear answer"
+                className="flex w-fit items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
               >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                <History className="h-4 w-4" aria-hidden="true" />
+                History
               </button>
-            </div>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                sendMessage();
-              }}
-              className="grid gap-3"
-            >
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                rows={4}
-                className="min-h-28 resize-none rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                placeholder="Ask any LMX Content question. The assistant will search all training topics."
-              />
-              {attachments.length > 0 ? (
-                <div className="grid gap-2">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.name} className="flex items-center justify-between gap-2 rounded-md border border-line bg-mist px-3 py-2 text-xs text-slate-600">
-                      <span className="truncate">{attachment.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(attachment.name)}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-line bg-white text-slate-500 hover:border-signal hover:text-signal"
-                        title="Remove attachment"
-                      >
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {hasAiProvider ? (
-                <input
-                  ref={attachmentInputRef}
-                  type="file"
-                  multiple
-                  accept=".csv,.txt,.md,.json,.pdf,.doc,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
-                  onChange={(event) => handleAttachmentChange(event.target.files)}
-                  className="hidden"
-                />
-              ) : null}
-              <button
-                type="submit"
-                disabled={loading || (!input.trim() && attachments.length === 0)}
-                className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-signal px-4 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-                Send
-              </button>
-              {hasAiProvider ? (
-                <button
-                  type="button"
-                  onClick={() => attachmentInputRef.current?.click()}
-                  className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-signal hover:text-signal"
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Attach file
-                </button>
-              ) : null}
-            </form>
-          </section>
-
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <h2 className="mb-3 font-semibold text-ink">Frequently Asked Questions (FAQ)</h2>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Question</span>
-              <select
-                value={selectedCommonQuestion}
-                onChange={(event) => selectCommonQuestion(event.target.value)}
-                className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-              >
-                <option value="">Select a common question</option>
-                {commonQuestions.map((item, index) => (
-                  <option key={item.question} value={item.question}>
-                    {index + 1}. {item.question}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-        </aside>
-
-        <section className="flex h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-lg border border-line bg-mist/50 shadow-panel lg:sticky lg:top-4">
-          {/* Scrollable messages area */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {messages.length > 0 ? (
-              <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Current Topic Conversation</span>
-                  <div className="flex-1 border-t border-line" />
-                </div>
-                {messages.map((message) => (
-                  <article
-                    key={message.id}
-                    className={message.role === "user" ? "w-full rounded-lg bg-slatePanel p-4 text-white" : "w-full rounded-lg border border-line bg-white p-4 text-ink"}
-                  >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold">{message.role === "user" ? "You" : "Assistant"}</p>
-                        {message.role === "assistant" && message.source ? (
-                          <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-signal">
-                            {message.source === "openai" ? "OpenAI" : message.source === "claude" ? "Claude" : message.source === "mistral" ? "Mistral" : message.source === "knowledge" ? "Knowledge" : "Local"}
-                          </span>
-                        ) : null}
-                      </div>
-                      {message.role === "assistant" ? (
-                        <button
-                          type="button"
-                          onClick={() => navigator.clipboard.writeText(message.content)}
-                          className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal"
-                          title="Copy response"
-                        >
-                          <Clipboard className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      ) : null}
-                    </div>
-                    {message.role === "assistant" ? (
-                      <>
-                        <FormattedResponse content={message.content} />
-                        {message.sourceNotes && message.sourceNotes.length > 0 ? (
-                          <div className="mt-3 border-t border-line pt-3">
-                            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Sources used</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {message.sourceNotes.map((note, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 rounded border border-line bg-mist px-2 py-0.5 text-[11px] text-slate-500">
-                                  <span className="text-slate-400">{note.folder}</span>
-                                  <span className="mx-0.5 text-slate-300">/</span>
-                                  <span className="font-medium text-slate-600">{note.file.replace(/\.md$/i, "")}</span>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                        {message.sourceLinks && message.sourceLinks.length > 0 ? (
-                          <div className="mt-4 border-t border-line pt-3">
-                            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
-                            <div className="flex flex-wrap gap-2">
-                              {message.sourceLinks.map((link) => (
-                                <a
-                                  key={link.url}
-                                  href={link.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
-                                >
-                                  {link.label} ↗
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </>
-                    ) : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
-                  </article>
-                ))}
-
-                {loading ? (
-                  <div className="flex w-full items-center gap-3 rounded-lg border border-line bg-white p-4 text-sm text-slate-600">
-                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                    Searching all training topics...
-                  </div>
-                ) : null}
-                <div ref={messagesEndRef} />
-              </div>
-            ) : (
-              <>
-                <TopicContent selectedTopic={selectedTopic} />
-                {selectedTopic && (topicSourceLinks[selectedTopic.category] ?? []).length > 0 ? (
-                  <div className="mt-4 rounded-lg border border-line bg-white p-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Further reading</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(topicSourceLinks[selectedTopic.category] ?? []).map((link) => (
-                        <a
-                          key={link.url}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded border border-signal/30 bg-signal/5 px-2.5 py-1 text-xs font-medium text-signal transition hover:border-signal hover:bg-signal/10"
-                        >
-                          {link.label} ↗
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </>
             )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-fit items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Sign out
+            </button>
           </div>
+        </div>
+      </header>
 
-          {/* Sticky reply bar — shown once the conversation has started */}
-          {messages.length > 0 ? (
-            <div className="border-t border-line bg-white p-3">
-              <div className="mx-auto mb-3 max-w-3xl">
-                <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Follow-up Questions</p>
-                <p className="text-xs text-slate-400">Continue discussing the current topic. To start a new question or topic, use <span className="font-medium text-slate-500">Ask Assistant</span> on the left.</p>
-              </div>
-              {attachments.length > 0 ? (
-                <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.name} className="flex items-center gap-1.5 rounded border border-line bg-mist px-2.5 py-1 text-xs text-slate-600">
-                      <span className="max-w-[180px] truncate">{attachment.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(attachment.name)}
-                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 hover:text-signal"
-                      >
-                        <X className="h-3 w-3" aria-hidden="true" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <form
-                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                className="mx-auto flex max-w-3xl items-end gap-2"
-              >
-                <textarea
-                  ref={replyTextareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  rows={1}
-                  disabled={loading}
-                  className="flex-1 resize-none overflow-hidden rounded-lg border border-line px-3 py-2.5 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20 disabled:bg-slate-50"
-                  placeholder="Continue this conversation… (Shift+Enter for new line)"
-                />
-                {hasAiProvider ? (
-                  <button
-                    type="button"
-                    onClick={() => attachmentInputRef.current?.click()}
-                    title="Attach file"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line text-slate-600 transition hover:border-signal hover:text-signal"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={loading || (!input.trim() && attachments.length === 0)}
-                  title="Send"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-signal text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-                </button>
-              </form>
-            </div>
-          ) : null}
-        </section>
+      {hasAiProvider ? (
+        <input
+          ref={attachmentInputRef}
+          type="file"
+          multiple
+          accept=".csv,.txt,.md,.json,.pdf,.doc,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+          onChange={(event) => handleAttachmentChange(event.target.files)}
+          className="hidden"
+        />
+      ) : null}
+
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[380px_1fr]">
+        <IntakeSidebar
+          username={username}
+          intake={intake}
+          onIntakeChange={updateIntake}
+          loading={loading}
+          input={input}
+          onInputChange={setInput}
+          onSend={sendMessage}
+          attachments={attachments}
+          onRemoveAttachment={removeAttachment}
+          onAttachClick={() => attachmentInputRef.current?.click()}
+          hasAiProvider={hasAiProvider}
+          selectedCommonQuestion={selectedCommonQuestion}
+          onSelectCommonQuestion={selectCommonQuestion}
+          onClearMessages={() => {
+            setMessages([]);
+            setActiveConversationId(null);
+            setSelectedCommonQuestion("");
+          }}
+          selectedTopic={selectedTopic}
+        />
+        <ChatThread
+          messages={messages}
+          loading={loading}
+          input={input}
+          onInputChange={setInput}
+          onSend={sendMessage}
+          attachments={attachments}
+          onRemoveAttachment={removeAttachment}
+          onAttachClick={() => attachmentInputRef.current?.click()}
+          hasAiProvider={hasAiProvider}
+          selectedTopic={selectedTopic}
+        />
       </div>
     </main>
   );
-}
-
-function TopicContent({ selectedTopic }: { selectedTopic?: KnowledgeTopic }) {
-  if (!selectedTopic) return <TrainingOverview />;
-  if (selectedTopic.category === "Dashboard Overview") return <DashboardTrainingPage />;
-  if (selectedTopic.category === "Create Network") return <NetworkTrainingPage />;
-  if (selectedTopic.category === "Create Location") return <LocationTrainingPage />;
-  if (selectedTopic.category === "Create Playlist") return <PlaylistTrainingPage />;
-  if (selectedTopic.category === "Create Layout") return <LayoutTrainingPage />;
-  if (selectedTopic.category === "Create Device") return <DeviceTrainingPage />;
-  if (selectedTopic.category === "Device Pairing") return <DevicePairingTrainingPage />;
-  if (selectedTopic.category === "Storage Management") return <StorageManagementTrainingPage />;
-  if (selectedTopic.category === "Default Playlist") return <DefaultPlaylistTrainingPage />;
-  if (selectedTopic.category === "Schedule Content") return <ScheduleContentTrainingPage />;
-  if (selectedTopic.category === "Bundle Scheduling") return <BundleSchedulingTrainingPage />;
-  if (selectedTopic.category === "Publish Content") return <PublishContentTrainingPage />;
-  if (selectedTopic.category === "Playlogs") return <PlaylogTrainingPage />;
-  if (selectedTopic.category === "User Management") return <UserManagementTrainingPage />;
-  if (selectedTopic.category === "Installation of LMX Content App") return <AppInstallationTrainingPage />;
-  if (selectedTopic.category === "Supported Operating Systems & Hardware") return <SupportedHardwareTrainingPage />;
-  return <GenericTopicTrainingPage topic={selectedTopic} />;
-}
-
-function GenericTopicTrainingPage({ topic }: { topic: KnowledgeTopic }) {
-  return (
-    <section className="space-y-4 text-sm leading-6 text-slate-700">
-      <article className="rounded-lg border border-line bg-white p-4">
-        <h2 className="text-base font-semibold text-ink">{topic.category}</h2>
-        <p className="mt-3">{topic.overview}</p>
-      </article>
-
-      <article className="rounded-lg border border-line bg-white p-4">
-        <h3 className="font-semibold text-ink">Key Steps</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          {topic.steps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ul>
-      </article>
-
-      <article className="rounded-lg border border-line bg-white p-4">
-        <h3 className="font-semibold text-ink">Important Notes</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          {topic.importantNotes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
-      </article>
-
-      <article className="rounded-lg border border-line bg-white p-4">
-        <h3 className="font-semibold text-ink">Common Mistakes</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          {topic.commonMistakes.map((mistake) => (
-            <li key={mistake}>{mistake}</li>
-          ))}
-        </ul>
-        <h3 className="mt-4 font-semibold text-ink">Next Step</h3>
-        <p className="mt-2">{topic.nextStep}</p>
-      </article>
-    </section>
-  );
-}
-
-function TrainingOverview() {
-  return (
-    <section className="rounded-lg border border-line bg-white p-4 text-sm leading-6 text-slate-700">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-ink">Overview</h2>
-        <p className="mt-2">
-          The LMX Content CMS Support & Training Assistant is an internal support and training tool designed to help users understand and operate the LMX Content CMS platform.
-        </p>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div>
-          <h3 className="font-semibold text-signal">This assistant provides</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Step-by-step CMS guidance</li>
-            <li>Device setup assistance</li>
-            <li>Scheduling and publishing instructions</li>
-            <li>Basic troubleshooting workflows</li>
-            <li>Device compatibility checks</li>
-            <li>Playlog and reporting guidance</li>
-            <li>Programmatic DOOH operational support</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 className="font-semibold text-signal">Training Scope</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Dashboard, network, location, playlist, and layout setup</li>
-            <li>Device registration, scheduling, publishing, and storage</li>
-            <li>Playlogs, troubleshooting, Android compatibility, and programmatic workflows</li>
-            <li>CMS operational best practices</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-md border border-line bg-mist p-3">
-        <h3 className="font-semibold text-ink">Important Notes</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>This assistant provides Level 1 operational guidance only.</li>
-          <li>Always validate critical changes before production deployment.</li>
-          <li>Escalate unresolved backend or system-related issues to the engineering team.</li>
-          <li>Device compatibility depends on actual hardware capability, not only RAM or storage specifications.</li>
-          <li>Verification codes for device pairing are one-time use only.</li>
-        </ul>
-      </div>
-
-      <p className="mt-4">To begin the training, select a training topic from the available options and start asking your questions.</p>
-      <p className="mt-2">
-        Knowledge source: uploaded LMX Content training modules, troubleshooting guides, and operational documentation. For more detailed training documentation, refer to{" "}
-        <a className="font-semibold text-signal underline" href="https://movingwallshub.atlassian.net/wiki/x/mYCKCQ" target="_blank" rel="noreferrer">
-          Moving Walls Hub
-        </a>.
-      </p>
-    </section>
-  );
-}
-
-function TopicDetail({ topic }: { topic: KnowledgeTopic }) {
-  return (
-    <div className="rounded-md border border-line bg-mist p-3 text-sm text-slate-700">
-      <h3 className="font-semibold text-ink">{topic.category}</h3>
-      <p className="mt-1 leading-5">{topic.overview}</p>
-      <div className="mt-3">
-        <p className="font-medium text-signal">Key steps</p>
-        <ul className="mt-1 list-disc space-y-1 pl-5">
-          {topic.steps.slice(0, 5).map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function Input({ label, value, onChange, placeholder }: { label: string; value?: string; onChange: (value: string) => void; placeholder?: string }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-slate-700">{label}</span>
-      <input
-        value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-      />
-    </label>
-  );
-}
-
-function FormattedResponse({ content }: { content: string }) {
-  return <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{content}</p>;
 }

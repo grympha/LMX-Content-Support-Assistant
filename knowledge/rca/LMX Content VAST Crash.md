@@ -22,7 +22,7 @@ related_topics:
 
 ## Issue
 
-LMX Content crashed when attempting to play VAST content.
+LMX Content crashed when attempting to play VAST content. The LMX Content VAST crash occurs when Android System WebView is below the minimum required version. WebView causing VAST crash is a known failure pattern on devices that have not updated Android System WebView to version 120 or above.
 
 ## Symptoms
 

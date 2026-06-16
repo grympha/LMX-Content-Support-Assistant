@@ -240,25 +240,29 @@ const synonymGroups = [
   ["content not playing", "not playing", "playback missing", "video not playing", "ads not playing", "ad not showing"],
   ["wrong content", "incorrect playlist", "wrong playlist", "fallback content"],
   ["old content", "old video", "not updated", "cached content"],
-  ["playlog", "playlogs", "proof of play", "report", "reporting", "log"],
-  ["publish", "publishing", "push content", "send to device", "sync to device"],
+  ["playlog", "playlogs", "proof of play", "report", "reporting", "playback report", "campaign report", "playlog download", "export report", "device report", "download playlogs", "campaign name in report"],
+  ["publish", "publishing", "push content", "send to device", "sync to device", "republish", "publish error", "cannot publish", "publish failed", "unable to publish", "deploy content", "content deployment"],
   ["schedule", "scheduling", "campaign", "daypart", "start date", "end date"],
-  ["pairing", "pair device", "verification code", "pair code", "register device"],
+  ["pairing", "pair device", "verification code", "pair code", "register device", "activation code", "registration code", "add device", "pairing code"],
   ["storage", "upload", "media library", "main storage", "file upload"],
   ["default playlist", "fallback playlist", "default content", "fallback"],
-  ["programmatic", "vast", "ssp", "dsp", "no fill", "no-fill", "webview", "ima"],
+  ["programmatic", "vast", "ssp", "dsp", "no fill", "no-fill", "ima", "vast crash", "empty ad slot", "programmatic not playing", "ad delivery failed", "service outage", "programmatic outage", "ad serving", "ad delivery", "impressions failed", "programmatic service down"],
   ["hardware", "requirements", "specification", "spec", "operating system", "supported platform"],
   ["user management", "user", "role", "roles", "permission", "permissions", "access"],
   ["not approved", "content approval", "approve content", "pending approval", "approval status"],
   ["ad tag", "vast tag", "ad url", "ima sdk", "ima tag", "ad server"],
   ["bundle scheduling", "content bundle", "multi schedule", "bundle content"],
   ["media format", "file format", "supported format", "video format", "image format"],
-  ["webview version", "webview update", "chrome version", "browser version", "webview"],
+  ["webview version", "webview update", "chrome version", "browser version", "webview", "webview 120", "update webview", "android system webview", "webview outdated", "webview apk", "check webview version", "webview not updating", "html webview"],
   ["pull to content", "pull-to-content", "ptc", "inventory mapping", "ssp campaign", "campaign delivery", "ssp inventory", "campaign not playing"],
   ["download", "download link", "apk", "installer", "setup", "appimage", "app download", "player download", "install app", "get app", "latest version", "update player", "new version", "exe", "zip"],
   ["max dsp", "demand side platform", "advertiser", "buyer", "explore mode", "instant mode", "conventional mode", "campaign planning", "signals", "media inventories"],
   ["ssp overview", "supply side platform", "publisher", "inventory management", "deal management", "deal id", "pmp", "dv360", "place exchange", "viooh", "programmatic workflow"],
-  ["orientation", "portrait", "landscape", "screen rotation", "vertical screen", "horizontal screen", "rotate screen", "change orientation", "device orientation"]
+  ["orientation", "portrait", "landscape", "screen rotation", "vertical screen", "horizontal screen", "rotate screen", "change orientation", "device orientation"],
+  ["login failed", "cannot login", "login error", "sign in failed", "forgot password", "password reset", "account locked", "invalid credentials", "mfa code", "authentication failed", "session expired", "cms access denied", "cms not loading after login", "login troubleshooting"],
+  ["restart player", "restart app", "force stop", "player frozen", "player not responding", "reboot device", "clear cache restart", "how to restart", "lmx content not responding", "force close app", "player not working", "player keeps restarting", "force stop lmx"],
+  ["firewall", "whitelist", "ports", "network requirements", "outbound connections", "cms url whitelist", "proxy configuration", "enterprise network", "required domains", "https 443", "websocket cms", "connectivity requirements", "allowed urls", "firewall blocking cms", "network whitelist"],
+  ["content not updating", "not refreshing", "content stuck", "sync not triggering", "deploy not working", "content rollout delay", "device not updating", "stale content", "force refresh device", "republish device", "content update delay", "sync delay", "how long to deploy"]
 ];
 
 const supportPlaybooks: SupportPlaybook[] = [
@@ -541,7 +545,7 @@ function expandTerms(message: string, intake?: IssueIntake) {
   const vaultSynonymGroups = loadVaultData().synonymGroups;
   const activeSynonymGroups = vaultSynonymGroups.length > 0 ? vaultSynonymGroups : synonymGroups;
   for (const group of activeSynonymGroups) {
-    if (group.some((phrase) => normalized.includes(phrase))) {
+    if (group.some((phrase) => (" " + normalized + " ").includes(" " + phrase + " "))) {
       for (const phrase of group) {
         terms.add(phrase);
         for (const word of phrase.split(/\s+/)) {
@@ -617,7 +621,7 @@ function chunkMarkdown(topic: string, content: string, sourceFile: string, sourc
   return chunks;
 }
 
-const SKIP_DIRS = new Set(["knowledge-map"]);
+const SKIP_DIRS = new Set(["knowledge-map", "config"]);
 const SKIP_ROOT_FILES = new Set(["HOME.md", "lmx-content-training-module.md"]);
 // Stale, duplicate, or template files excluded from chunk indexing regardless of folder.
 const SKIP_FILES = new Set([
@@ -634,12 +638,12 @@ const SKIP_FILES = new Set([
 
 // "support-playbooks" in the priority spec maps to the actual folder name "playbooks"
 const FOLDER_PRIORITY: Record<string, number> = {
-  playbooks: 300,
+  playbooks: 250,
   platforms: 250,
-  rca: 250,
+  rca: 210,
   "incident-library": 200,
-  troubleshooting: 150,
-  faq: 190,
+  troubleshooting: 220,
+  faq: 180,
   "common-support-questions": 100,
   "customer-training": 80,
   topics: 40,
@@ -739,7 +743,11 @@ function scoreChunk(chunk: { topic: string; heading: string; content: string; so
     }
   }
 
-  const folderBoost = rawScore > 0 ? (FOLDER_PRIORITY[chunk.sourceFolder] ?? 0) : 0;
+  const baseFolderPriority = FOLDER_PRIORITY[chunk.sourceFolder] ?? 0;
+  const effectiveFolderPriority =
+    intent === "requirements" && chunk.sourceFolder === "platforms" ? 355 :
+    baseFolderPriority;
+  const folderBoost = rawScore > 0 ? effectiveFolderPriority : 0;
   let score = rawScore + folderBoost;
 
   if (intake?.issueCategory && intake.issueCategory !== "Other" && chunk.topic === intake.issueCategory) {

@@ -103,7 +103,7 @@ export const lmxKnowledge: KnowledgeEntry[] = [
   lesson("User Management", ["user", "roles", "permissions", "rbac"], "User Management controls CMS access, roles, permissions, and network visibility.", ["Go to Dashboard > Setup > User", "Click Create User", "Enter Username", "Enter Email", "Enter First Name and Last Name", "Select User Type", "Choose Language", "Enable Status", "Assign required access", "Click Add"], ["Only Tenant Admins can create users", "Assign minimum required access"], ["Wrong role", "Account disabled", "Network restriction", "Too much access"], "Verify the user can log in and access the required module."),
   lesson(
     "Basic Troubleshooting",
-    ["troubleshoot", "troubleshooting", "black screen", "offline", "not playing", "wrong content", "old content", "missing playlog", "sync failure", "synchronization", "programmatic failure"],
+    ["troubleshoot", "troubleshooting", "black screen", "offline", "not playing", "wrong content", "sync failure", "synchronization", "programmatic failure"],
     "Basic Troubleshooting in LMX Content CMS helps identify and isolate common playback, synchronization, and device-related issues across CMS configuration, device/player, internet/network, content file, scheduling, storage, screen/display, and programmatic delivery.",
     [
       "Follow the troubleshooting flow: CMS > Device > Network > Content > Schedule > Playback > Screen",

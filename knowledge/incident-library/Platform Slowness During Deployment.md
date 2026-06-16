@@ -9,6 +9,9 @@ keywords:
   - database bottleneck
   - schedule updates delayed
   - device status delayed
+  - platform performance
+  - deployment slowness
+  - cms platform performance issues
 description: "Incident record for platform slowness during deployment — backend load combined with database bottlenecks caused slow CMS response and delayed device status updates."
 search_priority: "low"
 related_topics:
@@ -29,6 +32,10 @@ Users reported slow platform performance during deployment activities.
     
 - Increased support tickets
     
+
+## CMS Slow During Deployment
+
+CMS response times can degrade during active deployment windows when backend load and database operations peak simultaneously. Platform performance issues and deployment slowness are expected during concurrent deployment and database activity. CMS platform performance issues during deployment are resolved by scheduling deployments during controlled maintenance windows.
 
 ## Symptoms
 

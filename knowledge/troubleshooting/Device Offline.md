@@ -72,6 +72,10 @@ related_topics:
 6. Verify pairing status.
     
 
+## Heartbeat Not Reaching CMS
+
+If the device heartbeat is not reaching CMS, the device will appear offline even while the player is running. Check network connectivity, firewall rules, and DNS resolution to restore the heartbeat signal. See [[Firewall-And-Network-Requirements]] for required ports and domains.
+
 ## Escalation Information
 
 Collect:

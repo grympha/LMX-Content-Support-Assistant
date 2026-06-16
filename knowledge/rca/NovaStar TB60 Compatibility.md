@@ -18,6 +18,10 @@ related_topics:
 
 # NovaStar TB60 Compatibility
 
+## NovaStar TB60 Not Compatible with LMX Content
+
+NovaStar TB60 is not compatible with LMX Content. The NovaStar TB60 device operates as a display controller and cannot support the LMX Content player application. Attempting to install LMX Content on a NovaStar TB60 results in the application launching behind the NovaStar player interface with no access to pairing or playback controls.
+
 ## Issue
 
 Attempted to deploy LMX Content on NovaStar TB60.

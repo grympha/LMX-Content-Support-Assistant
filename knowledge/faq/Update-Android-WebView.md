@@ -14,6 +14,11 @@ keywords:
   - update android webview steps
   - webview 100
   - google webview
+  - webview 120 update steps
+  - 120 update
+  - update steps
+  - steps to update webview
+  - webview update guide
 description: "Step-by-step guide for checking and updating Android System WebView on LMX Content player devices — required for VAST, HTML ZIP, and URL widget playback."
 search_priority: "high"
 related_topics:

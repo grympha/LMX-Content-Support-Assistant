@@ -1,4 +1,24 @@
 ---
+keywords:
+  - brightsign
+  - bright sign
+  - brightsign player
+  - bs player
+  - brightsign hs123
+  - brightsign xt1143
+  - brightsign hd224
+  - brightsign requirements
+  - brightsign installation
+  - brightsign setup
+  - brightsign lmx content
+  - brightsign supported
+  - lmx content brightsign
+description: "Hardware and system requirements for running LMX Content on BrightSign devices — covers supported models, processor, memory, and media formats."
+search_priority: "medium"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Installation of LMX Content App"
+# Platform-specific spec fields
 platform: "BrightSign"
 triggers: [brightsign, bright sign]
 os_version: "BrightSign HS123, XT1143, HD224"

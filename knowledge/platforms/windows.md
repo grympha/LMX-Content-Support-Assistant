@@ -1,4 +1,26 @@
 ---
+keywords:
+  - windows player
+  - windows device
+  - windows installation
+  - windows setup
+  - windows requirements
+  - windows 10
+  - windows 11
+  - windows lmx content
+  - install windows
+  - windows hardware
+  - amd processor windows
+  - windows player setup
+  - lmx content windows
+  - windows vast
+description: "Hardware and system requirements for running LMX Content on Windows devices — covers supported OS versions, processor, memory, graphics, media formats, and full programmatic support."
+search_priority: "high"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Installation of LMX Content App"
+  - "Programmatic / VAST"
+# Platform-specific spec fields
 platform: "Windows"
 triggers: [windows, windows device, windows devices, windows player]
 os_version: "Windows 10 and 11"

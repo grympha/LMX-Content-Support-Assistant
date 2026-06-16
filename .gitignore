@@ -19,5 +19,8 @@ tsconfig.tsbuildinfo
 Project Dashboard.md
 Solum VAST Crash.md
 
+# Local-only archive (phase reports, analysis docs — preserved but not versioned)
+archive/
+
 # VS Code workspace files (developer-local)
 *.code-workspace

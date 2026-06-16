@@ -5,6 +5,8 @@ keywords:
   - application crash
   - force close
   - app keeps closing
+  - force closing
+  - application keeps force closing
   - player restarts
   - low ram
   - storage full

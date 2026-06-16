@@ -1,4 +1,28 @@
 ---
+keywords:
+  - android player
+  - android device
+  - android requirements
+  - android installation
+  - android setup
+  - android 11
+  - android tv
+  - android media player
+  - rockchip device
+  - amlogic device
+  - android lmx content
+  - install android
+  - android hardware
+  - 4gb ram android
+  - 8gb ram android
+  - android webview
+description: "Hardware and system requirements for running LMX Content on Android devices — covers supported OS versions, processor, memory, storage, media formats, and programmatic requirements."
+search_priority: "high"
+related_topics:
+  - "Supported Operating Systems & Hardware"
+  - "Installation of LMX Content App"
+  - "Programmatic / VAST"
+# Platform-specific spec fields
 platform: "Android"
 triggers: [android, android device, android devices, android player, android tv, android media player]
 os_version: "Android 11 and above"

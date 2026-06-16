@@ -17,6 +17,10 @@ related_topics:
 
 # Pull To Content Mapping Issue
 
+## PTC Inventory Mapping Mismatch
+
+A PTC inventory mapping mismatch occurs when the inventory name in the Pull To Content configuration does not match the expected device mapping. This causes content to not display even though the device is online and inventory is available.
+
 ## Issue
 
 Pull To Content not functioning.

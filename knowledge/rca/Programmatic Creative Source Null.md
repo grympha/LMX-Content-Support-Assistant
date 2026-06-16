@@ -10,6 +10,9 @@ keywords:
   - programmaticCreativeSource null
   - creative validation failed
   - google ad manager
+  - programmatic creative source null
+  - creative source null
+  - creative source returns null
 description: "RCA for programmatic campaign delivery failure — missing Advertiser field in GAM caused programmaticCreativeSource to return null."
 search_priority: "medium"
 related_topics:
@@ -36,6 +39,10 @@ Programmatic campaign failed to deliver.
 DV360 campaign active.
 
 Creative validation failed.
+
+## Programmatic Creative Source Returns Null
+
+The programmaticCreativeSource field returned null due to a missing Advertiser field in GAM, causing the campaign to fail creative validation and halt delivery. A programmatic creative source null error means the creative cannot be resolved and delivery halts. When programmaticCreativeSource is null, verify the Advertiser field is correctly configured in Google Ad Manager before retrying delivery.
 
 ## Root Cause
 

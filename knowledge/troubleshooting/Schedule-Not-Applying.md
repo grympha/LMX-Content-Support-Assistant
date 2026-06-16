@@ -30,6 +30,14 @@ related_topics:
 
 A schedule that is visible in CMS but not playing on the device is almost always caused by one of four issues: the campaign was not approved and published, the schedule timing or timezone is incorrect, the device has not yet synchronized the latest publish, or the campaign is targeting the wrong playlist or location. Work through each layer in order: approval → publish → device sync → schedule configuration.
 
+## Campaign Not Applying After Publish
+
+Use this guide when a campaign has been approved and published in CMS but is not applying to the device.
+
+## Schedule Published But Content Not Showing
+
+Use this guide when a schedule has been published successfully but the expected content is not showing on screen.
+
 ## Symptoms
 
 - Schedule is visible in CMS but content is not playing on the device

@@ -4,6 +4,10 @@ import { buildLocalSearchResponse, localMatchesToDocumentContext } from "@/lib/l
 import { logProgressEvent } from "@/lib/progressLog";
 import { getPreferredChatProvider } from "@/lib/chatProviders";
 import { commonQuestions } from "@/lib/commonQuestions";
+import { db } from "@/lib/db";
+import { conversations, messages as dbMessages } from "@/lib/schema";
+import { generateTitle, truncateMessage } from "@/lib/conversationUtils";
+import { eq, and, count as dbCount } from "drizzle-orm";
 
 const FAQ_STOP_WORDS = new Set([
   "the","a","an","is","are","do","does","did","how","why","what","when","where","who",
@@ -77,6 +81,7 @@ function matchFaq(message: string) {
 const cookieName = "lmx-support-session";
 const userCookieName = "lmx-support-user";
 const maxAttachmentCharacters = 12000;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type ChatAttachment = {
   name: string;
@@ -276,6 +281,41 @@ async function isAuthenticated(request: Request) {
   return cookie.includes(`${cookieName}=${token}`);
 }
 
+async function saveExchange(
+  convId: string | null,
+  username: string,
+  userContent: string,
+  assistantContent: string
+): Promise<void> {
+  if (!db || !convId || !username) return;
+  try {
+    const [conv] = await db
+      .select({ id: conversations.id, title: conversations.title })
+      .from(conversations)
+      .where(and(eq(conversations.id, convId), eq(conversations.userId, username)));
+    if (!conv) return;
+
+    const [{ total }] = await db
+      .select({ total: dbCount() })
+      .from(dbMessages)
+      .where(eq(dbMessages.conversationId, convId));
+
+    const isFirst = total === 0;
+
+    await db.insert(dbMessages).values({ conversationId: convId, role: "user", content: userContent });
+    await db.insert(dbMessages).values({ conversationId: convId, role: "assistant", content: assistantContent });
+
+    const updates: { updatedAt: Date; title?: string } = { updatedAt: new Date() };
+    if (isFirst) updates.title = generateTitle(userContent);
+    await db
+      .update(conversations)
+      .set(updates)
+      .where(and(eq(conversations.id, convId), eq(conversations.userId, username)));
+  } catch (err) {
+    console.error("[saveExchange]", err);
+  }
+}
+
 export async function POST(request: Request) {
   if (!(await isAuthenticated(request))) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -286,9 +326,10 @@ export async function POST(request: Request) {
     attachments?: ChatAttachment[];
     intake?: IssueIntake;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
+    conversationId?: string;
   };
 
-  const message = body.message?.trim() ?? "";
+  const message = truncateMessage(body.message?.trim() ?? "");
   const attachments = (body.attachments ?? []).slice(0, 3);
 
   if (!message && attachments.length === 0) {
@@ -296,6 +337,8 @@ export async function POST(request: Request) {
   }
 
   const username = usernameFromRequest(request);
+  const rawConvId = (body.conversationId ?? "").trim();
+  const validConvId = rawConvId && UUID_REGEX.test(rawConvId) ? rawConvId : null;
   const attachmentContext = await buildAttachmentContext(attachments);
   const imageAttachments = attachments.filter(isImageAttachment);
 
@@ -316,6 +359,7 @@ export async function POST(request: Request) {
         fullName: body.intake?.clientTenant,
         question: message
       });
+      void saveExchange(validConvId, username, message, faqMatch.answer);
       return NextResponse.json({
         reply: faqMatch.answer,
         source: "knowledge",
@@ -345,14 +389,17 @@ export async function POST(request: Request) {
 
   if (provider === "local") {
     if (imageAttachments.length > 0 && !message && !attachmentContext) {
+      const imgReply = `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`;
+      void saveExchange(validConvId, username, message, imgReply);
       return NextResponse.json({
-        reply: `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`,
+        reply: imgReply,
         source: "local",
         sourceLinks: [],
         sourceNotes: []
       });
     }
 
+    void saveExchange(validConvId, username, message, localReply);
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
@@ -391,6 +438,7 @@ export async function POST(request: Request) {
 
   async function fallbackToLocal(errorMessage: string) {
     console.error(errorMessage);
+    void saveExchange(validConvId, username, message, localReply);
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
@@ -414,6 +462,7 @@ export async function POST(request: Request) {
       return await fallbackToLocal(`No reply returned from ${provider}.`);
     }
 
+    void saveExchange(validConvId, username, message, reply);
     return NextResponse.json({
       reply,
       source: provider,
@@ -428,14 +477,20 @@ export async function POST(request: Request) {
         try {
           const data = await callOpenAI(messages);
           const reply = data.choices?.[0]?.message?.content;
-          if (reply) return NextResponse.json({ reply, source: "openai", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+          if (reply) {
+            void saveExchange(validConvId, username, message, reply);
+            return NextResponse.json({ reply, source: "openai", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+          }
         } catch (fallbackError) { console.error(fallbackError); }
       }
       if (process.env.MISTRAL_API_KEY) {
         try {
           const data = await callMistral(messages);
           const reply = data.choices?.[0]?.message?.content;
-          if (reply) return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+          if (reply) {
+            void saveExchange(validConvId, username, message, reply);
+            return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+          }
         } catch (fallbackError) { console.error(fallbackError); }
       }
     }
@@ -444,7 +499,10 @@ export async function POST(request: Request) {
       try {
         const data = await callMistral(messages);
         const reply = data.choices?.[0]?.message?.content;
-        if (reply) return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+        if (reply) {
+          void saveExchange(validConvId, username, message, reply);
+          return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+        }
       } catch (fallbackError) { console.error(fallbackError); }
     }
 

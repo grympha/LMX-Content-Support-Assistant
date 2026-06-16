@@ -32,6 +32,10 @@ related_topics:
 
 HTML ZIP packages require `index.html` at the root level of the ZIP and a device running Android System WebView 120+. URL widgets require the same WebView version and live internet access at runtime. If HTML content shows a blank or black screen, verify WebView version first, then validate the ZIP structure. Content that renders in a browser on your computer but fails on the player is almost always a WebView version or device hardware issue.
 
+## HTML Black Screen or HTML ZIP Black Screen
+
+An HTML black screen or HTML ZIP black screen is the most common symptom of a WebView version below 120 or an invalid ZIP package structure. Check WebView version first, then validate that `index.html` is at the root of the ZIP.
+
 ## Symptoms
 
 - HTML ZIP content shows a black or blank screen on the device

@@ -11,6 +11,9 @@ keywords:
   - led processor scaling
   - screen processor settings
   - re-upload correct dimensions
+  - cropped on screen
+  - content clipped
+  - content appears cropped
 description: "Troubleshooting guide for content displaying cropped, stretched, or with black borders — covers screen resolution verification, layout comparison, and content re-upload."
 search_priority: "medium"
 related_topics:
@@ -20,9 +23,13 @@ related_topics:
 
 # Resolution Mismatch
 
+## Content Cropped or Clipped on Screen
+
+Content appears cropped on screen, content clipped at screen edges, or content stretched when the CMS layout resolution does not match the physical screen resolution.
+
 ## Symptoms
 
-- Content cropped
+- Content cropped on screen or content clipped at edges
     
 - Content stretched
     
