@@ -21,7 +21,8 @@ This repository is documented so work can continue from any PC:
 - Local topic knowledge search from `knowledge/topics/`
 - Common questions and quick answers
 - Learner progress panel with browser local storage persistence
-- Optional Google Sheets logging through `GOOGLE_SHEETS_WEBHOOK_URL`
+- Training events and user progress stored in Neon PostgreSQL
+- Admin dashboard reads training records, analytics, and user progress from Neon
 - Render deployment config in `render.yaml`
 
 ## Tech Stack
@@ -31,8 +32,11 @@ This repository is documented so work can continue from any PC:
 - TypeScript
 - Tailwind CSS
 - lucide-react icons
+- Neon PostgreSQL (training events, user progress, conversation history)
+- Drizzle ORM
+- Optional Claude (Anthropic) Chat API
 - Optional OpenAI Chat Completions API
-- Optional Google Apps Script + Google Sheets tracking
+- Optional Mistral AI Chat API
 
 ## Quick Start
 
@@ -48,13 +52,12 @@ Create the local environment file:
 cp .env.example .env.local
 ```
 
-Set at least the app password:
+Set at least the app password and database URL:
 
 ```env
 APP_PASSWORD=your-internal-password
 ADMIN_PASSWORD=your-admin-password
-OPENAI_API_KEY=
-GOOGLE_SHEETS_WEBHOOK_URL=
+DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
 ```
 
 Run the development server:
@@ -84,6 +87,14 @@ npm run start
 npm run lint
 npm run typecheck
 npm test
+
+# One-time historical import from a Google Sheets CSV export
+npm run import:training-events -- path/to/export.csv --dry-run
+npm run import:training-events -- path/to/export.csv
+
+# Training data retention cleanup (see docs/GOOGLE_SHEETS_TO_NEON_IMPORT.md)
+npm run training-retention -- --dry-run
+npm run training-retention
 ```
 
 ## Environment Variables
@@ -92,15 +103,16 @@ npm test
 | --- | --- | --- |
 | `APP_PASSWORD` | Yes | Learner password for the main app. Users also enter a username for progress tracking. |
 | `ADMIN_PASSWORD` | Recommended | Admin password for `/admin`. If empty, admin auth falls back to `APP_PASSWORD`. |
-| `OPENAI_API_KEY` | No | Enables OpenAI-assisted answers and image attachment analysis. Without it, the app uses local knowledge fallback. |
-| `OPENAI_MODEL` | No | Optional OpenAI model override. The chat route defaults to `gpt-4o-mini`. |
-| `CLAUDE_API_KEY` | No | Optional Anthropic Claude API key. If configured, Claude is used before OpenAI. |
+| `DATABASE_URL` | Recommended | Neon PostgreSQL connection string. Required for training events, user progress, and conversation history. Without it the app still works but data is not persisted. |
+| `MAX_CONVERSATIONS_PER_USER` | No | Maximum saved conversations per user. Defaults to 50. |
+| `CLAUDE_API_KEY` | No | Enables Claude as the primary AI provider. |
 | `CLAUDE_MODEL` | No | Optional Claude model override. Defaults to `claude-haiku-4-5`. |
 | `CLAUDE_API_URL` | No | Optional Claude API base URL if using a proxy or alternative endpoint. |
+| `OPENAI_API_KEY` | No | Enables OpenAI-assisted answers and image attachment analysis. |
+| `OPENAI_MODEL` | No | Optional OpenAI model override. Defaults to `gpt-4o-mini`. |
 | `MISTRAL_API_KEY` | No | Mistral AI API key. Used in the provider fallback chain (Claude → OpenAI → Mistral). |
 | `MISTRAL_MODEL` | No | Optional Mistral model override. Defaults to `mistral-small-latest`. |
 | `VAULT_KB` | No | Set to `true` to use the full vault-backed knowledge retrieval path (reads all folders under `knowledge/`). |
-| `GOOGLE_SHEETS_WEBHOOK_URL` | No | Google Apps Script Web App URL for logging and reading training records. |
 
 ## Knowledge Base
 
@@ -143,83 +155,6 @@ When adding or changing a topic, keep these places aligned:
 - `src/lib/lmxKnowledge.ts` issue categories and fallback lesson
 - Topic page component under `src/components/`, if the topic needs a custom screen
 
-## Google Sheets Tracking
-
-Tracking is optional. If `GOOGLE_SHEETS_WEBHOOK_URL` is configured, the app logs:
-
-- login
-- topic selected
-- topic completed
-- assistant question asked
-- quick answer selected
-
-Expected Google Sheet header:
-
-```text
-Timestamp | Timezone | Username | Full Name | Event Type | Topic | Question | Progress Percent | Completed Topics | Source | Details
-```
-
-The current admin page also contains compatibility handling for older sheets that did not include `Full Name`.
-
-Minimal Apps Script:
-
-```js
-function getTrainingSheet() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Training Records');
-}
-
-function doPost(e) {
-  var sheet = getTrainingSheet();
-  var data = JSON.parse(e.postData.contents || '{}');
-
-  sheet.appendRow([
-    data.timestamp || '',
-    data.timezone || 'Asia/Kuala_Lumpur',
-    data.username || '',
-    data.fullName || '',
-    data.eventType || '',
-    data.topic || '',
-    data.question || '',
-    data.progressPercent || '',
-    (data.completedTopics || []).join(', '),
-    data.source || '',
-    data.details || ''
-  ]);
-
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doGet() {
-  var sheet = getTrainingSheet();
-  var values = sheet.getDataRange().getValues();
-  var rows = values.slice(1);
-
-  var records = rows.map(function(row) {
-    return {
-      timestamp: row[0] || '',
-      timezone: row[1] || '',
-      username: row[2] || '',
-      fullName: row[3] || '',
-      eventType: row[4] || '',
-      topic: row[5] || '',
-      question: row[6] || '',
-      progressPercent: row[7] || '',
-      completedTopics: row[8] || '',
-      source: row[9] || '',
-      details: row[10] || ''
-    };
-  });
-
-  return ContentService
-    .createTextOutput(JSON.stringify({ records: records }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-```
-
-Deploy it as a Google Apps Script Web App and set `GOOGLE_SHEETS_WEBHOOK_URL` to the deployment URL.
-
 ## Render Deployment
 
 This repository includes `render.yaml`.
@@ -237,10 +172,10 @@ Render environment variables:
 NODE_VERSION=22
 APP_PASSWORD=your-secure-password
 ADMIN_PASSWORD=your-admin-password
+DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
 CLAUDE_API_KEY=
 OPENAI_API_KEY=
 MISTRAL_API_KEY=
-GOOGLE_SHEETS_WEBHOOK_URL=
 ```
 
 ## Continue Work From Another PC

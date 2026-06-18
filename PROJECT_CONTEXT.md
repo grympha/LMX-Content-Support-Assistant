@@ -4,7 +4,7 @@ Use this file as the project handoff note when continuing work from another PC.
 
 ## Project Purpose
 
-LMX Content Support Assistant is an internal training and support app for LMX Content CMS. It gives learners guided topic pages, lets them ask CMS workflow questions, supports file review, and records progress for admins when Google Sheets logging is enabled.
+LMX Content Support Assistant is an internal training and support app for LMX Content CMS. It gives learners guided topic pages, lets them ask CMS workflow questions, supports file review, and records progress in Neon PostgreSQL for admin visibility.
 
 The app is designed to work in three modes:
 
@@ -47,7 +47,12 @@ src/app/api/auth/route.ts
 src/app/api/chat/route.ts
 src/app/api/progress/route.ts
 src/app/api/admin/auth/route.ts
-src/app/api/admin/progress/route.ts
+src/app/api/admin/analytics/route.ts
+src/app/api/admin/training-records/route.ts
+src/app/api/admin/user-progress/route.ts
+src/app/api/admin/users/route.ts
+src/app/api/admin/users/[userId]/route.ts
+src/app/api/admin/users/[userId]/export/route.ts
 ```
 
 Core knowledge and logging libraries:
@@ -59,6 +64,15 @@ src/lib/localSearchEngine.ts
 src/lib/knowledgeVaultLoader.ts
 src/lib/commonQuestions.ts
 src/lib/progressLog.ts
+src/lib/db.ts
+src/lib/schema.ts
+```
+
+Utility scripts:
+
+```text
+scripts/import-google-sheets-training-events.ts  — one-time historical import
+scripts/training-retention-cleanup.ts            — periodic retention enforcement
 ```
 
 Training topic components:
@@ -196,18 +210,13 @@ When adding a new topic, update:
 
 ## Progress Tracking
 
-Progress tracking is split between browser local storage and optional Google Sheets logging.
-
-Browser-side progress:
-
-```text
-src/components/ProgressPanel.tsx
-```
+All training events are written to Neon PostgreSQL via `src/lib/progressLog.ts`.
 
 Server-side logging:
 
 ```text
-src/lib/progressLog.ts
+src/lib/progressLog.ts → training_events table
+                       → user_progress table (on topic_completed only)
 ```
 
 Progress events:
@@ -218,37 +227,56 @@ Progress events:
 - `question_asked`
 - `quick_answer_selected`
 
-Timestamps are formatted in:
+All writes are best-effort — a Neon failure never blocks the learner action. If `DATABASE_URL` is not configured, writes are silently skipped and the app remains usable.
+
+Browser-side progress display:
 
 ```text
-Asia/Kuala_Lumpur
+src/components/ProgressPanel.tsx
 ```
-
-If `GOOGLE_SHEETS_WEBHOOK_URL` is not configured, logging quietly does nothing and the app remains usable.
 
 ## Admin Dashboard
 
-The admin dashboard lives at:
+The admin dashboard lives at `/admin` and reads entirely from Neon PostgreSQL.
+
+API routes used by the dashboard:
 
 ```text
-/admin
+GET /api/admin/analytics        — aggregate stats (13 fields)
+GET /api/admin/training-records — paginated training_events (50/page, filterable)
+GET /api/admin/user-progress    — user_progress rows ordered by progress desc
+GET /api/admin/users            — conversation user list
+GET /api/admin/users/[id]       — per-user conversation history
+GET /api/admin/users/[id]/export — JSONL export
 ```
 
-It reads:
+The dashboard shows:
+
+- Training overview (total events, questions asked, topics completed, FAQ selections)
+- Top learners by progress percentage
+- Paginated training records table with username/event/search filters
+- Conversation analytics (total users, conversations, messages)
+
+## Database Schema
+
+Tables managed by Drizzle ORM (`src/lib/schema.ts`):
 
 ```text
-GET /api/admin/progress
+conversations   — conversation sessions per user
+messages        — individual chat messages
+training_events — all learner activity events
+user_progress   — latest progress snapshot per user
 ```
 
-That API route fetches records from the configured Google Apps Script URL. The dashboard shows:
+Retention policy (enforced manually via the retention script):
 
-- total users
-- questions asked
-- topics completed
-- quick answers used
-- average progress
-- latest activity
-- searchable training records table
+| Event type | Retention |
+|---|---|
+| login | 6 months |
+| topic_selected | 12 months |
+| quick_answer_selected | 12 months |
+| question_asked | 24 months |
+| topic_completed | forever |
 
 ## Attachments
 
@@ -293,9 +321,9 @@ Current deployment assumptions:
 - Node 22
 - build command: `npm install && npm run build`
 - start command: `npm run start`
-- required env var: `APP_PASSWORD`
+- required env vars: `APP_PASSWORD`, `DATABASE_URL`
 - recommended env var: `ADMIN_PASSWORD`
-- optional env vars: `CLAUDE_API_KEY`, `CLAUDE_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `VAULT_KB`, `GOOGLE_SHEETS_WEBHOOK_URL`
+- optional env vars: `CLAUDE_API_KEY`, `CLAUDE_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `VAULT_KB`, `MAX_CONVERSATIONS_PER_USER`
 
 ## Known Technical Notes
 
@@ -303,8 +331,8 @@ Current deployment assumptions:
 - The app currently uses the Chat Completions endpoint directly in `src/app/api/chat/route.ts`.
 - Vitest test suite: 20 tests across 6 files in `src/__tests__/`. Run with `npm test`. Coverage: auth route, chat provider selection, local search E2E, vault KB parity, diagnostics analyzer, progress logging.
 - Authentication is simple password-based access, not full user identity management.
-- Google Sheets is used as a lightweight activity log, not a database.
 - Knowledge retrieval is local weighted keyword and synonym scoring, not embeddings/vector search.
+- Admin auth check (SHA-256 cookie) is duplicated across 6 route files — known P1 debt, should be extracted to `src/lib/adminAuth.ts`.
 
 ## Safe Editing Checklist
 

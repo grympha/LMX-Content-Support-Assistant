@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "import:training-events": "tsx scripts/import-google-sheets-training-events.ts"
+    "import:training-events": "tsx scripts/import-google-sheets-training-events.ts",
+    "training-retention": "tsx scripts/training-retention-cleanup.ts"
   },
   "analyze:diagnostics": "node ./scripts/analyzeDiagnostics.js",
   "dependencies": {

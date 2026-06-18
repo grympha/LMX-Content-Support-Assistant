@@ -3,16 +3,14 @@ import { logProgressEvent } from "../lib/progressLog";
 
 describe("logProgressEvent", () => {
   beforeEach(() => {
-    delete process.env.GOOGLE_SHEETS_WEBHOOK_URL;
     vi.stubGlobal("fetch", vi.fn());
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env.GOOGLE_SHEETS_WEBHOOK_URL;
   });
 
-  it("does not call fetch when GOOGLE_SHEETS_WEBHOOK_URL is not configured", async () => {
+  it("does not call fetch (writes only to Neon, no webhook)", async () => {
     await logProgressEvent({ eventType: "login" });
 
     expect(fetch).not.toHaveBeenCalled();

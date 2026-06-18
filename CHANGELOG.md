@@ -4,6 +4,40 @@ All notable project changes are recorded here.
 
 ---
 
+## [v0.4.0] — 2026-06-18 — Neon Migration Complete
+
+### Infrastructure
+
+- Migrated all training data storage from Google Sheets to Neon PostgreSQL.
+- `training_events` and `user_progress` tables now serve as the single source of truth.
+- Imported 100 historical training records from Google Sheets into Neon via one-time import script.
+- Conversation history was already stored in Neon; now training events are too.
+
+### Removed
+
+- Google Sheets write path from `src/lib/progressLog.ts` — `logProgressEvent()` now writes only to Neon.
+- `malaysiaTimestamp()` helper — only used for the Google Sheets webhook payload.
+- `/api/admin/progress` route — read-only Google Sheets proxy, superseded by `/api/admin/training-records`.
+- `GOOGLE_SCRIPT_URL` from `.env.example`.
+- `GOOGLE_SHEETS_WEBHOOK_URL` from `render.yaml`.
+
+### Added
+
+- `scripts/import-google-sheets-training-events.ts` — one-time CSV import with soft dedup, batch insert, dry-run mode, and `user_progress` upsert.
+- `scripts/training-retention-cleanup.ts` — per-event-type retention enforcement (login: 6mo, topic_selected/quick_answer_selected: 12mo, question_asked: 24mo, topic_completed: forever). Supports `--dry-run`.
+- `docs/GOOGLE_SHEETS_TO_NEON_IMPORT.md` — field mapping reference and import guide.
+- `npm run import:training-events` and `npm run training-retention` scripts.
+
+### Admin Dashboard (Phase 3, landed with this version)
+
+- Rewrote admin dashboard to read entirely from Neon (training records, analytics, user progress).
+- Added Training Overview section with 4 KPI cards.
+- Added Top Learners section from `user_progress`.
+- Added server-side paginated Training Records table (50/page) with username, event type, and search filters.
+- New API routes: `/api/admin/analytics` (extended with training stats), `/api/admin/training-records`, `/api/admin/user-progress`.
+
+---
+
 ## [v0.3.0] — 2026-06-15 — Knowledge Vault Expansion Sprint
 
 ### Knowledge Vault

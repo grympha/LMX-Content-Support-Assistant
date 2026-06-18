@@ -22,8 +22,6 @@ services:
         sync: false
       - key: MISTRAL_MODEL
         sync: false
-      - key: GOOGLE_SHEETS_WEBHOOK_URL
-        sync: false
       - key: DATABASE_URL
         sync: false
       - key: MAX_CONVERSATIONS_PER_USER
