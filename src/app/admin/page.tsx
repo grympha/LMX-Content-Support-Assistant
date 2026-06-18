@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Download,
   Loader2,
-  Lock,
   LogOut,
   RefreshCw,
   Search,
@@ -553,10 +552,8 @@ export default function AdminDashboard() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 py-10">
         <section className="w-full max-w-md rounded-lg border border-line bg-white p-7 shadow-panel">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slatePanel text-white">
-              <Lock className="h-5 w-5" aria-hidden="true" />
-            </div>
+          <div className="mb-6 flex items-center gap-4">
+            <Logo size="sm" className="w-[60px] sm:w-[100px]" clickable={false} />
             <div>
               <h1 className="text-xl font-semibold text-ink">Admin Dashboard</h1>
               <p className="text-sm text-slate-600">Training progress access</p>
