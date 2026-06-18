@@ -31,7 +31,8 @@ export default function Home() {
   const [authenticated, setAuthenticated] = useState(false);
   const [hasAiProvider, setHasAiProvider] = useState(false);
   const [username, setUsername] = useState("");
-  const [loginUsername, setLoginUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [intake, setIntake] = useState<IssueIntake>(emptyIntake);
@@ -52,9 +53,10 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/auth")
       .then((response) => response.json())
-      .then((data: { authenticated: boolean; username?: string; hasAiProvider?: boolean }) => {
+      .then((data: { authenticated: boolean; username?: string; displayName?: string; hasAiProvider?: boolean }) => {
         setAuthenticated(data.authenticated);
         setUsername(data.username ?? "");
+        setDisplayName(data.displayName ?? data.username ?? "");
         setHasAiProvider(data.hasAiProvider ?? false);
       })
       .catch(() => setAuthenticated(false))
@@ -136,17 +138,21 @@ export default function Home() {
     event.preventDefault();
     setAuthError("");
 
-    const cleanUsername = loginUsername.trim();
+    const cleanEmail = loginEmail.trim().toLowerCase();
 
-    if (!cleanUsername) {
-      setAuthError("Username is required.");
+    if (!cleanEmail) {
+      setAuthError("Email is required.");
+      return;
+    }
+    if (!cleanEmail.endsWith("@movingwalls.com")) {
+      setAuthError("Only @movingwalls.com email addresses are allowed.");
       return;
     }
 
     const response = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: cleanUsername, password })
+      body: JSON.stringify({ email: cleanEmail, password }),
     });
 
     if (!response.ok) {
@@ -155,9 +161,11 @@ export default function Home() {
       return;
     }
 
+    const data = (await response.json()) as { username?: string; displayName?: string };
     setAuthenticated(true);
-    setUsername(cleanUsername);
-    setLoginUsername("");
+    setUsername(data.username ?? cleanEmail.split("@")[0]);
+    setDisplayName(data.displayName ?? data.username ?? "");
+    setLoginEmail("");
     setPassword("");
   }
 
@@ -165,6 +173,7 @@ export default function Home() {
     await fetch("/api/auth", { method: "DELETE" });
     setAuthenticated(false);
     setUsername("");
+    setDisplayName("");
     setIntake(emptyIntake);
     setMessages([]);
     setConversations([]);
@@ -497,7 +506,7 @@ export default function Home() {
       body: JSON.stringify({
         eventType: "quick_answer_selected",
         username,
-        fullName: intake.clientTenant,
+        fullName: displayName || username,
         question: selected.question
       })
     }).catch(() => undefined);
@@ -552,15 +561,18 @@ export default function Home() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Username</span>
+              <span className="mb-2 block text-sm font-medium text-slate-700">Moving Walls Email</span>
               <input
-                value={loginUsername}
-                onChange={(event) => setLoginUsername(event.target.value)}
+                type="email"
+                value={loginEmail}
+                onChange={(event) => setLoginEmail(event.target.value)}
+                placeholder="yourname@movingwalls.com"
                 className="w-full rounded-md border border-line bg-white px-3 py-2.5 text-ink outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                 autoFocus
+                autoComplete="email"
               />
               <p className="mt-1.5 text-xs text-slate-500">
-                Use your full name or work email. This keeps your conversation history separate.
+                Use your Moving Walls email address. Only @movingwalls.com accounts are allowed.
               </p>
             </label>
             <label className="block">
@@ -607,7 +619,7 @@ export default function Home() {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">LMX Content CMS</p>
             <h1 className="text-2xl font-semibold text-ink">Support & Training Assistant</h1>
-            <p className="mt-1 text-xs text-slate-500">Signed in as {username}</p>
+            <p className="mt-1 text-xs text-slate-500">Signed in as {displayName || username}</p>
           </div>
           <div className="flex items-center gap-2">
             {historyAvailable && (

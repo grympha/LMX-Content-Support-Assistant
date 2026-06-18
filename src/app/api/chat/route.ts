@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { conversations, messages as dbMessages } from "@/lib/schema";
 import { generateTitle, truncateMessage } from "@/lib/conversationUtils";
 import { eq, and, count as dbCount } from "drizzle-orm";
+import { isAuthenticated, usernameFromRequest } from "@/lib/apiAuth";
 
 const FAQ_STOP_WORDS = new Set([
   "the","a","an","is","are","do","does","did","how","why","what","when","where","who",
@@ -78,8 +79,6 @@ function matchFaq(message: string) {
   return best;
 }
 
-const cookieName = "lmx-support-session";
-const userCookieName = "lmx-support-user";
 const maxAttachmentCharacters = 12000;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -186,20 +185,6 @@ async function callMistral(messages: OpenAiMessage[]) {
   return (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
 }
 
-function readCookie(cookieHeader: string, name: string) {
-  return cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
-}
-
-function usernameFromRequest(request: Request) {
-  const cookie = request.headers.get("cookie") ?? "";
-  const encodedUsername = readCookie(cookie, userCookieName) ?? "";
-  return encodedUsername ? decodeURIComponent(encodedUsername) : "";
-}
-
 function dataUrlToBuffer(dataUrl: string) {
   const base64 = dataUrl.split(",")[1] ?? "";
   return Buffer.from(base64, "base64");
@@ -261,26 +246,6 @@ async function buildAttachmentContext(attachments: ChatAttachment[] = []) {
   return extracted.join("\n\n---\n\n");
 }
 
-async function sessionToken(password: string) {
-  const data = new TextEncoder().encode(`lmx-content-support:${password}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function isAuthenticated(request: Request) {
-  const appPassword = process.env.APP_PASSWORD;
-
-  if (!appPassword) {
-    return false;
-  }
-
-  const cookie = request.headers.get("cookie") ?? "";
-  const token = await sessionToken(appPassword);
-  return cookie.includes(`${cookieName}=${token}`);
-}
-
 async function saveExchange(
   convId: string | null,
   username: string,
@@ -339,7 +304,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message or attachment is required." }, { status: 400 });
   }
 
-  const username = usernameFromRequest(request);
+  const username = await usernameFromRequest(request);
   const rawConvId = (body.conversationId ?? "").trim();
   const validConvId = rawConvId && UUID_REGEX.test(rawConvId) ? rawConvId : null;
   const attachmentContext = await buildAttachmentContext(attachments);

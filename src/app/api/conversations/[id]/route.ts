@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid conversation ID." }, { status: 400 });
   }
 
-  const username = usernameFromRequest(request);
+  const username = await usernameFromRequest(request);
   if (!username) {
     return NextResponse.json({ error: "Username missing from session." }, { status: 400 });
   }
@@ -73,7 +73,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid conversation ID." }, { status: 400 });
   }
 
-  const username = usernameFromRequest(request);
+  const username = await usernameFromRequest(request);
   if (!username) {
     return NextResponse.json({ error: "Username missing from session." }, { status: 400 });
   }
@@ -115,7 +115,7 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid conversation ID." }, { status: 400 });
   }
 
-  const username = usernameFromRequest(request);
+  const username = await usernameFromRequest(request);
   if (!username) {
     return NextResponse.json({ error: "Username missing from session." }, { status: 400 });
   }
