@@ -41,6 +41,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
+  const [feedbackState, setFeedbackState] = useState<Record<string, "good" | "bad" | "pending" | "error">>({});
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const askAssistantSectionRef = useRef<HTMLElement>(null);
   const askAssistantInputRef = useRef<HTMLTextAreaElement>(null);
@@ -193,6 +194,37 @@ export default function Home() {
     });
   }
 
+  async function handleFeedback(messageId: string, rating: "good" | "bad") {
+    const msgIndex = messages.findIndex((m) => m.id === messageId);
+    if (msgIndex < 0) return;
+    const assistantMsg = messages[msgIndex];
+    const questionMsg = messages.slice(0, msgIndex).reverse().find((m) => m.role === "user");
+
+    setFeedbackState((prev) => ({ ...prev, [messageId]: "pending" }));
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeConversationId,
+          messageId: assistantMsg.dbId,
+          question: questionMsg?.content ?? "",
+          response: assistantMsg.content,
+          rating,
+          aiProvider: assistantMsg.source,
+          sources: [
+            ...(assistantMsg.sourceLinks?.map((l) => l.label) ?? []),
+            ...(assistantMsg.sourceNotes?.map((n) => n.file.replace(/\.md$/i, "")) ?? []),
+          ].filter(Boolean),
+        }),
+      });
+      if (!res.ok) throw new Error("Feedback failed");
+      setFeedbackState((prev) => ({ ...prev, [messageId]: rating }));
+    } catch {
+      setFeedbackState((prev) => ({ ...prev, [messageId]: "error" }));
+    }
+  }
+
   // --- Conversation history actions ---
 
   async function fetchConversations() {
@@ -224,8 +256,10 @@ export default function Home() {
         role: m.role as "user" | "assistant",
         content: m.content,
         source: m.role === "assistant" ? ("knowledge" as ChatSource) : undefined,
+        dbId: m.role === "assistant" ? m.id : undefined,
       }));
       setMessages(loaded);
+      setFeedbackState({});
       setActiveConversationId(id);
     } catch {
       // silently ignore
@@ -244,6 +278,7 @@ export default function Home() {
       setConversations((prev) => [newConv, ...prev]);
       setActiveConversationId(newConv.id);
       setMessages([]);
+      setFeedbackState({});
       setHistoryOpen(false);
     } catch {
       // silently ignore
@@ -306,6 +341,7 @@ export default function Home() {
 
     setActiveConversationId(convId);
     setMessages([]);
+    setFeedbackState({});
     setSelectedCommonQuestion("");
     focusAskAssistant();
   }
@@ -375,6 +411,7 @@ export default function Home() {
         source: ChatSource;
         sourceLinks?: SourceLink[];
         sourceNotes?: SourceNote[];
+        assistantMessageId?: string;
       };
       setMessages((prev) => [
         ...prev,
@@ -385,6 +422,7 @@ export default function Home() {
           source: data.source,
           sourceLinks: data.sourceLinks ?? [],
           sourceNotes: data.sourceNotes ?? [],
+          dbId: data.assistantMessageId,
         },
       ]);
       if (convId) {
@@ -454,6 +492,7 @@ export default function Home() {
         source: ChatSource;
         sourceLinks?: SourceLink[];
         sourceNotes?: SourceNote[];
+        assistantMessageId?: string;
       };
       setMessages((prev) => [
         ...prev,
@@ -464,6 +503,7 @@ export default function Home() {
           source: data.source,
           sourceLinks: data.sourceLinks ?? [],
           sourceNotes: data.sourceNotes ?? [],
+          dbId: data.assistantMessageId,
         },
       ]);
       if (convId) {
@@ -488,6 +528,7 @@ export default function Home() {
 
   function updateIntake<K extends keyof IssueIntake>(field: K, value: IssueIntake[K]) {
     setMessages([]);
+    setFeedbackState({});
     setActiveConversationId(null);
     setSelectedCommonQuestion("");
     setIntake((current) => ({
@@ -688,6 +729,7 @@ export default function Home() {
           onSelectCommonQuestion={selectCommonQuestion}
           onClearMessages={() => {
             setMessages([]);
+            setFeedbackState({});
             setActiveConversationId(null);
             setSelectedCommonQuestion("");
           }}
@@ -708,6 +750,8 @@ export default function Home() {
           onAttachClick={() => attachmentInputRef.current?.click()}
           hasAiProvider={hasAiProvider}
           selectedTopic={selectedTopic}
+          onFeedback={handleFeedback}
+          feedbackState={feedbackState}
         />
       </div>
     </main>

@@ -250,7 +250,8 @@ async function saveExchange(
   convId: string | null,
   username: string,
   userContent: string,
-  assistantContent: string
+  assistantContent: string,
+  assistantMsgId: string
 ): Promise<void> {
   if (!db || !convId || !username) return;
   try {
@@ -271,7 +272,7 @@ async function saveExchange(
     const isFirst = total === 0;
 
     await db.insert(dbMessages).values({ conversationId: convId, role: "user", content: userContent });
-    await db.insert(dbMessages).values({ conversationId: convId, role: "assistant", content: assistantContent });
+    await db.insert(dbMessages).values({ id: assistantMsgId, conversationId: convId, role: "assistant", content: assistantContent });
 
     const updates: { updatedAt: Date; title?: string } = { updatedAt: new Date() };
     if (isFirst) updates.title = generateTitle(userContent);
@@ -305,6 +306,7 @@ export async function POST(request: Request) {
   }
 
   const username = await usernameFromRequest(request);
+  const assistantMsgId = crypto.randomUUID();
   const rawConvId = (body.conversationId ?? "").trim();
   const validConvId = rawConvId && UUID_REGEX.test(rawConvId) ? rawConvId : null;
   const attachmentContext = await buildAttachmentContext(attachments);
@@ -327,12 +329,13 @@ export async function POST(request: Request) {
         fullName: body.intake?.clientTenant,
         question: message
       });
-      void saveExchange(validConvId, username, message, faqMatch.answer);
+      void saveExchange(validConvId, username, message, faqMatch.answer, assistantMsgId);
       return NextResponse.json({
         reply: faqMatch.answer,
         source: "knowledge",
         sourceLinks: faqMatch.sourceLinks ?? [],
-        sourceNotes: []
+        sourceNotes: [],
+        assistantMessageId: validConvId && db ? assistantMsgId : undefined,
       });
     }
   }
@@ -358,21 +361,23 @@ export async function POST(request: Request) {
   if (provider === "local") {
     if (imageAttachments.length > 0 && !message && !attachmentContext) {
       const imgReply = `Image Attachment Review\n\nImage attachments require OPENAI_API_KEY or CLAUDE_API_KEY for visual analysis. Please type what is shown in the screenshot or describe the issue, and I will search the local LMX Content training knowledge without using any API key.`;
-      void saveExchange(validConvId, username, message, imgReply);
+      void saveExchange(validConvId, username, message, imgReply, assistantMsgId);
       return NextResponse.json({
         reply: imgReply,
         source: "local",
         sourceLinks: [],
-        sourceNotes: []
+        sourceNotes: [],
+        assistantMessageId: validConvId && db ? assistantMsgId : undefined,
       });
     }
 
-    void saveExchange(validConvId, username, message, localReply);
+    void saveExchange(validConvId, username, message, localReply, assistantMsgId);
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
       sourceLinks: localSearch.sourceLinks,
-      sourceNotes: localSearch.sourceNotes
+      sourceNotes: localSearch.sourceNotes,
+      assistantMessageId: validConvId && db ? assistantMsgId : undefined,
     });
   }
 
@@ -406,13 +411,14 @@ export async function POST(request: Request) {
 
   async function fallbackToLocal(errorMessage: string) {
     console.error(errorMessage);
-    void saveExchange(validConvId, username, message, localReply);
+    void saveExchange(validConvId, username, message, localReply, assistantMsgId);
     return NextResponse.json({
       reply: localReply,
       source: localSearch.confidence === "low" ? "local" : "knowledge",
       sourceLinks: localSearch.sourceLinks,
       sourceNotes: localSearch.sourceNotes,
-      warning: `AI unavailable. Used local knowledge fallback.`
+      warning: `AI unavailable. Used local knowledge fallback.`,
+      assistantMessageId: validConvId && db ? assistantMsgId : undefined,
     });
   }
 
@@ -430,12 +436,13 @@ export async function POST(request: Request) {
       return await fallbackToLocal(`No reply returned from ${provider}.`);
     }
 
-    void saveExchange(validConvId, username, message, reply);
+    void saveExchange(validConvId, username, message, reply, assistantMsgId);
     return NextResponse.json({
       reply,
       source: provider,
       sourceLinks: localSearch.sourceLinks,
-      sourceNotes: localSearch.sourceNotes
+      sourceNotes: localSearch.sourceNotes,
+      assistantMessageId: validConvId && db ? assistantMsgId : undefined,
     });
   } catch (error) {
     console.error(error);
@@ -446,8 +453,8 @@ export async function POST(request: Request) {
           const data = await callOpenAI(messages);
           const reply = data.choices?.[0]?.message?.content;
           if (reply) {
-            void saveExchange(validConvId, username, message, reply);
-            return NextResponse.json({ reply, source: "openai", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+            void saveExchange(validConvId, username, message, reply, assistantMsgId);
+            return NextResponse.json({ reply, source: "openai", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes, assistantMessageId: validConvId && db ? assistantMsgId : undefined });
           }
         } catch (fallbackError) { console.error(fallbackError); }
       }
@@ -456,8 +463,8 @@ export async function POST(request: Request) {
           const data = await callMistral(messages);
           const reply = data.choices?.[0]?.message?.content;
           if (reply) {
-            void saveExchange(validConvId, username, message, reply);
-            return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+            void saveExchange(validConvId, username, message, reply, assistantMsgId);
+            return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes, assistantMessageId: validConvId && db ? assistantMsgId : undefined });
           }
         } catch (fallbackError) { console.error(fallbackError); }
       }
@@ -468,8 +475,8 @@ export async function POST(request: Request) {
         const data = await callMistral(messages);
         const reply = data.choices?.[0]?.message?.content;
         if (reply) {
-          void saveExchange(validConvId, username, message, reply);
-          return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes });
+          void saveExchange(validConvId, username, message, reply, assistantMsgId);
+          return NextResponse.json({ reply, source: "mistral", sourceLinks: localSearch.sourceLinks, sourceNotes: localSearch.sourceNotes, assistantMessageId: validConvId && db ? assistantMsgId : undefined });
         }
       } catch (fallbackError) { console.error(fallbackError); }
     }

@@ -11,6 +11,7 @@ export type ChatMessage = {
   source?: ChatSource;
   sourceLinks?: SourceLink[];
   sourceNotes?: SourceNote[];
+  dbId?: string;
 };
 
 export type ChatAttachment = {

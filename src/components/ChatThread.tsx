@@ -58,6 +58,9 @@ const topicSourceLinks: Record<string, Array<{ label: string; url: string }>> = 
   "Programmatic / VAST": [{ label: "Schedule URL & Google IMA (VAST)", url: "https://movingwallshub.atlassian.net/wiki/x/AQCXDw" }]
 };
 
+type FeedbackRating = "good" | "bad";
+type FeedbackStatus = FeedbackRating | "pending" | "error";
+
 type ChatThreadProps = {
   messages: ChatMessage[];
   loading: boolean;
@@ -71,6 +74,8 @@ type ChatThreadProps = {
   onAttachClick: () => void;
   hasAiProvider: boolean;
   selectedTopic?: KnowledgeTopic;
+  onFeedback?: (messageId: string, rating: FeedbackRating) => void;
+  feedbackState?: Record<string, FeedbackStatus>;
 };
 
 export function ChatThread({
@@ -85,7 +90,9 @@ export function ChatThread({
   onRemoveAttachment,
   onAttachClick,
   hasAiProvider,
-  selectedTopic
+  selectedTopic,
+  onFeedback,
+  feedbackState,
 }: ChatThreadProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -170,6 +177,13 @@ export function ChatThread({
                           ))}
                         </div>
                       </div>
+                    ) : null}
+                    {onFeedback ? (
+                      <FeedbackBar
+                        messageId={message.id}
+                        status={feedbackState?.[message.id]}
+                        onFeedback={onFeedback}
+                      />
                     ) : null}
                   </>
                 ) : (
@@ -427,4 +441,64 @@ function TrainingOverview() {
 
 function FormattedResponse({ content }: { content: string }) {
   return <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{content}</p>;
+}
+
+function FeedbackBar({
+  messageId,
+  status,
+  onFeedback,
+}: {
+  messageId: string;
+  status?: FeedbackStatus;
+  onFeedback: (id: string, rating: FeedbackRating) => void;
+}) {
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+      {status === "good" || status === "bad" ? (
+        <>
+          <span className="text-sm">{status === "good" ? "👍" : "👎"}</span>
+          <span className="text-xs text-slate-500">Thanks for your feedback.</span>
+          <button
+            type="button"
+            onClick={() => onFeedback(messageId, status === "good" ? "bad" : "good")}
+            className="ml-1 text-xs text-slate-400 underline hover:text-slate-600"
+          >
+            Change
+          </button>
+        </>
+      ) : status === "error" ? (
+        <p className="text-xs text-red-500">Unable to save feedback.</p>
+      ) : (
+        <>
+          <p className="text-xs text-slate-400">Was this helpful?</p>
+          <button
+            type="button"
+            onClick={() => onFeedback(messageId, "good")}
+            disabled={status === "pending"}
+            className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs text-slate-600 transition hover:border-signal hover:text-signal disabled:opacity-50"
+          >
+            {status === "pending" ? (
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              "👍"
+            )}{" "}
+            Good
+          </button>
+          <button
+            type="button"
+            onClick={() => onFeedback(messageId, "bad")}
+            disabled={status === "pending"}
+            className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs text-slate-600 transition hover:border-signal hover:text-signal disabled:opacity-50"
+          >
+            {status === "pending" ? (
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              "👎"
+            )}{" "}
+            Bad
+          </button>
+        </>
+      )}
+    </div>
+  );
 }

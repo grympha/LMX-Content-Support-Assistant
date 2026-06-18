@@ -65,6 +65,26 @@ type TrainingUserStat = {
   latestActivity: string | null;
 };
 
+type FeedbackRecord = {
+  id: string;
+  username: string;
+  conversationId: string | null;
+  messageId: string | null;
+  question: string | null;
+  response: string | null;
+  rating: string;
+  aiProvider: string | null;
+  sources: string[] | null;
+  createdAt: string;
+};
+
+type FeedbackSummary = {
+  total: number;
+  good: number;
+  bad: number;
+  goodRate: number;
+};
+
 const EVENT_TYPES = [
   "login",
   "topic_selected",
@@ -184,6 +204,18 @@ export default function AdminDashboard() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
 
+  // Feedback
+  const [feedbackRecords, setFeedbackRecords] = useState<FeedbackRecord[]>([]);
+  const [feedbackSummary, setFeedbackSummary] = useState<FeedbackSummary | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackAvailable, setFeedbackAvailable] = useState(true);
+  const [feedbackTotal, setFeedbackTotal] = useState(0);
+  const [feedbackTotalPages, setFeedbackTotalPages] = useState(1);
+  const [feedbackPage, setFeedbackPage] = useState(1);
+  const [feedbackRatingFilter, setFeedbackRatingFilter] = useState("all");
+  const [feedbackUsernameFilter, setFeedbackUsernameFilter] = useState("all");
+  const [feedbackSearch, setFeedbackSearch] = useState("");
+
   useEffect(() => {
     fetch("/api/admin/auth")
       .then((r) => r.json())
@@ -205,6 +237,7 @@ export default function AdminDashboard() {
         search: "",
       });
       void loadUserProgress();
+      void loadFeedback({ targetPage: 1, rating: "all", username: "all", search: "" });
     }
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -242,6 +275,7 @@ export default function AdminDashboard() {
     });
     void loadUserProgress();
     void loadTrainingUserStats();
+    void loadFeedback({ targetPage: feedbackPage, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
   }
 
   async function loadAnalytics(username?: string) {
@@ -370,6 +404,49 @@ export default function AdminDashboard() {
       // silently ignore
     } finally {
       setTrainingUserStatsLoading(false);
+    }
+  }
+
+  async function loadFeedback({
+    targetPage,
+    rating,
+    username,
+    search: searchTerm,
+  }: {
+    targetPage: number;
+    rating: string;
+    username: string;
+    search: string;
+  }) {
+    setFeedbackLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(targetPage), limit: "50" });
+      if (rating && rating !== "all") params.set("rating", rating);
+      if (username && username !== "all") params.set("username", username);
+      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      const res = await fetch(`/api/admin/feedback?${params.toString()}`, { cache: "no-store" });
+      if (res.status === 503) {
+        setFeedbackAvailable(false);
+        return;
+      }
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        records: FeedbackRecord[];
+        total: number;
+        page: number;
+        totalPages: number;
+        summary: FeedbackSummary;
+      };
+      setFeedbackRecords(data.records);
+      setFeedbackTotal(data.total);
+      setFeedbackPage(data.page);
+      setFeedbackTotalPages(data.totalPages);
+      setFeedbackSummary(data.summary);
+      setFeedbackAvailable(true);
+    } catch {
+      // silently ignore
+    } finally {
+      setFeedbackLoading(false);
     }
   }
 
@@ -621,6 +698,190 @@ export default function AdminDashboard() {
                 <AnalyticCard label="FAQ Selections" value={analytics.totalFaqSelections} />
               </div>
             ) : null}
+          </section>
+        )}
+
+        {/* Assistant Feedback */}
+        {feedbackAvailable && (
+          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-semibold text-ink">Assistant Feedback</h2>
+                <p className="text-sm text-slate-600">User ratings on assistant responses.</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  Rating
+                  <select
+                    value={feedbackRatingFilter}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFeedbackRatingFilter(val);
+                      void loadFeedback({ targetPage: 1, rating: val, username: feedbackUsernameFilter, search: feedbackSearch });
+                    }}
+                    className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                  >
+                    <option value="all">All</option>
+                    <option value="good">Good</option>
+                    <option value="bad">Bad</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  Username
+                  <select
+                    value={feedbackUsernameFilter}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFeedbackUsernameFilter(val);
+                      void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: val, search: feedbackSearch });
+                    }}
+                    className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                  >
+                    <option value="all">All</option>
+                    {Array.from(new Set(feedbackRecords.map((r) => r.username))).sort().map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="relative block sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                  <input
+                    value={feedbackSearch}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFeedbackSearch(val);
+                      void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: val });
+                    }}
+                    placeholder="Search question or response..."
+                    className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void loadFeedback({ targetPage: feedbackPage, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch })}
+                  disabled={feedbackLoading}
+                  className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {feedbackLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-md border border-line bg-mist p-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Feedback</p>
+                <p className="mt-1 text-2xl font-semibold text-ink">{(feedbackSummary?.total ?? 0).toLocaleString()}</p>
+              </div>
+              <div className="rounded-md border border-line bg-mist p-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Responses</p>
+                <p className="mt-1 text-2xl font-semibold text-signal">{(feedbackSummary?.good ?? 0).toLocaleString()}</p>
+              </div>
+              <div className="rounded-md border border-line bg-mist p-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Bad Responses</p>
+                <p className="mt-1 text-2xl font-semibold text-red-600">{(feedbackSummary?.bad ?? 0).toLocaleString()}</p>
+              </div>
+              <div className="rounded-md border border-line bg-mist p-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Rate</p>
+                <p className="mt-1 text-2xl font-semibold text-ink">{feedbackSummary?.goodRate ?? 0}%</p>
+              </div>
+            </div>
+
+            {feedbackLoading ? (
+              <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                Loading feedback…
+              </div>
+            ) : feedbackRecords.length === 0 ? (
+              <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                No feedback recorded yet.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-3 font-semibold">Timestamp</th>
+                        <th className="px-3 py-3 font-semibold">Username</th>
+                        <th className="px-3 py-3 font-semibold">Rating</th>
+                        <th className="px-3 py-3 font-semibold">Question</th>
+                        <th className="px-3 py-3 font-semibold">Response Preview</th>
+                        <th className="px-3 py-3 font-semibold">AI Provider</th>
+                        <th className="px-3 py-3 font-semibold">Sources</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feedbackRecords.map((rec) => (
+                        <tr key={rec.id} className="border-b border-line last:border-0">
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                            {formatMalaysiaTimestamp(rec.createdAt)}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">
+                            {rec.username}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${rec.rating === "good" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                              {rec.rating === "good" ? "👍 Good" : "👎 Bad"}
+                            </span>
+                          </td>
+                          <td className="max-w-xs px-3 py-3 text-slate-700">
+                            <span className="line-clamp-2">{rec.question ?? "-"}</span>
+                          </td>
+                          <td className="max-w-xs px-3 py-3 text-slate-600">
+                            <span className="line-clamp-2 text-xs">{rec.response ? rec.response.slice(0, 120) + (rec.response.length > 120 ? "…" : "") : "-"}</span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                            {rec.aiProvider ?? "-"}
+                          </td>
+                          <td className="max-w-xs px-3 py-3 text-slate-600">
+                            {rec.sources && rec.sources.length > 0
+                              ? <span className="text-xs">{rec.sources.slice(0, 3).join(", ")}{rec.sources.length > 3 ? ` +${rec.sources.length - 3}` : ""}</span>
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-500">
+                    {feedbackTotal === 0
+                      ? "No records"
+                      : `Showing ${(feedbackPage - 1) * 50 + 1}–${Math.min(feedbackPage * 50, feedbackTotal)} of ${feedbackTotal}`}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const np = Math.max(1, feedbackPage - 1);
+                        void loadFeedback({ targetPage: np, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
+                      }}
+                      disabled={feedbackPage <= 1 || feedbackLoading}
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <span className="text-sm text-slate-600">Page {feedbackPage} of {feedbackTotalPages}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const np = Math.min(feedbackTotalPages, feedbackPage + 1);
+                        void loadFeedback({ targetPage: np, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
+                      }}
+                      disabled={feedbackPage >= feedbackTotalPages || feedbackLoading}
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Next page"
+                    >
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         )}
 

@@ -64,3 +64,29 @@ export type TrainingEvent = typeof trainingEvents.$inferSelect;
 export type NewTrainingEvent = typeof trainingEvents.$inferInsert;
 export type UserProgress = typeof userProgress.$inferSelect;
 export type NewUserProgress = typeof userProgress.$inferInsert;
+
+export const assistantFeedback = pgTable(
+  "assistant_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    username: varchar("username", { length: 255 }).notNull(),
+    conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+    messageId: uuid("message_id"),
+    question: text("question"),
+    response: text("response"),
+    rating: varchar("rating", { length: 20 }).notNull(),
+    aiProvider: varchar("ai_provider", { length: 50 }),
+    sources: text("sources").array(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_assistant_feedback_username").on(t.username),
+    index("idx_assistant_feedback_rating").on(t.rating),
+    index("idx_assistant_feedback_created_at").on(t.createdAt),
+    index("idx_assistant_feedback_conversation_id").on(t.conversationId),
+  ]
+);
+
+export type AssistantFeedback = typeof assistantFeedback.$inferSelect;
+export type NewAssistantFeedback = typeof assistantFeedback.$inferInsert;
