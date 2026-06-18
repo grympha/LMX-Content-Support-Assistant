@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { conversations, messages, trainingEvents, userProgress } from "@/lib/schema";
+import type { SQL } from "drizzle-orm";
 
 const ADMIN_COOKIE = "lmx-admin-session";
 
@@ -32,6 +33,18 @@ export async function GET(request: Request) {
       { status: 503 }
     );
   }
+
+  const { searchParams } = new URL(request.url);
+  const usernameParam = searchParams.get("username");
+  const filterUsername = usernameParam && usernameParam !== "all" ? usernameParam : null;
+
+  // Per-table WHERE conditions, undefined = no filter (Drizzle no-op)
+  const teWhere: SQL | undefined = filterUsername
+    ? eq(trainingEvents.username, filterUsername)
+    : undefined;
+  const upWhere: SQL | undefined = filterUsername
+    ? eq(userProgress.username, filterUsername)
+    : undefined;
 
   // "Today" boundary in Malaysia timezone (UTC+8).
   // Shift now to Malaysian wall-clock date, truncate to midnight, shift back to UTC.
@@ -88,46 +101,50 @@ export async function GET(request: Request) {
         upTop,
         upProgressSum,
       ] = await Promise.all([
-        // Total events
-        db.select({ n: count() }).from(trainingEvents),
+        // Total events (filtered by username when present)
+        db.select({ n: count() }).from(trainingEvents).where(teWhere),
         // question_asked count
         db
           .select({ n: count() })
           .from(trainingEvents)
-          .where(eq(trainingEvents.eventType, "question_asked")),
+          .where(teWhere ? sql`${teWhere} AND ${eq(trainingEvents.eventType, "question_asked")}` : eq(trainingEvents.eventType, "question_asked")),
         // topic_completed count
         db
           .select({ n: count() })
           .from(trainingEvents)
-          .where(eq(trainingEvents.eventType, "topic_completed")),
+          .where(teWhere ? sql`${teWhere} AND ${eq(trainingEvents.eventType, "topic_completed")}` : eq(trainingEvents.eventType, "topic_completed")),
         // quick_answer_selected count
         db
           .select({ n: count() })
           .from(trainingEvents)
-          .where(eq(trainingEvents.eventType, "quick_answer_selected")),
+          .where(teWhere ? sql`${teWhere} AND ${eq(trainingEvents.eventType, "quick_answer_selected")}` : eq(trainingEvents.eventType, "quick_answer_selected")),
         // Latest activity timestamp
         db
           .select({ v: sql<string | null>`MAX(${trainingEvents.loggedAt})` })
-          .from(trainingEvents),
-        // Distinct user count — NULLIF excludes blank usernames left by legacy rows
+          .from(trainingEvents)
+          .where(teWhere),
+        // Distinct user count — NULLIF excludes blank usernames; filtered to one when username param set
         db
           .select({
             n: sql<number>`COUNT(DISTINCT NULLIF(${trainingEvents.username}, ''))`,
           })
-          .from(trainingEvents),
-        // Top learner by progress
+          .from(trainingEvents)
+          .where(teWhere),
+        // Top learner by progress (filtered to single user when username param set)
         db
           .select({
             username: userProgress.username,
             progressPercent: userProgress.progressPercent,
           })
           .from(userProgress)
+          .where(upWhere)
           .orderBy(desc(userProgress.progressPercent))
           .limit(1),
-        // Sum of all recorded progress (to divide by total distinct users, not just user_progress rows)
+        // Sum of recorded progress (filtered to single user when username param set)
         db
           .select({ total: sql<string | null>`SUM(${userProgress.progressPercent})` })
-          .from(userProgress),
+          .from(userProgress)
+          .where(upWhere),
       ]);
 
       totalTrainingEvents = Number(teTotal[0].n);

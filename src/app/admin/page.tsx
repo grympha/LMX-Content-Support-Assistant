@@ -58,6 +58,13 @@ type NeonUserProgress = {
   lastActiveAt: string;
 };
 
+type TrainingUserStat = {
+  username: string;
+  trainingEventCount: number;
+  completedTopicCount: number;
+  latestActivity: string | null;
+};
+
 const EVENT_TYPES = [
   "login",
   "topic_selected",
@@ -144,8 +151,8 @@ export default function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(50);
 
-  // Training record username options (distinct from training_events)
-  const [trainingUsernames, setTrainingUsernames] = useState<string[]>([]);
+  // Training user stats (distinct from training_events — used for Records dropdown and Management section)
+  const [trainingUserStats, setTrainingUserStats] = useState<TrainingUserStat[]>([]);
 
   // User management
   const [userStats, setUserStats] = useState<UserStat[]>([]);
@@ -161,6 +168,16 @@ export default function AdminDashboard() {
     messages: number;
   } | null>(null);
   const [exportingUserId, setExportingUserId] = useState<string | null>(null);
+
+  // Training user management (delete from training_events + user_progress)
+  const [confirmDeleteTrainingUser, setConfirmDeleteTrainingUser] = useState<string | null>(null);
+  const [deletingTrainingUser, setDeletingTrainingUser] = useState<string | null>(null);
+  const [deletedTrainingUserInfo, setDeletedTrainingUserInfo] = useState<{
+    username: string;
+    deletedEvents: number;
+    deletedProgress: number;
+  } | null>(null);
+  const [trainingUserStatsLoading, setTrainingUserStatsLoading] = useState(false);
 
   // Analytics
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -179,7 +196,7 @@ export default function AdminDashboard() {
     if (authenticated) {
       void loadAnalytics();
       void loadUserStats();
-      void loadTrainingUsernames();
+      void loadTrainingUserStats();
       void loadTrainingRecords({
         targetPage: 1,
         limit: recordsPerPage,
@@ -215,7 +232,7 @@ export default function AdminDashboard() {
   }
 
   function handleRefreshAll() {
-    void loadAnalytics();
+    void loadAnalytics(usernameFilter);
     void loadTrainingRecords({
       targetPage: page,
       limit: recordsPerPage,
@@ -224,12 +241,16 @@ export default function AdminDashboard() {
       search,
     });
     void loadUserProgress();
+    void loadTrainingUserStats();
   }
 
-  async function loadAnalytics() {
+  async function loadAnalytics(username?: string) {
     setAnalyticsLoading(true);
     try {
-      const res = await fetch("/api/admin/analytics", { cache: "no-store" });
+      const params = new URLSearchParams();
+      if (username && username !== "all") params.set("username", username);
+      const qs = params.toString();
+      const res = await fetch(`/api/admin/analytics${qs ? `?${qs}` : ""}`, { cache: "no-store" });
       if (res.status === 503) {
         setAnalyticsAvailable(false);
         return;
@@ -339,13 +360,47 @@ export default function AdminDashboard() {
     }
   }
 
-  async function loadTrainingUsernames() {
+  async function loadTrainingUserStats() {
+    setTrainingUserStatsLoading(true);
     try {
       const res = await fetch("/api/admin/training-users", { cache: "no-store" });
       if (!res.ok) return;
-      setTrainingUsernames((await res.json()) as string[]);
+      setTrainingUserStats((await res.json()) as TrainingUserStat[]);
     } catch {
       // silently ignore
+    } finally {
+      setTrainingUserStatsLoading(false);
+    }
+  }
+
+  async function deleteTrainingUser(username: string) {
+    setDeletingTrainingUser(username);
+    setDeletedTrainingUserInfo(null);
+    try {
+      const res = await fetch(`/api/admin/training-users/${encodeURIComponent(username)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to delete training records.");
+      }
+      const data = (await res.json()) as {
+        deletedEvents: number;
+        deletedProgress: number;
+      };
+      setTrainingUserStats((prev) => prev.filter((u) => u.username !== username));
+      setConfirmDeleteTrainingUser(null);
+      setDeletedTrainingUserInfo({ username, ...data });
+      void loadAnalytics(usernameFilter !== username ? usernameFilter : "all");
+      if (usernameFilter === username) {
+        setUsernameFilter("all");
+        void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: "all", event: eventFilter, search });
+      }
+    } catch (err) {
+      console.error(err);
+      setConfirmDeleteTrainingUser(null);
+    } finally {
+      setDeletingTrainingUser(null);
     }
   }
 
@@ -494,7 +549,24 @@ export default function AdminDashboard() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-5">
-        {/* Summary cards — global totals from Neon analytics */}
+        {/* Summary cards — filtered when Training Records username is selected */}
+        {usernameFilter !== "all" && (
+          <div className="flex items-center gap-2 rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-sm text-signal">
+            <span className="font-medium">Showing data for:</span>
+            <span className="font-semibold">{usernameFilter}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameFilter("all");
+                void loadAnalytics("all");
+                void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: "all", event: eventFilter, search });
+              }}
+              className="ml-auto rounded px-2 py-0.5 text-xs font-medium text-signal hover:bg-signal/10"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             title="Total Users"
@@ -564,7 +636,7 @@ export default function AdminDashboard() {
               </div>
               <button
                 type="button"
-                onClick={loadAnalytics}
+                onClick={() => void loadAnalytics(usernameFilter)}
                 disabled={analyticsLoading}
                 className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -684,6 +756,10 @@ export default function AdminDashboard() {
               <p className="text-sm text-slate-600">
                 View and delete conversation history stored in the database.
               </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Only users with saved conversation history appear here. Deleting here removes
+                conversation history only — training records remain in Neon.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -791,8 +867,7 @@ export default function AdminDashboard() {
                           <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
                             <p className="text-xs text-red-700">
                               This will permanently delete all conversation history for this user.
-                              This does not delete a login account because user accounts are not
-                              implemented yet.
+                              Training records in Neon will not be deleted.
                             </p>
                             <div className="flex gap-2">
                               <button
@@ -852,6 +927,141 @@ export default function AdminDashboard() {
           )}
         </section>
 
+        {/* Training User Management */}
+        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-ink">Training User Management</h2>
+              <p className="text-sm text-slate-600">
+                Delete training records and progress for a specific user.
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Deleting here removes training_events and user_progress only — conversation
+                history is not affected.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={loadTrainingUserStats}
+              disabled={trainingUserStatsLoading}
+              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {trainingUserStatsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              )}
+              Refresh
+            </button>
+          </div>
+
+          {deletedTrainingUserInfo ? (
+            <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+              <div className="text-green-800">
+                <p className="font-semibold">Deleted training records:</p>
+                <p>
+                  User: <span className="font-medium">{deletedTrainingUserInfo.username}</span>
+                </p>
+                <p>
+                  Training events removed:{" "}
+                  <span className="font-medium">{deletedTrainingUserInfo.deletedEvents}</span>
+                </p>
+                <p>
+                  Progress rows removed:{" "}
+                  <span className="font-medium">{deletedTrainingUserInfo.deletedProgress}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletedTrainingUserInfo(null)}
+                className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
+
+          {trainingUserStatsLoading ? (
+            <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+              Loading training users…
+            </div>
+          ) : trainingUserStats.length === 0 ? (
+            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+              No training users found.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-3 font-semibold">Username</th>
+                    <th className="px-3 py-3 font-semibold">Training Events</th>
+                    <th className="px-3 py-3 font-semibold">Topics Completed</th>
+                    <th className="px-3 py-3 font-semibold">Latest Activity</th>
+                    <th className="px-3 py-3 font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trainingUserStats.map((u) => (
+                    <tr key={u.username} className="border-b border-line last:border-0">
+                      <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
+                      <td className="px-3 py-3 text-slate-700">{u.trainingEventCount}</td>
+                      <td className="px-3 py-3 text-slate-700">{u.completedTopicCount}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                        {formatMalaysiaTimestamp(u.latestActivity)}
+                      </td>
+                      <td className="px-3 py-3">
+                        {confirmDeleteTrainingUser === u.username ? (
+                          <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                            <p className="text-xs text-red-700">
+                              This will permanently delete all training records and progress for{" "}
+                              <span className="font-semibold">{u.username}</span>. Conversation
+                              history will not be deleted.
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => deleteTrainingUser(u.username)}
+                                disabled={deletingTrainingUser === u.username}
+                                className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                              >
+                                {deletingTrainingUser === u.username ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                )}
+                                Yes, Delete Training Records
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteTrainingUser(null)}
+                                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteTrainingUser(u.username)}
+                            className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
+                            Delete Training Records
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         {/* Training Records */}
         <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -867,6 +1077,7 @@ export default function AdminDashboard() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setUsernameFilter(val);
+                    void loadAnalytics(val);
                     void loadTrainingRecords({
                       targetPage: 1,
                       limit: recordsPerPage,
@@ -878,9 +1089,9 @@ export default function AdminDashboard() {
                   className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                 >
                   <option value="all">All</option>
-                  {trainingUsernames.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
+                  {trainingUserStats.map((u) => (
+                    <option key={u.username} value={u.username}>
+                      {u.username}
                     </option>
                   ))}
                 </select>

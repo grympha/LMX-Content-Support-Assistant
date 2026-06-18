@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asc } from "drizzle-orm";
+import { asc, count, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { trainingEvents } from "@/lib/schema";
 
@@ -32,18 +32,27 @@ export async function GET(request: Request) {
 
   try {
     const rows = await db
-      .selectDistinct({ username: trainingEvents.username })
+      .select({
+        username: trainingEvents.username,
+        trainingEventCount: count(),
+        completedTopicCount: sql<number>`COUNT(CASE WHEN ${trainingEvents.eventType} = 'topic_completed' THEN 1 END)`,
+        latestActivity: sql<string | null>`MAX(${trainingEvents.loggedAt})`,
+      })
       .from(trainingEvents)
+      .where(sql`${trainingEvents.username} != ''`)
+      .groupBy(trainingEvents.username)
       .orderBy(asc(trainingEvents.username));
 
-    const usernames = rows
-      .map((r) => r.username)
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const stats = rows.map((r) => ({
+      username: r.username,
+      trainingEventCount: Number(r.trainingEventCount),
+      completedTopicCount: Number(r.completedTopicCount),
+      latestActivity: r.latestActivity ?? null,
+    }));
 
-    return NextResponse.json(usernames);
+    return NextResponse.json(stats);
   } catch (err) {
     console.error("[GET /api/admin/training-users]", err);
-    return NextResponse.json({ error: "Failed to load training usernames." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to load training users." }, { status: 500 });
   }
 }
