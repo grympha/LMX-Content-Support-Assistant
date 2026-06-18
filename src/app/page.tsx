@@ -675,6 +675,7 @@ export default function Home() {
           onInputChange={setInput}
           onSend={sendFollowUpMessage}
           onNewTopic={handleNewTopicButton}
+          onOpenHistory={historyAvailable ? () => { setHistoryOpen(true); void fetchConversations(); } : undefined}
           attachments={attachments}
           onRemoveAttachment={removeAttachment}
           onAttachClick={() => attachmentInputRef.current?.click()}

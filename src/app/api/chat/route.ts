@@ -293,7 +293,10 @@ async function saveExchange(
       .select({ id: conversations.id, title: conversations.title })
       .from(conversations)
       .where(and(eq(conversations.id, convId), eq(conversations.userId, username)));
-    if (!conv) return;
+    if (!conv) {
+      console.error("[saveExchange] Conversation not found — convId:", convId, "user:", username);
+      return;
+    }
 
     const [{ total }] = await db
       .select({ total: dbCount() })

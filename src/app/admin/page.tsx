@@ -1,7 +1,23 @@
 "use client";
 
 import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronLeft, ChevronRight, Loader2, Lock, LogOut, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, Download, Loader2, Lock, LogOut, RefreshCw, Search, ShieldCheck, Trash2, Users } from "lucide-react";
+
+type UserStat = {
+  userId: string;
+  conversationCount: number;
+  messageCount: number;
+  latestActivity: string | null;
+};
+
+type AnalyticsData = {
+  totalUsers: number;
+  totalConversations: number;
+  totalMessages: number;
+  conversationsToday: number;
+  messagesToday: number;
+  mostActiveUser: { userId: string; conversationCount: number } | null;
+};
 
 type TrainingRecord = {
   timestamp: string;
@@ -111,6 +127,17 @@ export default function AdminDashboard() {
   const [eventFilter, setEventFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(20);
+  const [userStats, setUserStats] = useState<UserStat[]>([]);
+  const [userStatsLoading, setUserStatsLoading] = useState(true);
+  const [userStatsError, setUserStatsError] = useState("");
+  const [userStatsAvailable, setUserStatsAvailable] = useState(true);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deletedUserInfo, setDeletedUserInfo] = useState<{ userId: string; conversations: number; messages: number } | null>(null);
+  const [exportingUserId, setExportingUserId] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/auth")
@@ -123,6 +150,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (authenticated) {
       loadRecords();
+      loadUserStats();
+      loadAnalytics();
     }
   }, [authenticated]);
 
@@ -179,6 +208,108 @@ export default function AdminDashboard() {
       setLoadError(error instanceof Error ? error.message : "Unable to load records.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadUserStats() {
+    setUserStatsLoading(true);
+    setUserStatsError("");
+    try {
+      const res = await fetch("/api/admin/users", { cache: "no-store" });
+      if (res.status === 503) {
+        setUserStatsAvailable(false);
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to load user stats.");
+      }
+      const data = (await res.json()) as UserStat[];
+      setUserStats(data);
+      setUserStatsAvailable(true);
+    } catch (err) {
+      setUserStatsError(err instanceof Error ? err.message : "Failed to load user stats.");
+    } finally {
+      setUserStatsLoading(false);
+    }
+  }
+
+  async function loadAnalytics() {
+    setAnalyticsLoading(true);
+    try {
+      const res = await fetch("/api/admin/analytics", { cache: "no-store" });
+      if (res.status === 503) {
+        setAnalyticsAvailable(false);
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to load analytics.");
+      }
+      const data = (await res.json()) as AnalyticsData;
+      setAnalytics(data);
+      setAnalyticsAvailable(true);
+    } catch {
+      // Silently ignore — analytics section degrades gracefully
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    const userBeforeDelete = userStats.find((u) => u.userId === userId);
+    setDeletingUserId(userId);
+    setUserStatsError("");
+    setDeletedUserInfo(null);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to delete user conversations.");
+      }
+      setUserStats((prev) => prev.filter((u) => u.userId !== userId));
+      setConfirmDeleteUserId(null);
+      if (userBeforeDelete) {
+        setDeletedUserInfo({
+          userId,
+          conversations: userBeforeDelete.conversationCount,
+          messages: userBeforeDelete.messageCount,
+        });
+      }
+      void loadAnalytics();
+    } catch (err) {
+      setUserStatsError(err instanceof Error ? err.message : "Failed to delete user conversations.");
+      setConfirmDeleteUserId(null);
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
+  async function exportUser(userId: string) {
+    setExportingUserId(userId);
+    setUserStatsError("");
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/export`);
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Export failed.");
+      }
+      const data = await res.json() as unknown;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${userId}-history.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setUserStatsError(err instanceof Error ? err.message : "Export failed.");
+    } finally {
+      setExportingUserId(null);
     }
   }
 
@@ -329,6 +460,177 @@ export default function AdminDashboard() {
           <SummaryCard title="Latest Activity" value={summary.lastActivity} small icon={<RefreshCw className="h-5 w-5" />} />
         </section>
 
+        {analyticsAvailable && (
+          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-ink">Conversation Analytics</h2>
+                <p className="text-sm text-slate-600">Aggregate stats from the conversation database.</p>
+              </div>
+              <button
+                type="button"
+                onClick={loadAnalytics}
+                disabled={analyticsLoading}
+                className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {analyticsLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                Refresh
+              </button>
+            </div>
+            {analyticsLoading ? (
+              <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                Loading analytics…
+              </div>
+            ) : analytics ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <AnalyticCard label="Total Users" value={analytics.totalUsers} />
+                <AnalyticCard label="Total Conversations" value={analytics.totalConversations} />
+                <AnalyticCard label="Total Messages" value={analytics.totalMessages} />
+                <AnalyticCard label="Conversations Today" value={analytics.conversationsToday} />
+                <AnalyticCard label="Messages Today" value={analytics.messagesToday} />
+                <div className="rounded-md border border-line bg-mist p-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Most Active User</p>
+                  {analytics.mostActiveUser ? (
+                    <>
+                      <p className="mt-1 truncate text-base font-semibold text-ink">{analytics.mostActiveUser.userId}</p>
+                      <p className="text-sm text-slate-500">{analytics.mostActiveUser.conversationCount} conversations</p>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-400">No data yet</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        )}
+
+        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-ink">User Conversation Management</h2>
+              <p className="text-sm text-slate-600">View and delete conversation history stored in the database.</p>
+            </div>
+            <button
+              type="button"
+              onClick={loadUserStats}
+              disabled={userStatsLoading}
+              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {userStatsLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+              Refresh
+            </button>
+          </div>
+
+          {deletedUserInfo ? (
+            <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+              <div className="text-green-800">
+                <p className="font-semibold">Deleted user history:</p>
+                <p>User: <span className="font-medium">{deletedUserInfo.userId}</span></p>
+                <p>Conversations removed: <span className="font-medium">{deletedUserInfo.conversations}</span></p>
+                <p>Messages removed: <span className="font-medium">{deletedUserInfo.messages}</span></p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletedUserInfo(null)}
+                className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
+
+          {!userStatsAvailable ? (
+            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+              Conversation database is not configured.
+            </div>
+          ) : userStatsError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{userStatsError}</div>
+          ) : userStatsLoading ? (
+            <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+              Loading user stats…
+            </div>
+          ) : userStats.length === 0 ? (
+            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+              No conversation history found.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-3 font-semibold">Username</th>
+                    <th className="px-3 py-3 font-semibold">Conversations</th>
+                    <th className="px-3 py-3 font-semibold">Messages</th>
+                    <th className="px-3 py-3 font-semibold">Latest Activity</th>
+                    <th className="px-3 py-3 font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userStats.map((user) => (
+                    <tr key={user.userId} className="border-b border-line last:border-0">
+                      <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
+                      <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
+                      <td className="px-3 py-3 text-slate-700">{user.messageCount}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-slate-600">{user.latestActivity ? formatMalaysiaTimestamp(user.latestActivity) : "-"}</td>
+                      <td className="px-3 py-3">
+                        {confirmDeleteUserId === user.userId ? (
+                          <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                            <p className="text-xs text-red-700">
+                              This will permanently delete all conversation history for this user. This does not delete a login account because user accounts are not implemented yet.
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => deleteUser(user.userId)}
+                                disabled={deletingUserId === user.userId}
+                                className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                              >
+                                {deletingUserId === user.userId ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3 w-3" aria-hidden="true" />}
+                                Yes, Delete All
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteUserId(null)}
+                                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => exportUser(user.userId)}
+                              disabled={exportingUserId === user.userId}
+                              className="flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+                              title="Download conversation history as JSON"
+                            >
+                              {exportingUserId === user.userId ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : <Download className="h-3 w-3" aria-hidden="true" />}
+                              Download History
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteUserId(user.userId)}
+                              className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" aria-hidden="true" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -462,5 +764,14 @@ function SummaryCard({ title, value, icon, small = false }: { title: string; val
       <p className="text-sm text-slate-500">{title}</p>
       <p className={small ? "mt-1 text-sm font-semibold text-ink" : "mt-1 text-2xl font-semibold text-ink"}>{value}</p>
     </article>
+  );
+}
+
+function AnalyticCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-line bg-mist p-3">
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-ink">{value.toLocaleString()}</p>
+    </div>
   );
 }

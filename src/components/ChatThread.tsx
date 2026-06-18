@@ -1,6 +1,6 @@
 "use client";
 
-import { Clipboard, Loader2, Plus, Send, X } from "lucide-react";
+import { Clipboard, History, Loader2, Plus, Send, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { AppInstallationTrainingPage } from "@/components/AppInstallationTrainingPage";
 import { BundleSchedulingTrainingPage } from "@/components/BundleSchedulingTrainingPage";
@@ -65,6 +65,7 @@ type ChatThreadProps = {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onNewTopic: () => void;
+  onOpenHistory?: () => void;
   attachments: ChatAttachment[];
   onRemoveAttachment: (name: string) => void;
   onAttachClick: () => void;
@@ -79,6 +80,7 @@ export function ChatThread({
   onInputChange,
   onSend,
   onNewTopic,
+  onOpenHistory,
   attachments,
   onRemoveAttachment,
   onAttachClick,
@@ -212,8 +214,8 @@ export function ChatThread({
       {/* Sticky reply bar — shown once the conversation has started */}
       {messages.length > 0 ? (
         <div className="border-t border-line bg-white p-3">
-          {/* Mobile-only shortcut: start a new topic without scrolling up to Ask Assistant */}
-          <div className="mx-auto mb-3 max-w-3xl lg:hidden">
+          {/* Mobile-only shortcuts: start a new topic or open history without scrolling */}
+          <div className="mx-auto mb-3 flex gap-2 max-w-3xl lg:hidden">
             <button
               type="button"
               onClick={onNewTopic}
@@ -223,6 +225,17 @@ export function ChatThread({
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               New Topic
             </button>
+            {onOpenHistory ? (
+              <button
+                type="button"
+                onClick={onOpenHistory}
+                disabled={loading}
+                className="flex items-center gap-1.5 rounded-md border border-line bg-mist px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <History className="h-3.5 w-3.5" aria-hidden="true" />
+                History
+              </button>
+            ) : null}
           </div>
           <div className="mx-auto mb-3 max-w-3xl">
             <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Follow-up Questions</p>
