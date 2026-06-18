@@ -647,17 +647,22 @@ export default function AdminDashboard() {
   return (
     <main className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Logo size="md" />
+      <header className="border-b border-line bg-white/90 px-4 py-2 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Logo className="w-[48px] sm:w-[64px]" />
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-signal">
                 LMX Content CMS
               </p>
-              <h1 className="text-2xl font-semibold text-ink">Admin Dashboard</h1>
-              <p className="mt-1 text-xs text-slate-500">
-                User activity, progress, and training questions
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-semibold leading-tight text-ink">Admin Dashboard</h1>
+                <span className="rounded-full bg-slatePanel px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  ADMIN
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                User activity, progress and training analytics
               </p>
             </div>
           </div>
