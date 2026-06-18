@@ -144,8 +144,12 @@ export default function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(50);
 
+  // Training record username options (distinct from training_events)
+  const [trainingUsernames, setTrainingUsernames] = useState<string[]>([]);
+
   // User management
   const [userStats, setUserStats] = useState<UserStat[]>([]);
+  const [userConvFilter, setUserConvFilter] = useState("all");
   const [userStatsLoading, setUserStatsLoading] = useState(true);
   const [userStatsError, setUserStatsError] = useState("");
   const [userStatsAvailable, setUserStatsAvailable] = useState(true);
@@ -175,6 +179,7 @@ export default function AdminDashboard() {
     if (authenticated) {
       void loadAnalytics();
       void loadUserStats();
+      void loadTrainingUsernames();
       void loadTrainingRecords({
         targetPage: 1,
         limit: recordsPerPage,
@@ -331,6 +336,16 @@ export default function AdminDashboard() {
       // silently ignore
     } finally {
       setUserProgressLoading(false);
+    }
+  }
+
+  async function loadTrainingUsernames() {
+    try {
+      const res = await fetch("/api/admin/training-users", { cache: "no-store" });
+      if (!res.ok) return;
+      setTrainingUsernames((await res.json()) as string[]);
+    } catch {
+      // silently ignore
     }
   }
 
@@ -663,26 +678,43 @@ export default function AdminDashboard() {
 
         {/* User Conversation Management */}
         <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold text-ink">User Conversation Management</h2>
               <p className="text-sm text-slate-600">
                 View and delete conversation history stored in the database.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={loadUserStats}
-              disabled={userStatsLoading}
-              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {userStatsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              )}
-              Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Username
+                <select
+                  value={userConvFilter}
+                  onChange={(e) => setUserConvFilter(e.target.value)}
+                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                >
+                  <option value="all">All</option>
+                  {userStats.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.userId}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={loadUserStats}
+                disabled={userStatsLoading}
+                className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {userStatsLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                )}
+                Refresh
+              </button>
+            </div>
           </div>
 
           {deletedUserInfo ? (
@@ -742,7 +774,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {userStats.map((user) => (
+                  {userStats
+                    .filter((u) => userConvFilter === "all" || u.userId === userConvFilter)
+                    .map((user) => (
                     <tr key={user.userId} className="border-b border-line last:border-0">
                       <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
                       <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
@@ -844,9 +878,9 @@ export default function AdminDashboard() {
                   className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                 >
                   <option value="all">All</option>
-                  {userStats.map((u) => (
-                    <option key={u.userId} value={u.userId}>
-                      {u.userId}
+                  {trainingUsernames.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
                     </option>
                   ))}
                 </select>
