@@ -667,14 +667,14 @@ export default function Home() {
         />
       )}
 
-      <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Logo size="md" />
+      <header className="border-b border-line bg-white/90 px-4 py-2 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Logo className="w-[48px] sm:w-[64px]" />
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">LMX Content CMS</p>
-              <h1 className="text-2xl font-semibold text-ink">Support & Training Assistant</h1>
-              <p className="mt-1 text-xs text-slate-500">Signed in as {displayName || username}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-signal">LMX Content CMS</p>
+              <h1 className="text-lg font-semibold leading-tight text-ink">Support & Training Assistant</h1>
+              <p className="text-xs text-slate-500">Signed in as {displayName || username}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
