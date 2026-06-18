@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Loader2, Lock, LogOut, ShieldCheck } from "lucide-react";
+import { History, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatThread } from "@/components/ChatThread";
@@ -604,16 +604,11 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 py-10">
         <section className="w-full max-w-md rounded-lg border border-line bg-white p-7 shadow-panel">
-          <div className="mb-6 flex flex-col items-center gap-4">
-            <Logo size="login" />
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slatePanel text-white">
-                <Lock className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-ink">LMX Content Support & Training Assistant</h1>
-                <p className="text-sm text-slate-600">Internal training access</p>
-              </div>
+          <div className="mb-6 flex items-center gap-4">
+            <Logo size="sm" className="w-[60px] sm:w-[100px]" />
+            <div>
+              <h1 className="text-xl font-semibold text-ink">LMX Content Support & Training Assistant</h1>
+              <p className="text-sm text-slate-600">Internal training access</p>
             </div>
           </div>
 
@@ -675,7 +670,7 @@ export default function Home() {
       <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <Logo size="md" className="shrink-0" />
+            <Logo size="md" />
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">LMX Content CMS</p>
               <h1 className="text-2xl font-semibold text-ink">Support & Training Assistant</h1>

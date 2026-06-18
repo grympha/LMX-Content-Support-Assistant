@@ -1,35 +1,31 @@
-import Image from "next/image";
 import Link from "next/link";
 
+const sizeClass = {
+  sm: "w-[80px]",
+  md: "w-[120px]",
+  lg: "w-[180px]",
+};
+
 type LogoProps = {
-  /**
-   * sm = 80px | md = 120px | lg = 180px
-   * Use "login" for the responsive login-page treatment (140px mobile / 180px desktop).
-   */
-  size?: "sm" | "md" | "lg" | "login";
+  /** Fixed size shorthand. Ignored when className provides a w- class. */
+  size?: "sm" | "md" | "lg";
+  /** Tailwind classes for the container. Providing a w-* here overrides size. */
   className?: string;
   clickable?: boolean;
 };
 
-const sizeClass: Record<NonNullable<LogoProps["size"]>, string> = {
-  sm: "w-[80px]",
-  md: "w-[120px]",
-  lg: "w-[180px]",
-  login: "w-[140px] sm:w-[180px]",
-};
-
 export function Logo({ size = "md", className = "", clickable = true }: LogoProps) {
-  const widthClass = sizeClass[size];
-  const combined = [widthClass, className].filter(Boolean).join(" ");
+  // If caller provides any width class (w-*), don't add the size-based one.
+  const hasWidthClass = /\bw-/.test(className);
+  const widthClass = hasWidthClass ? "" : sizeClass[size];
+  const combined = ["shrink-0", widthClass, className].filter(Boolean).join(" ");
 
   const img = (
-    <Image
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
       src="/logo/MW-logo-trans_1754045676555.png"
       alt="Moving Walls"
-      width={180}
-      height={180}
       className="h-auto w-full object-contain"
-      priority
     />
   );
 

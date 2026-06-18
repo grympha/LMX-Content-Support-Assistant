@@ -592,7 +592,7 @@ export default function AdminDashboard() {
       <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <Logo size="md" className="shrink-0" />
+            <Logo size="md" />
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">
                 LMX Content CMS
