@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
   try {
     // Conversation analytics — source: conversations + messages tables
-    const [convTotals, msgTotals, convsToday, msgsToday, topUser] = await Promise.all([
+    const [convTotals, msgTotals, convsToday, msgsToday, topUser, newestConvRes, oldestConvRes] = await Promise.all([
       db.select({ totalConversations: count(conversations.id) }).from(conversations),
       db.select({ totalMessages: count(messages.id) }).from(messages),
       db
@@ -77,6 +77,8 @@ export async function GET(request: Request) {
         .groupBy(conversations.userId)
         .orderBy(desc(count(conversations.id)))
         .limit(1),
+      db.select({ createdAt: conversations.createdAt }).from(conversations).orderBy(desc(conversations.createdAt)).limit(1),
+      db.select({ createdAt: conversations.createdAt }).from(conversations).orderBy(conversations.createdAt).limit(1),
     ]);
 
     // Training stats — source: training_events + user_progress tables.
@@ -168,12 +170,24 @@ export async function GET(request: Request) {
       // training_events / user_progress not yet migrated — all training fields default to 0
     }
 
+    const totalConversations = Number(convTotals[0].totalConversations);
+    const totalMessages = Number(msgTotals[0].totalMessages);
+    const avgConversationsPerUser =
+      totalUsers > 0 ? Math.round((totalConversations / totalUsers) * 10) / 10 : 0;
+    const avgMessagesPerConversation =
+      totalConversations > 0 ? Math.round((totalMessages / totalConversations) * 10) / 10 : 0;
+    const tsToStr = (v: unknown): string | null => {
+      if (!v) return null;
+      if (v instanceof Date) return v.toISOString();
+      return String(v);
+    };
+
     return NextResponse.json({
       // Training-sourced total (all distinct learners, not just conversation users)
       totalUsers,
       // Conversation analytics
-      totalConversations: Number(convTotals[0].totalConversations),
-      totalMessages: Number(msgTotals[0].totalMessages),
+      totalConversations,
+      totalMessages,
       conversationsToday: Number(convsToday[0].conversationsToday),
       messagesToday: Number(msgsToday[0].messagesToday),
       mostActiveUser: topUser[0]
@@ -182,6 +196,10 @@ export async function GET(request: Request) {
             conversationCount: Number(topUser[0].conversationCount),
           }
         : null,
+      avgConversationsPerUser,
+      avgMessagesPerConversation,
+      newestConversation: tsToStr(newestConvRes[0]?.createdAt),
+      oldestConversation: tsToStr(oldestConvRes[0]?.createdAt),
       // Training analytics
       totalTrainingEvents,
       totalQuestionsAsked,

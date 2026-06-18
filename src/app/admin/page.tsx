@@ -2,19 +2,27 @@
 
 import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import {
-  BarChart3,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
+  HelpCircle,
   Loader2,
   LogOut,
   RefreshCw,
   Search,
   ShieldCheck,
   Trash2,
+  TrendingUp,
   Users,
+  Zap,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type AdminTab = "overview" | "feedback" | "users" | "training";
 
 type UserStat = {
   userId: string;
@@ -37,6 +45,10 @@ type AnalyticsData = {
   mostCompletedUser: { userId: string; progressPercent: string } | null;
   latestTrainingActivity: string | null;
   averageProgress: number;
+  avgConversationsPerUser: number;
+  avgMessagesPerConversation: number;
+  newestConversation: string | null;
+  oldestConversation: string | null;
 };
 
 type NeonTrainingRecord = {
@@ -85,6 +97,17 @@ type FeedbackSummary = {
   goodRate: number;
 };
 
+type TopicStat = { topic: string; selections: number };
+type TopicAnalyticsData = { topTopics: TopicStat[]; bottomTopics: TopicStat[] };
+
+type FeedbackIntelligenceData = {
+  topBadQuestions: Array<{ question: string; count: number }>;
+  topGoodQuestions: Array<{ question: string; count: number }>;
+  topBadTopics: Array<{ source: string; count: number }>;
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const EVENT_TYPES = [
   "login",
   "topic_selected",
@@ -93,21 +116,24 @@ const EVENT_TYPES = [
   "quick_answer_selected",
 ] as const;
 
+const TABS: { id: AdminTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "feedback", label: "Feedback" },
+  { id: "users", label: "Users" },
+  { id: "training", label: "Training" },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function progressNumber(value: string | number | null | undefined) {
   if (value === null || value === undefined) return 0;
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatProgress(value: string | number | null | undefined) {
-  const n = progressNumber(value);
-  return n > 0 ? `${Math.round(n)}%` : "-";
-}
-
 function timestampValue(timestamp: string) {
   const parsed = Date.parse(timestamp);
   if (Number.isFinite(parsed)) return parsed;
-
   const match = timestamp.match(
     /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
   );
@@ -146,13 +172,25 @@ function formatMalaysiaTimestamp(timestamp: string | undefined | null) {
   }
 }
 
+function getHealthStatus(goodRate: number) {
+  if (goodRate >= 95) return { label: "Excellent", classes: "bg-green-100 text-green-700" };
+  if (goodRate >= 80) return { label: "Good", classes: "bg-teal-100 text-teal-700" };
+  if (goodRate >= 60) return { label: "Needs Review", classes: "bg-yellow-100 text-yellow-800" };
+  return { label: "Critical", classes: "bg-red-100 text-red-700" };
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function AdminDashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  // Training records (Neon)
+  // Active tab
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+
+  // Training records
   const [neonRecords, setNeonRecords] = useState<NeonTrainingRecord[]>([]);
   const [neonLoading, setNeonLoading] = useState(false);
   const [neonError, setNeonError] = useState("");
@@ -160,23 +198,24 @@ export default function AdminDashboard() {
   const [neonTotalPages, setNeonTotalPages] = useState(1);
   const [neonAvailable, setNeonAvailable] = useState(true);
 
-  // User progress (Neon)
+  // User progress
   const [userProgressData, setUserProgressData] = useState<NeonUserProgress[]>([]);
   const [userProgressLoading, setUserProgressLoading] = useState(false);
 
-  // Filters
+  // Filters for training records
   const [search, setSearch] = useState("");
   const [usernameFilter, setUsernameFilter] = useState("all");
   const [eventFilter, setEventFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(50);
 
-  // Training user stats (distinct from training_events — used for Records dropdown and Management section)
+  // Training user stats
   const [trainingUserStats, setTrainingUserStats] = useState<TrainingUserStat[]>([]);
 
   // User management
   const [userStats, setUserStats] = useState<UserStat[]>([]);
   const [userConvFilter, setUserConvFilter] = useState("all");
+  const [userConvSearch, setUserConvSearch] = useState("");
   const [userStatsLoading, setUserStatsLoading] = useState(true);
   const [userStatsError, setUserStatsError] = useState("");
   const [userStatsAvailable, setUserStatsAvailable] = useState(true);
@@ -189,7 +228,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [exportingUserId, setExportingUserId] = useState<string | null>(null);
 
-  // Training user management (delete from training_events + user_progress)
+  // Training user management
   const [confirmDeleteTrainingUser, setConfirmDeleteTrainingUser] = useState<string | null>(null);
   const [deletingTrainingUser, setDeletingTrainingUser] = useState<string | null>(null);
   const [deletedTrainingUserInfo, setDeletedTrainingUserInfo] = useState<{
@@ -216,6 +255,15 @@ export default function AdminDashboard() {
   const [feedbackUsernameFilter, setFeedbackUsernameFilter] = useState("all");
   const [feedbackSearch, setFeedbackSearch] = useState("");
 
+  // Topic analytics
+  const [topicAnalytics, setTopicAnalytics] = useState<TopicAnalyticsData | null>(null);
+  const [topicAnalyticsLoading, setTopicAnalyticsLoading] = useState(false);
+
+  // Feedback intelligence
+  const [feedbackIntelligence, setFeedbackIntelligence] =
+    useState<FeedbackIntelligenceData | null>(null);
+  const [feedbackIntelligenceLoading, setFeedbackIntelligenceLoading] = useState(false);
+
   useEffect(() => {
     fetch("/api/admin/auth")
       .then((r) => r.json())
@@ -238,8 +286,12 @@ export default function AdminDashboard() {
       });
       void loadUserProgress();
       void loadFeedback({ targetPage: 1, rating: "all", username: "all", search: "" });
+      void loadTopicAnalytics();
+      void loadFeedbackIntelligence();
     }
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Auth handlers ──────────────────────────────────────────────────────────
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -275,8 +327,17 @@ export default function AdminDashboard() {
     });
     void loadUserProgress();
     void loadTrainingUserStats();
-    void loadFeedback({ targetPage: feedbackPage, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
+    void loadFeedback({
+      targetPage: feedbackPage,
+      rating: feedbackRatingFilter,
+      username: feedbackUsernameFilter,
+      search: feedbackSearch,
+    });
+    void loadTopicAnalytics();
+    void loadFeedbackIntelligence();
   }
+
+  // ─── Data loaders ───────────────────────────────────────────────────────────
 
   async function loadAnalytics(username?: string) {
     setAnalyticsLoading(true);
@@ -284,20 +345,15 @@ export default function AdminDashboard() {
       const params = new URLSearchParams();
       if (username && username !== "all") params.set("username", username);
       const qs = params.toString();
-      const res = await fetch(`/api/admin/analytics${qs ? `?${qs}` : ""}`, { cache: "no-store" });
-      if (res.status === 503) {
-        setAnalyticsAvailable(false);
-        return;
-      }
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to load analytics.");
-      }
-      const data = (await res.json()) as AnalyticsData;
-      setAnalytics(data);
+      const res = await fetch(`/api/admin/analytics${qs ? `?${qs}` : ""}`, {
+        cache: "no-store",
+      });
+      if (res.status === 503) { setAnalyticsAvailable(false); return; }
+      if (!res.ok) throw new Error();
+      setAnalytics((await res.json()) as AnalyticsData);
       setAnalyticsAvailable(true);
     } catch {
-      // Silently ignore — analytics sections degrade gracefully
+      // silently degrade
     } finally {
       setAnalyticsLoading(false);
     }
@@ -308,14 +364,8 @@ export default function AdminDashboard() {
     setUserStatsError("");
     try {
       const res = await fetch("/api/admin/users", { cache: "no-store" });
-      if (res.status === 503) {
-        setUserStatsAvailable(false);
-        return;
-      }
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to load user stats.");
-      }
+      if (res.status === 503) { setUserStatsAvailable(false); return; }
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Failed to load user stats.");
       setUserStats((await res.json()) as UserStat[]);
       setUserStatsAvailable(true);
     } catch (err) {
@@ -341,34 +391,21 @@ export default function AdminDashboard() {
     setNeonLoading(true);
     setNeonError("");
     try {
-      const params = new URLSearchParams({
-        page: String(targetPage),
-        limit: String(limit),
-      });
+      const params = new URLSearchParams({ page: String(targetPage), limit: String(limit) });
       if (username && username !== "all") params.set("username", username);
       if (event && event !== "all") params.set("event", event);
       if (searchTerm.trim()) params.set("search", searchTerm.trim());
-
       const res = await fetch(`/api/admin/training-records?${params.toString()}`, {
         cache: "no-store",
       });
-
-      if (res.status === 503) {
-        setNeonAvailable(false);
-        return;
-      }
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to load training records.");
-      }
-
+      if (res.status === 503) { setNeonAvailable(false); return; }
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Failed to load records.");
       const data = (await res.json()) as {
         records: NeonTrainingRecord[];
         total: number;
         page: number;
         totalPages: number;
       };
-
       setNeonRecords(data.records);
       setNeonTotal(data.total);
       setNeonTotalPages(data.totalPages);
@@ -425,10 +462,7 @@ export default function AdminDashboard() {
       if (username && username !== "all") params.set("username", username);
       if (searchTerm.trim()) params.set("search", searchTerm.trim());
       const res = await fetch(`/api/admin/feedback?${params.toString()}`, { cache: "no-store" });
-      if (res.status === 503) {
-        setFeedbackAvailable(false);
-        return;
-      }
+      if (res.status === 503) { setFeedbackAvailable(false); return; }
       if (!res.ok) return;
       const data = (await res.json()) as {
         records: FeedbackRecord[];
@@ -450,6 +484,34 @@ export default function AdminDashboard() {
     }
   }
 
+  async function loadTopicAnalytics() {
+    setTopicAnalyticsLoading(true);
+    try {
+      const res = await fetch("/api/admin/topic-analytics", { cache: "no-store" });
+      if (!res.ok) return;
+      setTopicAnalytics((await res.json()) as TopicAnalyticsData);
+    } catch {
+      // silently ignore
+    } finally {
+      setTopicAnalyticsLoading(false);
+    }
+  }
+
+  async function loadFeedbackIntelligence() {
+    setFeedbackIntelligenceLoading(true);
+    try {
+      const res = await fetch("/api/admin/feedback-intelligence", { cache: "no-store" });
+      if (!res.ok) return;
+      setFeedbackIntelligence((await res.json()) as FeedbackIntelligenceData);
+    } catch {
+      // silently ignore
+    } finally {
+      setFeedbackIntelligenceLoading(false);
+    }
+  }
+
+  // ─── Delete / export ────────────────────────────────────────────────────────
+
   async function deleteTrainingUser(username: string) {
     setDeletingTrainingUser(username);
     setDeletedTrainingUserInfo(null);
@@ -457,14 +519,8 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/training-users/${encodeURIComponent(username)}`, {
         method: "DELETE",
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to delete training records.");
-      }
-      const data = (await res.json()) as {
-        deletedEvents: number;
-        deletedProgress: number;
-      };
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Failed.");
+      const data = (await res.json()) as { deletedEvents: number; deletedProgress: number };
       setTrainingUserStats((prev) => prev.filter((u) => u.username !== username));
       setConfirmDeleteTrainingUser(null);
       setDeletedTrainingUserInfo({ username, ...data });
@@ -490,10 +546,7 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
         method: "DELETE",
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to delete user conversations.");
-      }
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Failed.");
       setUserStats((prev) => prev.filter((u) => u.userId !== userId));
       setConfirmDeleteUserId(null);
       if (userBeforeDelete) {
@@ -505,9 +558,7 @@ export default function AdminDashboard() {
       }
       void loadAnalytics();
     } catch (err) {
-      setUserStatsError(
-        err instanceof Error ? err.message : "Failed to delete user conversations."
-      );
+      setUserStatsError(err instanceof Error ? err.message : "Failed to delete user conversations.");
       setConfirmDeleteUserId(null);
     } finally {
       setDeletingUserId(null);
@@ -519,10 +570,7 @@ export default function AdminDashboard() {
     setUserStatsError("");
     try {
       const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/export`);
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Export failed.");
-      }
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Export failed.");
       const data = (await res.json()) as unknown;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -539,6 +587,8 @@ export default function AdminDashboard() {
       setExportingUserId(null);
     }
   }
+
+  // ─── Login screen ────────────────────────────────────────────────────────────
 
   if (!authChecked) {
     return (
@@ -584,8 +634,19 @@ export default function AdminDashboard() {
     );
   }
 
+  // ─── Authenticated dashboard ──────────────────────────────────────────────
+
+  const filteredUserStats = userStats.filter((u) => {
+    if (userConvFilter !== "all" && u.userId !== userConvFilter) return false;
+    if (userConvSearch.trim()) {
+      return u.userId.toLowerCase().includes(userConvSearch.toLowerCase());
+    }
+    return true;
+  });
+
   return (
     <main className="min-h-screen">
+      {/* Header */}
       <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -626,972 +687,1306 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-5">
-        {/* Summary cards — filtered when Training Records username is selected */}
-        {usernameFilter !== "all" && (
-          <div className="flex items-center gap-2 rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-sm text-signal">
-            <span className="font-medium">Showing data for:</span>
-            <span className="font-semibold">{usernameFilter}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setUsernameFilter("all");
-                void loadAnalytics("all");
-                void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: "all", event: eventFilter, search });
-              }}
-              className="ml-auto rounded px-2 py-0.5 text-xs font-medium text-signal hover:bg-signal/10"
-            >
-              Clear filter
-            </button>
+      {/* Tab bar */}
+      <div className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="flex overflow-x-auto" role="tablist">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 border-b-2 px-5 py-3 text-sm font-medium transition whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-signal text-signal"
+                    : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-        )}
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard
-            title="Total Users"
-            value={analytics?.totalUsers ?? 0}
-            icon={<Users className="h-5 w-5" />}
-          />
-          <SummaryCard
-            title="Questions Asked"
-            value={analytics?.totalQuestionsAsked ?? 0}
-            icon={<Search className="h-5 w-5" />}
-          />
-          <SummaryCard
-            title="Topics Completed"
-            value={analytics?.totalCompletedTopics ?? 0}
-            icon={<ShieldCheck className="h-5 w-5" />}
-          />
-          <SummaryCard
-            title="Quick Answers"
-            value={analytics?.totalFaqSelections ?? 0}
-            icon={<RefreshCw className="h-5 w-5" />}
-          />
-          <SummaryCard
-            title="Avg Progress"
-            value={`${analytics?.averageProgress ?? 0}%`}
-            icon={<BarChart3 className="h-5 w-5" />}
-          />
-          <SummaryCard
-            title="Latest Activity"
-            value={formatMalaysiaTimestamp(analytics?.latestTrainingActivity)}
-            small
-            icon={<RefreshCw className="h-5 w-5" />}
-          />
-        </section>
+        </div>
+      </div>
 
-        {/* Training Overview */}
-        {analyticsAvailable && (
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <div className="mb-4">
-              <h2 className="font-semibold text-ink">Training Overview</h2>
-              <p className="text-sm text-slate-600">Event counts from Neon training_events.</p>
-            </div>
-            {analyticsLoading ? (
-              <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                Loading…
-              </div>
-            ) : analytics ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <AnalyticCard label="Total Training Events" value={analytics.totalTrainingEvents} />
-                <AnalyticCard label="Questions Asked" value={analytics.totalQuestionsAsked} />
-                <AnalyticCard label="Topics Completed" value={analytics.totalCompletedTopics} />
-                <AnalyticCard label="FAQ Selections" value={analytics.totalFaqSelections} />
-              </div>
-            ) : null}
-          </section>
-        )}
+      {/* Content */}
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-5">
 
-        {/* Assistant Feedback */}
-        {feedbackAvailable && (
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="font-semibold text-ink">Assistant Feedback</h2>
-                <p className="text-sm text-slate-600">User ratings on assistant responses.</p>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  Rating
-                  <select
-                    value={feedbackRatingFilter}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFeedbackRatingFilter(val);
-                      void loadFeedback({ targetPage: 1, rating: val, username: feedbackUsernameFilter, search: feedbackSearch });
-                    }}
-                    className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                  >
-                    <option value="all">All</option>
-                    <option value="good">Good</option>
-                    <option value="bad">Bad</option>
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  Username
-                  <select
-                    value={feedbackUsernameFilter}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFeedbackUsernameFilter(val);
-                      void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: val, search: feedbackSearch });
-                    }}
-                    className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                  >
-                    <option value="all">All</option>
-                    {Array.from(new Set(feedbackRecords.map((r) => r.username))).sort().map((u) => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="relative block sm:w-64">
-                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
-                  <input
-                    value={feedbackSearch}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFeedbackSearch(val);
-                      void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: val });
-                    }}
-                    placeholder="Search question or response..."
-                    className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                  />
-                </label>
+        {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
+        {activeTab === "overview" && (
+          <>
+            {/* Username filter banner */}
+            {usernameFilter !== "all" && (
+              <div className="flex items-center gap-2 rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-sm text-signal">
+                <span className="font-medium">Showing data for:</span>
+                <span className="font-semibold">{usernameFilter}</span>
                 <button
                   type="button"
-                  onClick={() => void loadFeedback({ targetPage: feedbackPage, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch })}
-                  disabled={feedbackLoading}
+                  onClick={() => {
+                    setUsernameFilter("all");
+                    void loadAnalytics("all");
+                    void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: "all", event: eventFilter, search });
+                  }}
+                  className="ml-auto rounded px-2 py-0.5 text-xs font-medium text-signal hover:bg-signal/10"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
+
+            {/* KPI Cards */}
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <SummaryCard
+                title="Total Users"
+                subtitle="Active learners"
+                value={analytics?.totalUsers ?? 0}
+                icon={<Users className="h-5 w-5" />}
+              />
+              <SummaryCard
+                title="Questions Asked"
+                subtitle="Training questions submitted"
+                value={analytics?.totalQuestionsAsked ?? 0}
+                icon={<HelpCircle className="h-5 w-5" />}
+              />
+              <SummaryCard
+                title="Topics Completed"
+                subtitle="Completed learning modules"
+                value={analytics?.totalCompletedTopics ?? 0}
+                icon={<BookOpen className="h-5 w-5" />}
+              />
+              <SummaryCard
+                title="Quick Answers"
+                subtitle="FAQ selections"
+                value={analytics?.totalFaqSelections ?? 0}
+                icon={<Zap className="h-5 w-5" />}
+              />
+              <SummaryCard
+                title="Avg Progress"
+                subtitle="Across all learners"
+                value={`${analytics?.averageProgress ?? 0}%`}
+                icon={<TrendingUp className="h-5 w-5" />}
+              />
+              <SummaryCard
+                title="Latest Activity"
+                subtitle="Most recent learning event"
+                value={formatMalaysiaTimestamp(analytics?.latestTrainingActivity)}
+                small
+                icon={<Clock className="h-5 w-5" />}
+              />
+            </section>
+
+            {/* Knowledge Health */}
+            {feedbackAvailable && (
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-ink">Knowledge Health</h2>
+                    <p className="text-sm text-slate-600">
+                      AI response quality based on learner feedback.
+                    </p>
+                  </div>
+                  {feedbackSummary && (
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${getHealthStatus(feedbackSummary.goodRate).classes}`}
+                    >
+                      {getHealthStatus(feedbackSummary.goodRate).label}
+                    </span>
+                  )}
+                </div>
+                {feedbackLoading || feedbackIntelligenceLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading…
+                  </div>
+                ) : (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {/* Stats */}
+                    <div className="space-y-3">
+                      <HealthStatRow
+                        emoji="👍"
+                        label="Good Responses"
+                        value={feedbackSummary?.good ?? 0}
+                        color="text-green-600"
+                      />
+                      <HealthStatRow
+                        emoji="👎"
+                        label="Bad Responses"
+                        value={feedbackSummary?.bad ?? 0}
+                        color="text-red-500"
+                      />
+                      <HealthStatRow
+                        emoji="📊"
+                        label="Success Rate"
+                        value={`${feedbackSummary?.goodRate ?? 0}%`}
+                        color="text-signal"
+                      />
+                    </div>
+
+                    {/* Top Bad Topics */}
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        Top Bad Topics
+                      </p>
+                      {feedbackIntelligence?.topBadTopics && feedbackIntelligence.topBadTopics.length > 0 ? (
+                        <ol className="space-y-1">
+                          {feedbackIntelligence.topBadTopics.map((t, i) => (
+                            <li key={t.source} className="flex items-center gap-2 text-sm">
+                              <span className="w-4 shrink-0 text-xs text-slate-400">{i + 1}.</span>
+                              <span className="truncate text-slate-700">{t.source}</span>
+                              <span className="ml-auto shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                                {t.count}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="text-sm text-slate-400">No bad feedback yet.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Conversation Analytics */}
+            {analyticsAvailable && (
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-ink">Conversation Analytics</h2>
+                    <p className="text-sm text-slate-600">
+                      Aggregate stats from the conversation database.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void loadAnalytics(usernameFilter)}
+                    disabled={analyticsLoading}
+                    className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {analyticsLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    Refresh
+                  </button>
+                </div>
+                {analyticsLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading analytics…
+                  </div>
+                ) : analytics ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    <AnalyticCard label="Total Users" value={analytics.totalUsers} />
+                    <AnalyticCard label="Total Conversations" value={analytics.totalConversations} />
+                    <AnalyticCard label="Total Messages" value={analytics.totalMessages} />
+                    <AnalyticCard label="Conversations Today" value={analytics.conversationsToday} />
+                    <AnalyticCard label="Messages Today" value={analytics.messagesToday} />
+                    <AnalyticCard
+                      label="Avg Conversations / User"
+                      value={analytics.avgConversationsPerUser}
+                      decimal
+                    />
+                    <AnalyticCard
+                      label="Avg Messages / Conversation"
+                      value={analytics.avgMessagesPerConversation}
+                      decimal
+                    />
+                    <div className="rounded-md border border-line bg-mist p-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        Most Active User
+                      </p>
+                      {analytics.mostActiveUser ? (
+                        <>
+                          <p className="mt-1 truncate text-base font-semibold text-ink">
+                            {analytics.mostActiveUser.userId}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {analytics.mostActiveUser.conversationCount} conversations
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-sm text-slate-400">No data yet</p>
+                      )}
+                    </div>
+                    <div className="rounded-md border border-line bg-mist p-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        Newest Conversation
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-ink">
+                        {formatMalaysiaTimestamp(analytics.newestConversation)}
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-line bg-mist p-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        Oldest Conversation
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-ink">
+                        {formatMalaysiaTimestamp(analytics.oldestConversation)}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ── FEEDBACK TAB ──────────────────────────────────────────────────── */}
+        {activeTab === "feedback" && (
+          <>
+            {/* Feedback Intelligence */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4">
+                <h2 className="font-semibold text-ink">Feedback Intelligence</h2>
+                <p className="text-sm text-slate-600">
+                  Questions with recurring bad or good feedback — identifies knowledge gaps.
+                </p>
+              </div>
+              {feedbackIntelligenceLoading ? (
+                <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading…
+                </div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Top bad questions */}
+                  <div>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      Questions Receiving Bad Feedback
+                    </p>
+                    {feedbackIntelligence?.topBadQuestions && feedbackIntelligence.topBadQuestions.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                              <th className="px-3 py-2 text-left font-semibold">#</th>
+                              <th className="px-3 py-2 text-left font-semibold">Question</th>
+                              <th className="px-3 py-2 text-right font-semibold">Bad Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {feedbackIntelligence.topBadQuestions.map((q, i) => (
+                              <tr key={i} className="border-b border-line last:border-0">
+                                <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                <td className="max-w-sm px-3 py-2 text-slate-700">
+                                  <span className="line-clamp-2">{q.question}</span>
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
+                                    {q.count}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No bad feedback recorded yet.</p>
+                    )}
+                  </div>
+
+                  {/* Most helpful answers */}
+                  <div>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      Most Helpful Answers
+                    </p>
+                    {feedbackIntelligence?.topGoodQuestions && feedbackIntelligence.topGoodQuestions.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                              <th className="px-3 py-2 text-left font-semibold">#</th>
+                              <th className="px-3 py-2 text-left font-semibold">Question</th>
+                              <th className="px-3 py-2 text-right font-semibold">Good Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {feedbackIntelligence.topGoodQuestions.map((q, i) => (
+                              <tr key={i} className="border-b border-line last:border-0">
+                                <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                <td className="max-w-sm px-3 py-2 text-slate-700">
+                                  <span className="line-clamp-2">{q.question}</span>
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-600">
+                                    {q.count}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No good feedback recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Assistant Feedback table */}
+            {feedbackAvailable && (
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="font-semibold text-ink">Assistant Feedback</h2>
+                    <p className="text-sm text-slate-600">User ratings on assistant responses.</p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      Rating
+                      <select
+                        value={feedbackRatingFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFeedbackRatingFilter(val);
+                          void loadFeedback({ targetPage: 1, rating: val, username: feedbackUsernameFilter, search: feedbackSearch });
+                        }}
+                        className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                      >
+                        <option value="all">All</option>
+                        <option value="good">Good</option>
+                        <option value="bad">Bad</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      Username
+                      <select
+                        value={feedbackUsernameFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFeedbackUsernameFilter(val);
+                          void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: val, search: feedbackSearch });
+                        }}
+                        className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                      >
+                        <option value="all">All</option>
+                        {Array.from(new Set(feedbackRecords.map((r) => r.username))).sort().map((u) => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="relative block sm:w-64">
+                      <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                      <input
+                        value={feedbackSearch}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFeedbackSearch(val);
+                          void loadFeedback({ targetPage: 1, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: val });
+                        }}
+                        placeholder="Search question or response..."
+                        className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void loadFeedback({ targetPage: feedbackPage, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch })}
+                      disabled={feedbackLoading}
+                      className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {feedbackLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                {/* Summary cards */}
+                <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-md border border-line bg-mist p-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Feedback</p>
+                    <p className="mt-1 text-2xl font-semibold text-ink">{(feedbackSummary?.total ?? 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-md border border-line bg-mist p-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Responses</p>
+                    <p className="mt-1 text-2xl font-semibold text-signal">{(feedbackSummary?.good ?? 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-md border border-line bg-mist p-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Bad Responses</p>
+                    <p className="mt-1 text-2xl font-semibold text-red-600">{(feedbackSummary?.bad ?? 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-md border border-line bg-mist p-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Rate</p>
+                    <p className="mt-1 text-2xl font-semibold text-ink">{feedbackSummary?.goodRate ?? 0}%</p>
+                  </div>
+                </div>
+
+                {feedbackLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading feedback…
+                  </div>
+                ) : feedbackRecords.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                    No feedback recorded yet.
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                            <th className="px-3 py-3 font-semibold">Timestamp</th>
+                            <th className="px-3 py-3 font-semibold">Username</th>
+                            <th className="px-3 py-3 font-semibold">Rating</th>
+                            <th className="px-3 py-3 font-semibold">Question</th>
+                            <th className="px-3 py-3 font-semibold">Response Preview</th>
+                            <th className="px-3 py-3 font-semibold">AI Provider</th>
+                            <th className="px-3 py-3 font-semibold">Sources</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {feedbackRecords.map((rec) => (
+                            <tr key={rec.id} className="border-b border-line last:border-0">
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                                {formatMalaysiaTimestamp(rec.createdAt)}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">
+                                {rec.username}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3">
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${rec.rating === "good" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {rec.rating === "good" ? "👍 Good" : "👎 Bad"}
+                                </span>
+                              </td>
+                              <td className="max-w-xs px-3 py-3 text-slate-700">
+                                <span className="line-clamp-2">{rec.question ?? "-"}</span>
+                              </td>
+                              <td className="max-w-xs px-3 py-3 text-slate-600">
+                                <span className="line-clamp-2 text-xs">{rec.response ? rec.response.slice(0, 120) + (rec.response.length > 120 ? "…" : "") : "-"}</span>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                                {rec.aiProvider ?? "-"}
+                              </td>
+                              <td className="max-w-xs px-3 py-3 text-slate-600">
+                                {rec.sources && rec.sources.length > 0
+                                  ? <span className="text-xs">{rec.sources.slice(0, 3).join(", ")}{rec.sources.length > 3 ? ` +${rec.sources.length - 3}` : ""}</span>
+                                  : "-"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-slate-500">
+                        {feedbackTotal === 0
+                          ? "No records"
+                          : `Showing ${(feedbackPage - 1) * 50 + 1}–${Math.min(feedbackPage * 50, feedbackTotal)} of ${feedbackTotal}`}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void loadFeedback({ targetPage: Math.max(1, feedbackPage - 1), rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch })}
+                          disabled={feedbackPage <= 1 || feedbackLoading}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <span className="text-sm text-slate-600">Page {feedbackPage} of {feedbackTotalPages}</span>
+                        <button
+                          type="button"
+                          onClick={() => void loadFeedback({ targetPage: Math.min(feedbackTotalPages, feedbackPage + 1), rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch })}
+                          disabled={feedbackPage >= feedbackTotalPages || feedbackLoading}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ── USERS TAB ─────────────────────────────────────────────────────── */}
+        {activeTab === "users" && (
+          <>
+            {/* Top Learners */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Top Learners</h2>
+                  <p className="text-sm text-slate-600">
+                    User progress ranked by completion percentage.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadUserProgress}
+                  disabled={userProgressLoading}
                   className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {feedbackLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                  {userProgressLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  )}
                   Refresh
                 </button>
               </div>
-            </div>
-
-            {/* Summary cards */}
-            <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-md border border-line bg-mist p-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Feedback</p>
-                <p className="mt-1 text-2xl font-semibold text-ink">{(feedbackSummary?.total ?? 0).toLocaleString()}</p>
-              </div>
-              <div className="rounded-md border border-line bg-mist p-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Responses</p>
-                <p className="mt-1 text-2xl font-semibold text-signal">{(feedbackSummary?.good ?? 0).toLocaleString()}</p>
-              </div>
-              <div className="rounded-md border border-line bg-mist p-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Bad Responses</p>
-                <p className="mt-1 text-2xl font-semibold text-red-600">{(feedbackSummary?.bad ?? 0).toLocaleString()}</p>
-              </div>
-              <div className="rounded-md border border-line bg-mist p-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Good Rate</p>
-                <p className="mt-1 text-2xl font-semibold text-ink">{feedbackSummary?.goodRate ?? 0}%</p>
-              </div>
-            </div>
-
-            {feedbackLoading ? (
-              <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                Loading feedback…
-              </div>
-            ) : feedbackRecords.length === 0 ? (
-              <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-                No feedback recorded yet.
-              </div>
-            ) : (
-              <>
+              {userProgressLoading ? (
+                <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading…
+                </div>
+              ) : userProgressData.length === 0 ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  No learner progress recorded yet.
+                </div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
-                        <th className="px-3 py-3 font-semibold">Timestamp</th>
                         <th className="px-3 py-3 font-semibold">Username</th>
-                        <th className="px-3 py-3 font-semibold">Rating</th>
-                        <th className="px-3 py-3 font-semibold">Question</th>
-                        <th className="px-3 py-3 font-semibold">Response Preview</th>
-                        <th className="px-3 py-3 font-semibold">AI Provider</th>
-                        <th className="px-3 py-3 font-semibold">Sources</th>
+                        <th className="px-3 py-3 font-semibold">Full Name</th>
+                        <th className="min-w-[180px] px-3 py-3 font-semibold">Progress</th>
+                        <th className="px-3 py-3 font-semibold">Last Active</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {feedbackRecords.map((rec) => (
-                        <tr key={rec.id} className="border-b border-line last:border-0">
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                            {formatMalaysiaTimestamp(rec.createdAt)}
+                      {userProgressData.map((u) => (
+                        <tr key={u.username} className="border-b border-line last:border-0">
+                          <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
+                          <td className="px-3 py-3 text-slate-700">{u.fullName ?? "-"}</td>
+                          <td className="min-w-[180px] px-3 py-4">
+                            <ProgressBar
+                              percent={progressNumber(u.progressPercent)}
+                              completedCount={u.completedTopics?.length ?? 0}
+                            />
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">
-                            {rec.username}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${rec.rating === "good" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                              {rec.rating === "good" ? "👍 Good" : "👎 Bad"}
-                            </span>
-                          </td>
-                          <td className="max-w-xs px-3 py-3 text-slate-700">
-                            <span className="line-clamp-2">{rec.question ?? "-"}</span>
-                          </td>
-                          <td className="max-w-xs px-3 py-3 text-slate-600">
-                            <span className="line-clamp-2 text-xs">{rec.response ? rec.response.slice(0, 120) + (rec.response.length > 120 ? "…" : "") : "-"}</span>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                            {rec.aiProvider ?? "-"}
-                          </td>
-                          <td className="max-w-xs px-3 py-3 text-slate-600">
-                            {rec.sources && rec.sources.length > 0
-                              ? <span className="text-xs">{rec.sources.slice(0, 3).join(", ")}{rec.sources.length > 3 ? ` +${rec.sources.length - 3}` : ""}</span>
-                              : "-"}
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-600" title={`Last Active: ${formatMalaysiaTimestamp(u.lastActiveAt)}`}>
+                            {formatMalaysiaTimestamp(u.lastActiveAt)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+              )}
+            </section>
 
-                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-slate-500">
-                    {feedbackTotal === 0
-                      ? "No records"
-                      : `Showing ${(feedbackPage - 1) * 50 + 1}–${Math.min(feedbackPage * 50, feedbackTotal)} of ${feedbackTotal}`}
+            {/* User Conversation Management */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">User Conversation Management</h2>
+                  <p className="text-sm text-slate-600">
+                    View and delete conversation history stored in the database.
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const np = Math.max(1, feedbackPage - 1);
-                        void loadFeedback({ targetPage: np, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
-                      }}
-                      disabled={feedbackPage <= 1 || feedbackLoading}
-                      className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
-                      title="Previous page"
+                  <p className="mt-1 text-xs text-slate-500">
+                    Only users with saved conversation history appear here. Deleting removes
+                    conversation history only — training records remain in Neon.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Search input */}
+                  <label className="relative block">
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                    <input
+                      value={userConvSearch}
+                      onChange={(e) => setUserConvSearch(e.target.value)}
+                      placeholder="Search user..."
+                      className="w-48 rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Username
+                    <select
+                      value={userConvFilter}
+                      onChange={(e) => setUserConvFilter(e.target.value)}
+                      className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
                     >
-                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <span className="text-sm text-slate-600">Page {feedbackPage} of {feedbackTotalPages}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const np = Math.min(feedbackTotalPages, feedbackPage + 1);
-                        void loadFeedback({ targetPage: np, rating: feedbackRatingFilter, username: feedbackUsernameFilter, search: feedbackSearch });
-                      }}
-                      disabled={feedbackPage >= feedbackTotalPages || feedbackLoading}
-                      className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
-                      title="Next page"
-                    >
-                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                      <option value="all">All Users</option>
+                      {userStats.map((u) => (
+                        <option key={u.userId} value={u.userId}>
+                          {u.userId}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={loadUserStats}
+                    disabled={userStatsLoading}
+                    className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {userStatsLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Found count */}
+              {(userConvSearch.trim() || userConvFilter !== "all") && (
+                <p className="mb-3 text-xs text-slate-500">
+                  Showing {filteredUserStats.length} of {userStats.length} users
+                </p>
+              )}
+
+              {deletedUserInfo ? (
+                <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+                  <div className="text-green-800">
+                    <p className="font-semibold">Deleted user history:</p>
+                    <p>User: <span className="font-medium">{deletedUserInfo.userId}</span></p>
+                    <p>Conversations removed: <span className="font-medium">{deletedUserInfo.conversations}</span></p>
+                    <p>Messages removed: <span className="font-medium">{deletedUserInfo.messages}</span></p>
                   </div>
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
-        {/* Conversation Analytics */}
-        {analyticsAvailable && (
-          <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-ink">Conversation Analytics</h2>
-                <p className="text-sm text-slate-600">
-                  Aggregate stats from the conversation database.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void loadAnalytics(usernameFilter)}
-                disabled={analyticsLoading}
-                className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {analyticsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                )}
-                Refresh
-              </button>
-            </div>
-            {analyticsLoading ? (
-              <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-                Loading analytics…
-              </div>
-            ) : analytics ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <AnalyticCard label="Total Users" value={analytics.totalUsers} />
-                <AnalyticCard label="Total Conversations" value={analytics.totalConversations} />
-                <AnalyticCard label="Total Messages" value={analytics.totalMessages} />
-                <AnalyticCard label="Conversations Today" value={analytics.conversationsToday} />
-                <AnalyticCard label="Messages Today" value={analytics.messagesToday} />
-                <div className="rounded-md border border-line bg-mist p-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                    Most Active User
-                  </p>
-                  {analytics.mostActiveUser ? (
-                    <>
-                      <p className="mt-1 truncate text-base font-semibold text-ink">
-                        {analytics.mostActiveUser.userId}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {analytics.mostActiveUser.conversationCount} conversations
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-sm text-slate-400">No data yet</p>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </section>
-        )}
-
-        {/* Top Learners */}
-        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold text-ink">Top Learners</h2>
-              <p className="text-sm text-slate-600">
-                User progress ranked by completion percentage.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={loadUserProgress}
-              disabled={userProgressLoading}
-              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {userProgressLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              )}
-              Refresh
-            </button>
-          </div>
-          {userProgressLoading ? (
-            <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-              Loading…
-            </div>
-          ) : userProgressData.length === 0 ? (
-            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-              No learner progress recorded yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-3 font-semibold">Username</th>
-                    <th className="px-3 py-3 font-semibold">Full Name</th>
-                    <th className="px-3 py-3 font-semibold">Progress</th>
-                    <th className="px-3 py-3 font-semibold">Topics Completed</th>
-                    <th className="px-3 py-3 font-semibold">Last Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userProgressData.map((u) => (
-                    <tr key={u.username} className="border-b border-line last:border-0">
-                      <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
-                      <td className="px-3 py-3 text-slate-700">{u.fullName ?? "-"}</td>
-                      <td className="px-3 py-3 font-semibold text-ink">
-                        {formatProgress(u.progressPercent)}
-                      </td>
-                      <td className="px-3 py-3 text-slate-700">
-                        {u.completedTopics?.length ?? 0}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                        {formatMalaysiaTimestamp(u.lastActiveAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* User Conversation Management */}
-        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-semibold text-ink">User Conversation Management</h2>
-              <p className="text-sm text-slate-600">
-                View and delete conversation history stored in the database.
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Only users with saved conversation history appear here. Deleting here removes
-                conversation history only — training records remain in Neon.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Username
-                <select
-                  value={userConvFilter}
-                  onChange={(e) => setUserConvFilter(e.target.value)}
-                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                >
-                  <option value="all">All</option>
-                  {userStats.map((u) => (
-                    <option key={u.userId} value={u.userId}>
-                      {u.userId}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={loadUserStats}
-                disabled={userStatsLoading}
-                className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {userStatsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                )}
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          {deletedUserInfo ? (
-            <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
-              <div className="text-green-800">
-                <p className="font-semibold">Deleted user history:</p>
-                <p>
-                  User: <span className="font-medium">{deletedUserInfo.userId}</span>
-                </p>
-                <p>
-                  Conversations removed:{" "}
-                  <span className="font-medium">{deletedUserInfo.conversations}</span>
-                </p>
-                <p>
-                  Messages removed:{" "}
-                  <span className="font-medium">{deletedUserInfo.messages}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeletedUserInfo(null)}
-                className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          ) : null}
-
-          {!userStatsAvailable ? (
-            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-              Conversation database is not configured.
-            </div>
-          ) : userStatsError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {userStatsError}
-            </div>
-          ) : userStatsLoading ? (
-            <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-              Loading user stats…
-            </div>
-          ) : userStats.length === 0 ? (
-            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-              No conversation history found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-3 font-semibold">Username</th>
-                    <th className="px-3 py-3 font-semibold">Conversations</th>
-                    <th className="px-3 py-3 font-semibold">Messages</th>
-                    <th className="px-3 py-3 font-semibold">Latest Activity</th>
-                    <th className="px-3 py-3 font-semibold">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userStats
-                    .filter((u) => userConvFilter === "all" || u.userId === userConvFilter)
-                    .map((user) => (
-                    <tr key={user.userId} className="border-b border-line last:border-0">
-                      <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
-                      <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
-                      <td className="px-3 py-3 text-slate-700">{user.messageCount}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                        {user.latestActivity
-                          ? formatMalaysiaTimestamp(user.latestActivity)
-                          : "-"}
-                      </td>
-                      <td className="px-3 py-3">
-                        {confirmDeleteUserId === user.userId ? (
-                          <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
-                            <p className="text-xs text-red-700">
-                              This will permanently delete all conversation history for this user.
-                              Training records in Neon will not be deleted.
-                            </p>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => deleteUser(user.userId)}
-                                disabled={deletingUserId === user.userId}
-                                className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                              >
-                                {deletingUserId === user.userId ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                                ) : (
-                                  <Trash2 className="h-3 w-3" aria-hidden="true" />
-                                )}
-                                Yes, Delete All
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteUserId(null)}
-                                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => exportUser(user.userId)}
-                              disabled={exportingUserId === user.userId}
-                              className="flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
-                              title="Download conversation history as JSON"
-                            >
-                              {exportingUserId === user.userId ? (
-                                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                              ) : (
-                                <Download className="h-3 w-3" aria-hidden="true" />
-                              )}
-                              Download History
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteUserId(user.userId)}
-                              className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-3 w-3" aria-hidden="true" />
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* Training User Management */}
-        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold text-ink">Training User Management</h2>
-              <p className="text-sm text-slate-600">
-                Delete training records and progress for a specific user.
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Deleting here removes training_events and user_progress only — conversation
-                history is not affected.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={loadTrainingUserStats}
-              disabled={trainingUserStatsLoading}
-              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {trainingUserStatsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              )}
-              Refresh
-            </button>
-          </div>
-
-          {deletedTrainingUserInfo ? (
-            <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
-              <div className="text-green-800">
-                <p className="font-semibold">Deleted training records:</p>
-                <p>
-                  User: <span className="font-medium">{deletedTrainingUserInfo.username}</span>
-                </p>
-                <p>
-                  Training events removed:{" "}
-                  <span className="font-medium">{deletedTrainingUserInfo.deletedEvents}</span>
-                </p>
-                <p>
-                  Progress rows removed:{" "}
-                  <span className="font-medium">{deletedTrainingUserInfo.deletedProgress}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeletedTrainingUserInfo(null)}
-                className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          ) : null}
-
-          {trainingUserStatsLoading ? (
-            <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-              Loading training users…
-            </div>
-          ) : trainingUserStats.length === 0 ? (
-            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-              No training users found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-3 font-semibold">Username</th>
-                    <th className="px-3 py-3 font-semibold">Training Events</th>
-                    <th className="px-3 py-3 font-semibold">Topics Completed</th>
-                    <th className="px-3 py-3 font-semibold">Latest Activity</th>
-                    <th className="px-3 py-3 font-semibold">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trainingUserStats.map((u) => (
-                    <tr key={u.username} className="border-b border-line last:border-0">
-                      <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
-                      <td className="px-3 py-3 text-slate-700">{u.trainingEventCount}</td>
-                      <td className="px-3 py-3 text-slate-700">{u.completedTopicCount}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                        {formatMalaysiaTimestamp(u.latestActivity)}
-                      </td>
-                      <td className="px-3 py-3">
-                        {confirmDeleteTrainingUser === u.username ? (
-                          <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
-                            <p className="text-xs text-red-700">
-                              This will permanently delete all training records and progress for{" "}
-                              <span className="font-semibold">{u.username}</span>. Conversation
-                              history will not be deleted.
-                            </p>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => deleteTrainingUser(u.username)}
-                                disabled={deletingTrainingUser === u.username}
-                                className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                              >
-                                {deletingTrainingUser === u.username ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                                ) : (
-                                  <Trash2 className="h-3 w-3" aria-hidden="true" />
-                                )}
-                                Yes, Delete Training Records
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteTrainingUser(null)}
-                                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteTrainingUser(u.username)}
-                            className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" aria-hidden="true" />
-                            Delete Training Records
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* Training Records */}
-        <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="font-semibold text-ink">Training Records</h2>
-              <p className="text-sm text-slate-600">Latest records shown first · Neon database</p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Username
-                <select
-                  value={usernameFilter}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setUsernameFilter(val);
-                    void loadAnalytics(val);
-                    void loadTrainingRecords({
-                      targetPage: 1,
-                      limit: recordsPerPage,
-                      username: val,
-                      event: eventFilter,
-                      search,
-                    });
-                  }}
-                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                >
-                  <option value="all">All</option>
-                  {trainingUserStats.map((u) => (
-                    <option key={u.username} value={u.username}>
-                      {u.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Event
-                <select
-                  value={eventFilter}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEventFilter(val);
-                    void loadTrainingRecords({
-                      targetPage: 1,
-                      limit: recordsPerPage,
-                      username: usernameFilter,
-                      event: val,
-                      search,
-                    });
-                  }}
-                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                >
-                  <option value="all">All</option>
-                  {EVENT_TYPES.map((et) => (
-                    <option key={et} value={et}>
-                      {et}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="relative block sm:w-80">
-                <Search
-                  className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                  aria-hidden="true"
-                />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearch(val);
-                    void loadTrainingRecords({
-                      targetPage: 1,
-                      limit: recordsPerPage,
-                      username: usernameFilter,
-                      event: eventFilter,
-                      search: val,
-                    });
-                  }}
-                  placeholder="Search username, topic, question..."
-                  className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Records
-                <select
-                  value={recordsPerPage}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setRecordsPerPage(val);
-                    void loadTrainingRecords({
-                      targetPage: 1,
-                      limit: val,
-                      username: usernameFilter,
-                      event: eventFilter,
-                      search,
-                    });
-                  }}
-                  className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          {!neonAvailable ? (
-            <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
-              Training records database not configured or not yet migrated. Run the Phase 1 SQL
-              migration in Neon first.
-            </div>
-          ) : (
-            <>
-              {neonError ? (
-                <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {neonError}
+                  <button
+                    type="button"
+                    onClick={() => setDeletedUserInfo(null)}
+                    className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
                 </div>
               ) : null}
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
-                      <th className="px-3 py-3 font-semibold">Timestamp</th>
-                      <th className="px-3 py-3 font-semibold">Username</th>
-                      <th className="px-3 py-3 font-semibold">Event</th>
-                      <th className="px-3 py-3 font-semibold">Topic</th>
-                      <th className="px-3 py-3 font-semibold">Question</th>
-                      <th className="px-3 py-3 font-semibold">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {neonLoading ? (
-                      <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
-                          <Loader2
-                            className="mx-auto h-5 w-5 animate-spin text-signal"
-                            aria-hidden="true"
-                          />
-                        </td>
+              {!userStatsAvailable ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  Conversation database is not configured.
+                </div>
+              ) : userStatsError ? (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {userStatsError}
+                </div>
+              ) : userStatsLoading ? (
+                <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading user stats…
+                </div>
+              ) : filteredUserStats.length === 0 ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  {userStats.length === 0 ? "No conversation history found." : "No users match the current filter."}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-3 font-semibold">Username</th>
+                        <th className="px-3 py-3 font-semibold">Conversations</th>
+                        <th className="px-3 py-3 font-semibold">Messages</th>
+                        <th className="px-3 py-3 font-semibold">Latest Activity</th>
+                        <th className="px-3 py-3 font-semibold">Action</th>
                       </tr>
-                    ) : neonRecords.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-3 py-8 text-center text-sm text-slate-500"
-                        >
-                          No records found.
-                        </td>
-                      </tr>
-                    ) : (
-                      neonRecords.map((record) => (
-                        <tr key={record.id} className="border-b border-line last:border-0">
+                    </thead>
+                    <tbody>
+                      {filteredUserStats.map((user) => (
+                        <tr key={user.userId} className="border-b border-line last:border-0">
+                          <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
+                          <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
+                          <td className="px-3 py-3 text-slate-700">{user.messageCount}</td>
                           <td className="whitespace-nowrap px-3 py-3 text-slate-600">
-                            {formatMalaysiaTimestamp(record.loggedAt)}
+                            {user.latestActivity ? formatMalaysiaTimestamp(user.latestActivity) : "-"}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">
-                            {record.username || "-"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-700">
-                            {record.eventType || "-"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-700">
-                            {record.topic ?? "-"}
-                          </td>
-                          <td className="max-w-md px-3 py-3 text-slate-700">
-                            {record.question ?? "-"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-700">
-                            {formatProgress(record.progressPercent)}
+                          <td className="px-3 py-3">
+                            {confirmDeleteUserId === user.userId ? (
+                              <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                                <p className="text-xs text-red-700">
+                                  This will permanently delete all conversation history for this user.
+                                  Training records in Neon will not be deleted.
+                                </p>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteUser(user.userId)}
+                                    disabled={deletingUserId === user.userId}
+                                    className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                                  >
+                                    {deletingUserId === user.userId ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                    )}
+                                    Yes, Delete All
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteUserId(null)}
+                                    className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => exportUser(user.userId)}
+                                  disabled={exportingUserId === user.userId}
+                                  className="flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+                                  title="Download conversation history as JSON"
+                                >
+                                  {exportingUserId === user.userId ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                  ) : (
+                                    <Download className="h-3 w-3" aria-hidden="true" />
+                                  )}
+                                  Download History
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteUserId(user.userId)}
+                                  className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
 
-              <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-500">
-                  {neonTotal === 0
-                    ? "No records"
-                    : `Showing ${(page - 1) * recordsPerPage + 1}–${Math.min(
-                        page * recordsPerPage,
-                        neonTotal
-                      )} of ${neonTotal}`}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newPage = Math.max(1, page - 1);
-                      setPage(newPage);
-                      void loadTrainingRecords({
-                        targetPage: newPage,
-                        limit: recordsPerPage,
-                        username: usernameFilter,
-                        event: eventFilter,
-                        search,
-                      });
-                    }}
-                    disabled={page <= 1 || neonLoading}
-                    className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                  <span className="text-sm text-slate-600">
-                    Page {page} of {neonTotalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newPage = Math.min(neonTotalPages, page + 1);
-                      setPage(newPage);
-                      void loadTrainingRecords({
-                        targetPage: newPage,
-                        limit: recordsPerPage,
-                        username: usernameFilter,
-                        event: eventFilter,
-                        search,
-                      });
-                    }}
-                    disabled={page >= neonTotalPages || neonLoading}
-                    className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Next page"
-                  >
-                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                  </button>
+        {/* ── TRAINING TAB ──────────────────────────────────────────────────── */}
+        {activeTab === "training" && (
+          <>
+            {/* Training Overview event counts */}
+            {analyticsAvailable && (
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4">
+                  <h2 className="font-semibold text-ink">Training Overview</h2>
+                  <p className="text-sm text-slate-600">Event counts from Neon training_events.</p>
+                </div>
+                {analyticsLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading…
+                  </div>
+                ) : analytics ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <AnalyticCard label="Total Training Events" value={analytics.totalTrainingEvents} />
+                    <AnalyticCard label="Questions Asked" value={analytics.totalQuestionsAsked} />
+                    <AnalyticCard label="Topics Completed" value={analytics.totalCompletedTopics} />
+                    <AnalyticCard label="FAQ Selections" value={analytics.totalFaqSelections} />
+                  </div>
+                ) : null}
+              </section>
+            )}
+
+            {/* Topic Analytics */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Topic Analytics</h2>
+                  <p className="text-sm text-slate-600">
+                    Topic selection frequency from training_events.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadTopicAnalytics}
+                  disabled={topicAnalyticsLoading}
+                  className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {topicAnalyticsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Refresh
+                </button>
+              </div>
+              {topicAnalyticsLoading ? (
+                <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading…
+                </div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Most Studied */}
+                  <div>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      Most Studied Topics (Top 10)
+                    </p>
+                    {topicAnalytics?.topTopics && topicAnalytics.topTopics.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                              <th className="px-3 py-2 text-left font-semibold">#</th>
+                              <th className="px-3 py-2 text-left font-semibold">Topic</th>
+                              <th className="px-3 py-2 text-right font-semibold">Selections</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topicAnalytics.topTopics.map((t, i) => (
+                              <tr key={t.topic} className="border-b border-line last:border-0">
+                                <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                <td className="px-3 py-2 text-slate-700">{t.topic}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-signal">
+                                  {t.selections.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No topic selection data yet.</p>
+                    )}
+                  </div>
+
+                  {/* Least Studied */}
+                  <div>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      Least Studied Topics (Bottom 10)
+                    </p>
+                    {topicAnalytics?.bottomTopics && topicAnalytics.bottomTopics.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                              <th className="px-3 py-2 text-left font-semibold">#</th>
+                              <th className="px-3 py-2 text-left font-semibold">Topic</th>
+                              <th className="px-3 py-2 text-right font-semibold">Selections</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topicAnalytics.bottomTopics.map((t, i) => (
+                              <tr key={t.topic} className="border-b border-line last:border-0">
+                                <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                <td className="px-3 py-2 text-slate-700">{t.topic}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-slate-500">
+                                  {t.selections.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No topic selection data yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Training Records */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Training Records</h2>
+                  <p className="text-sm text-slate-600">Latest records shown first · Neon database</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Username
+                    <select
+                      value={usernameFilter}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsernameFilter(val);
+                        void loadAnalytics(val);
+                        void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: val, event: eventFilter, search });
+                      }}
+                      className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    >
+                      <option value="all">All</option>
+                      {trainingUserStats.map((u) => (
+                        <option key={u.username} value={u.username}>{u.username}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Event
+                    <select
+                      value={eventFilter}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEventFilter(val);
+                        void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: usernameFilter, event: val, search });
+                      }}
+                      className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    >
+                      <option value="all">All</option>
+                      {EVENT_TYPES.map((et) => (
+                        <option key={et} value={et}>{et}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="relative block sm:w-80">
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                    <input
+                      value={search}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSearch(val);
+                        void loadTrainingRecords({ targetPage: 1, limit: recordsPerPage, username: usernameFilter, event: eventFilter, search: val });
+                      }}
+                      placeholder="Search username, topic, question..."
+                      className="w-full rounded-md border border-line bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Records
+                    <select
+                      value={recordsPerPage}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setRecordsPerPage(val);
+                        void loadTrainingRecords({ targetPage: 1, limit: val, username: usernameFilter, event: eventFilter, search });
+                      }}
+                      className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </label>
                 </div>
               </div>
-            </>
-          )}
-        </section>
+
+              {!neonAvailable ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  Training records database not configured or not yet migrated. Run the Phase 1 SQL
+                  migration in Neon first.
+                </div>
+              ) : (
+                <>
+                  {neonError ? (
+                    <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      {neonError}
+                    </div>
+                  ) : null}
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                          <th className="px-3 py-3 font-semibold">Timestamp</th>
+                          <th className="px-3 py-3 font-semibold">Username</th>
+                          <th className="px-3 py-3 font-semibold">Event</th>
+                          <th className="px-3 py-3 font-semibold">Topic</th>
+                          <th className="px-3 py-3 font-semibold">Question</th>
+                          <th className="px-3 py-3 font-semibold">Progress</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {neonLoading ? (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
+                              <Loader2 className="mx-auto h-5 w-5 animate-spin text-signal" aria-hidden="true" />
+                            </td>
+                          </tr>
+                        ) : neonRecords.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
+                              No records found.
+                            </td>
+                          </tr>
+                        ) : (
+                          neonRecords.map((record) => (
+                            <tr key={record.id} className="border-b border-line last:border-0">
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                                {formatMalaysiaTimestamp(record.loggedAt)}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 font-medium text-ink">
+                                {record.username || "-"}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-700">
+                                {record.eventType || "-"}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-700">
+                                {record.topic ?? "-"}
+                              </td>
+                              <td className="max-w-md px-3 py-3 text-slate-700">
+                                {record.question ?? "-"}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-3 text-slate-700">
+                                {record.progressPercent != null ? `${Math.round(Number(record.progressPercent))}%` : "-"}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-500">
+                      {neonTotal === 0
+                        ? "No records"
+                        : `Showing ${(page - 1) * recordsPerPage + 1}–${Math.min(page * recordsPerPage, neonTotal)} of ${neonTotal}`}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPage = Math.max(1, page - 1);
+                          setPage(newPage);
+                          void loadTrainingRecords({ targetPage: newPage, limit: recordsPerPage, username: usernameFilter, event: eventFilter, search });
+                        }}
+                        disabled={page <= 1 || neonLoading}
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <span className="text-sm text-slate-600">Page {page} of {neonTotalPages}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPage = Math.min(neonTotalPages, page + 1);
+                          setPage(newPage);
+                          void loadTrainingRecords({ targetPage: newPage, limit: recordsPerPage, username: usernameFilter, event: eventFilter, search });
+                        }}
+                        disabled={page >= neonTotalPages || neonLoading}
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-slate-600 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+
+            {/* Training User Management */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Training User Management</h2>
+                  <p className="text-sm text-slate-600">
+                    Delete training records and progress for a specific user.
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Deleting removes training_events and user_progress only — conversation history
+                    is not affected.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadTrainingUserStats}
+                  disabled={trainingUserStatsLoading}
+                  className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {trainingUserStatsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Refresh
+                </button>
+              </div>
+
+              {deletedTrainingUserInfo ? (
+                <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+                  <div className="text-green-800">
+                    <p className="font-semibold">Deleted training records:</p>
+                    <p>User: <span className="font-medium">{deletedTrainingUserInfo.username}</span></p>
+                    <p>Training events removed: <span className="font-medium">{deletedTrainingUserInfo.deletedEvents}</span></p>
+                    <p>Progress rows removed: <span className="font-medium">{deletedTrainingUserInfo.deletedProgress}</span></p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeletedTrainingUserInfo(null)}
+                    className="shrink-0 rounded p-0.5 text-green-600 hover:bg-green-100"
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : null}
+
+              {trainingUserStatsLoading ? (
+                <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading training users…
+                </div>
+              ) : trainingUserStats.length === 0 ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  No training users found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-3 font-semibold">Username</th>
+                        <th className="px-3 py-3 font-semibold">Training Events</th>
+                        <th className="px-3 py-3 font-semibold">Topics Completed</th>
+                        <th className="px-3 py-3 font-semibold">Latest Activity</th>
+                        <th className="px-3 py-3 font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trainingUserStats.map((u) => (
+                        <tr key={u.username} className="border-b border-line last:border-0">
+                          <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
+                          <td className="px-3 py-3 text-slate-700">{u.trainingEventCount}</td>
+                          <td className="px-3 py-3 text-slate-700">{u.completedTopicCount}</td>
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                            {formatMalaysiaTimestamp(u.latestActivity)}
+                          </td>
+                          <td className="px-3 py-3">
+                            {confirmDeleteTrainingUser === u.username ? (
+                              <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                                <p className="text-xs text-red-700">
+                                  This will permanently delete all training records and progress for{" "}
+                                  <span className="font-semibold">{u.username}</span>. Conversation
+                                  history will not be deleted.
+                                </p>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteTrainingUser(u.username)}
+                                    disabled={deletingTrainingUser === u.username}
+                                    className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                                  >
+                                    {deletingTrainingUser === u.username ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                    )}
+                                    Yes, Delete Training Records
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteTrainingUser(null)}
+                                    className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteTrainingUser(u.username)}
+                                className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                Delete Training Records
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </main>
   );
 }
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
 function SummaryCard({
   title,
+  subtitle,
   value,
   icon,
   small = false,
 }: {
   title: string;
+  subtitle?: string;
   value: string | number;
   icon: ReactNode;
   small?: boolean;
 }) {
   return (
-    <article className="rounded-lg border border-line bg-white p-4 shadow-panel">
+    <article className="group rounded-lg border border-line bg-white p-4 shadow-panel transition hover:border-signal/40 hover:shadow-md">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-slatePanel text-white">
         {icon}
       </div>
-      <p className="text-sm text-slate-500">{title}</p>
-      <p className={small ? "mt-1 text-sm font-semibold text-ink" : "mt-1 text-2xl font-semibold text-ink"}>
+      <p className="text-sm font-medium text-slate-500">{title}</p>
+      <p className={`mt-1 font-semibold text-ink ${small ? "text-base leading-snug" : "text-2xl"}`}>
         {value}
       </p>
+      {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
     </article>
   );
 }
 
-function AnalyticCard({ label, value }: { label: string; value: number }) {
+function AnalyticCard({
+  label,
+  value,
+  decimal = false,
+}: {
+  label: string;
+  value: number;
+  decimal?: boolean;
+}) {
   return (
     <div className="rounded-md border border-line bg-mist p-3">
       <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-ink">{value.toLocaleString()}</p>
+      <p className="mt-1 text-2xl font-semibold text-ink">
+        {decimal ? value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : value.toLocaleString()}
+      </p>
+    </div>
+  );
+}
+
+function ProgressBar({
+  percent,
+  completedCount,
+}: {
+  percent: number;
+  completedCount: number;
+}) {
+  const pct = Math.min(100, Math.max(0, percent));
+  return (
+    <div>
+      <div className="h-2 w-full rounded-full bg-slate-200">
+        <div
+          className="h-2 rounded-full bg-signal transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-1 flex items-center justify-between text-xs">
+        <span className="text-slate-500">{completedCount} Topics</span>
+        <span className="font-medium text-ink">{Math.round(pct)}%</span>
+      </div>
+    </div>
+  );
+}
+
+function HealthStatRow({
+  emoji,
+  label,
+  value,
+  color,
+}: {
+  emoji: string;
+  label: string;
+  value: string | number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-line bg-mist px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className="text-lg leading-none">{emoji}</span>
+        <span className="text-sm text-slate-600">{label}</span>
+      </div>
+      <span className={`text-xl font-semibold ${color}`}>{typeof value === "number" ? value.toLocaleString() : value}</span>
     </div>
   );
 }
