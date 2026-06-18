@@ -22,5 +22,8 @@ Solum VAST Crash.md
 # Local-only archive (phase reports, analysis docs — preserved but not versioned)
 archive/
 
+# Import data — CSV exports contain user data, never commit
+data/
+
 # VS Code workspace files (developer-local)
 *.code-workspace
