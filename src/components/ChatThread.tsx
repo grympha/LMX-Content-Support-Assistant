@@ -64,6 +64,7 @@ type ChatThreadProps = {
   input: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  onNewTopic: () => void;
   attachments: ChatAttachment[];
   onRemoveAttachment: (name: string) => void;
   onAttachClick: () => void;
@@ -77,6 +78,7 @@ export function ChatThread({
   input,
   onInputChange,
   onSend,
+  onNewTopic,
   attachments,
   onRemoveAttachment,
   onAttachClick,
@@ -210,6 +212,18 @@ export function ChatThread({
       {/* Sticky reply bar — shown once the conversation has started */}
       {messages.length > 0 ? (
         <div className="border-t border-line bg-white p-3">
+          {/* Mobile-only shortcut: start a new topic without scrolling up to Ask Assistant */}
+          <div className="mx-auto mb-3 max-w-3xl lg:hidden">
+            <button
+              type="button"
+              onClick={onNewTopic}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-md border border-line bg-mist px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              New Topic
+            </button>
+          </div>
           <div className="mx-auto mb-3 max-w-3xl">
             <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Follow-up Questions</p>
             <p className="text-xs text-slate-400">

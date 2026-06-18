@@ -260,6 +260,34 @@ export default function Home() {
     }
   }
 
+  // --- Mobile "New Topic" shortcut ---
+  // Creates a fresh conversation (or clears locally if DB unavailable).
+  // Never sends a message — only resets the thread.
+  async function handleNewTopicButton() {
+    let convId: string | null = null;
+
+    if (historyAvailable) {
+      try {
+        const res = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "New Conversation" }),
+        });
+        if (res.ok) {
+          const newConv = (await res.json()) as ConversationSummary;
+          setConversations((prev) => [newConv, ...prev]);
+          convId = newConv.id;
+        }
+      } catch {
+        // Silently ignore — still clear the thread.
+      }
+    }
+
+    setActiveConversationId(convId);
+    setMessages([]);
+    setSelectedCommonQuestion("");
+  }
+
   // --- Chat ---
 
   // Ask Assistant — always starts a fresh conversation, never continues the current one.
@@ -646,6 +674,7 @@ export default function Home() {
           input={input}
           onInputChange={setInput}
           onSend={sendFollowUpMessage}
+          onNewTopic={handleNewTopicButton}
           attachments={attachments}
           onRemoveAttachment={removeAttachment}
           onAttachClick={() => attachmentInputRef.current?.click()}
