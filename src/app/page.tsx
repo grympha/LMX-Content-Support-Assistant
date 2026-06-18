@@ -42,6 +42,8 @@ export default function Home() {
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [selectedCommonQuestion, setSelectedCommonQuestion] = useState("");
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const askAssistantSectionRef = useRef<HTMLElement>(null);
+  const askAssistantInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Conversation history state
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -182,6 +184,15 @@ export default function Home() {
     setHistoryOpen(false);
   }
 
+  // Scrolls the Ask Assistant card into view and focuses its textarea.
+  // Called after any "New Topic" action so the user can immediately type.
+  function focusAskAssistant() {
+    requestAnimationFrame(() => {
+      askAssistantSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      askAssistantInputRef.current?.focus({ preventScroll: true });
+    });
+  }
+
   // --- Conversation history actions ---
 
   async function fetchConversations() {
@@ -237,6 +248,7 @@ export default function Home() {
     } catch {
       // silently ignore
     }
+    focusAskAssistant();
   }
 
   async function deleteConversation(id: string) {
@@ -295,6 +307,7 @@ export default function Home() {
     setActiveConversationId(convId);
     setMessages([]);
     setSelectedCommonQuestion("");
+    focusAskAssistant();
   }
 
   // --- Chat ---
@@ -679,6 +692,8 @@ export default function Home() {
             setSelectedCommonQuestion("");
           }}
           selectedTopic={selectedTopic}
+          askAssistantSectionRef={askAssistantSectionRef}
+          askAssistantInputRef={askAssistantInputRef}
         />
         <ChatThread
           messages={messages}

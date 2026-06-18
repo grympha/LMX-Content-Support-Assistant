@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Plus, Send, Trash2, X } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, type RefObject } from "react";
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { commonQuestions } from "@/lib/commonQuestions";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
@@ -27,6 +27,8 @@ type IntakeSidebarProps = {
   onSelectCommonQuestion: (question: string) => void;
   onClearMessages: () => void;
   selectedTopic?: KnowledgeTopic;
+  askAssistantSectionRef?: RefObject<HTMLElement | null>;
+  askAssistantInputRef?: RefObject<HTMLTextAreaElement | null>;
 };
 
 export function IntakeSidebar({
@@ -44,7 +46,9 @@ export function IntakeSidebar({
   selectedCommonQuestion,
   onSelectCommonQuestion,
   onClearMessages,
-  selectedTopic
+  selectedTopic,
+  askAssistantSectionRef,
+  askAssistantInputRef,
 }: IntakeSidebarProps) {
   const learnerCompleteness = useMemo(() => {
     const required: Array<keyof IssueIntake> = ["clientTenant", "issueCategory"];
@@ -97,7 +101,7 @@ export function IntakeSidebar({
         </div>
       </section>
 
-      <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+      <section ref={askAssistantSectionRef} className="rounded-lg border border-line bg-white p-4 shadow-panel">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-semibold text-ink">Ask Assistant</h2>
           <button
@@ -117,6 +121,7 @@ export function IntakeSidebar({
           className="grid gap-3"
         >
           <textarea
+            ref={askAssistantInputRef}
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
             rows={4}
