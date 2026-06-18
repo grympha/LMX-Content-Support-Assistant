@@ -15,6 +15,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 type UserStat = {
   userId: string;
@@ -590,14 +591,17 @@ export default function AdminDashboard() {
     <main className="min-h-screen">
       <header className="border-b border-line bg-white/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">
-              LMX Content CMS
-            </p>
-            <h1 className="text-2xl font-semibold text-ink">Admin Dashboard</h1>
-            <p className="mt-1 text-xs text-slate-500">
-              User activity, progress, and training questions
-            </p>
+          <div className="flex items-center gap-4">
+            <Logo size="md" className="shrink-0" />
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-signal">
+                LMX Content CMS
+              </p>
+              <h1 className="text-2xl font-semibold text-ink">Admin Dashboard</h1>
+              <p className="mt-1 text-xs text-slate-500">
+                User activity, progress, and training questions
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
