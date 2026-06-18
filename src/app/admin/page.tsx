@@ -29,6 +29,16 @@ type UserStat = {
   conversationCount: number;
   messageCount: number;
   latestActivity: string | null;
+  topicsCompleted?: number;
+  goodFeedback?: number;
+  badFeedback?: number;
+};
+
+type TrendData = {
+  current: number;
+  previous: number;
+  pct: number;
+  direction: "up" | "down" | "flat";
 };
 
 type AnalyticsData = {
@@ -49,6 +59,12 @@ type AnalyticsData = {
   avgMessagesPerConversation: number;
   newestConversation: string | null;
   oldestConversation: string | null;
+  questionsAskedTrend?: TrendData | null;
+  completedTopicsTrend?: TrendData | null;
+  faqSelectionsTrend?: TrendData | null;
+  dau?: number;
+  wau?: number;
+  mau?: number;
 };
 
 type NeonTrainingRecord = {
@@ -104,6 +120,20 @@ type FeedbackIntelligenceData = {
   topBadQuestions: Array<{ question: string; count: number }>;
   topGoodQuestions: Array<{ question: string; count: number }>;
   topBadTopics: Array<{ source: string; count: number }>;
+};
+
+type KnowledgeCoverageData = {
+  totalTopics: number;
+  topicsAccessed: number;
+  topicsNeverAccessed: number;
+  coveragePercent: number;
+  mostAccessedTopic: string | null;
+  leastAccessedTopic: string | null;
+  neverAccessedTopics: string[];
+};
+
+type SearchAnalyticsData = {
+  topQuestions: Array<{ question: string; count: number; lastAsked: string | null }>;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -173,10 +203,64 @@ function formatMalaysiaTimestamp(timestamp: string | undefined | null) {
 }
 
 function getHealthStatus(goodRate: number) {
-  if (goodRate >= 95) return { label: "Excellent", classes: "bg-green-100 text-green-700" };
-  if (goodRate >= 80) return { label: "Good", classes: "bg-teal-100 text-teal-700" };
-  if (goodRate >= 60) return { label: "Needs Review", classes: "bg-yellow-100 text-yellow-800" };
-  return { label: "Critical", classes: "bg-red-100 text-red-700" };
+  if (goodRate >= 95) return { label: "🟢 Excellent", classes: "bg-green-100 text-green-700" };
+  if (goodRate >= 80) return { label: "🟢 Good", classes: "bg-teal-100 text-teal-700" };
+  if (goodRate >= 60) return { label: "🟠 Needs Review", classes: "bg-yellow-100 text-yellow-800" };
+  return { label: "🔴 Critical", classes: "bg-red-100 text-red-700" };
+}
+
+function getTopicRecommendation(source: string): string {
+  const s = source.toLowerCase();
+  if (s.includes("pull") || s.includes("ptc")) return "Review Pull To Content setup workflow";
+  if (s.includes("pair") || s.includes("device")) return "Expand device troubleshooting steps";
+  if (s.includes("schedule") || s.includes("content")) return "Review content scheduling workflow";
+  if (s.includes("playlog")) return "Expand playlog documentation";
+  if (s.includes("install")) return "Review installation guide";
+  if (s.includes("publish")) return "Expand publishing checklist";
+  if (s.includes("vast") || s.includes("programmatic")) return "Review VAST/programmatic setup guide";
+  if (s.includes("user") || s.includes("permission")) return "Clarify user roles and permissions";
+  if (s.includes("layout") || s.includes("playlist")) return "Review layout and playlist configuration";
+  return "Review knowledge article and improve response quality";
+}
+
+function rankBadge(rank: number): string {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return String(rank);
+}
+
+function downloadAsCsv(rows: Record<string, unknown>[], filename: string) {
+  if (rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const lines = [
+    headers.join(","),
+    ...rows.map((row) =>
+      headers
+        .map((h) => {
+          const val = String(row[h] ?? "").replace(/"/g, '""');
+          return `"${val}"`;
+        })
+        .join(",")
+    ),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function downloadAsXlsx(rows: Record<string, unknown>[], sheetName: string, filename: string) {
+  const XLSX = await import("xlsx");
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -264,6 +348,18 @@ export default function AdminDashboard() {
     useState<FeedbackIntelligenceData | null>(null);
   const [feedbackIntelligenceLoading, setFeedbackIntelligenceLoading] = useState(false);
 
+  // Knowledge coverage
+  const [knowledgeCoverage, setKnowledgeCoverage] = useState<KnowledgeCoverageData | null>(null);
+  const [knowledgeCoverageLoading, setKnowledgeCoverageLoading] = useState(false);
+
+  // Search analytics
+  const [searchAnalytics, setSearchAnalytics] = useState<SearchAnalyticsData | null>(null);
+  const [searchAnalyticsLoading, setSearchAnalyticsLoading] = useState(false);
+
+  // Export states
+  const [exportingTraining, setExportingTraining] = useState(false);
+  const [exportingFeedback, setExportingFeedback] = useState(false);
+
   useEffect(() => {
     fetch("/api/admin/auth")
       .then((r) => r.json())
@@ -288,6 +384,8 @@ export default function AdminDashboard() {
       void loadFeedback({ targetPage: 1, rating: "all", username: "all", search: "" });
       void loadTopicAnalytics();
       void loadFeedbackIntelligence();
+      void loadKnowledgeCoverage();
+      void loadSearchAnalytics();
     }
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -335,6 +433,8 @@ export default function AdminDashboard() {
     });
     void loadTopicAnalytics();
     void loadFeedbackIntelligence();
+    void loadKnowledgeCoverage();
+    void loadSearchAnalytics();
   }
 
   // ─── Data loaders ───────────────────────────────────────────────────────────
@@ -507,6 +607,111 @@ export default function AdminDashboard() {
       // silently ignore
     } finally {
       setFeedbackIntelligenceLoading(false);
+    }
+  }
+
+  async function loadKnowledgeCoverage() {
+    setKnowledgeCoverageLoading(true);
+    try {
+      const res = await fetch("/api/admin/knowledge-coverage", { cache: "no-store" });
+      if (!res.ok) return;
+      setKnowledgeCoverage((await res.json()) as KnowledgeCoverageData);
+    } catch {
+      // silently ignore
+    } finally {
+      setKnowledgeCoverageLoading(false);
+    }
+  }
+
+  async function loadSearchAnalytics() {
+    setSearchAnalyticsLoading(true);
+    try {
+      const res = await fetch("/api/admin/search-analytics", { cache: "no-store" });
+      if (!res.ok) return;
+      setSearchAnalytics((await res.json()) as SearchAnalyticsData);
+    } catch {
+      // silently ignore
+    } finally {
+      setSearchAnalyticsLoading(false);
+    }
+  }
+
+  async function exportTraining(format: "csv" | "xlsx") {
+    setExportingTraining(true);
+    try {
+      const params = new URLSearchParams({ export: "true" });
+      if (usernameFilter && usernameFilter !== "all") params.set("username", usernameFilter);
+      if (eventFilter && eventFilter !== "all") params.set("event", eventFilter);
+      if (search.trim()) params.set("search", search.trim());
+      const res = await fetch(`/api/admin/training-records?${params.toString()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { records: NeonTrainingRecord[] };
+      const rows = data.records.map((r) => ({
+        Timestamp: formatMalaysiaTimestamp(r.loggedAt),
+        Username: r.username ?? "",
+        "Full Name": r.fullName ?? "",
+        Event: r.eventType ?? "",
+        Topic: r.topic ?? "",
+        Question: r.question ?? "",
+        "Progress %": r.progressPercent != null ? Math.round(Number(r.progressPercent)) : "",
+      }));
+      if (format === "csv") {
+        downloadAsCsv(rows as Record<string, unknown>[], "training-records.csv");
+      } else {
+        await downloadAsXlsx(rows as Record<string, unknown>[], "Training Records", "training-records.xlsx");
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setExportingTraining(false);
+    }
+  }
+
+  async function exportFeedback(format: "csv" | "xlsx") {
+    setExportingFeedback(true);
+    try {
+      const params = new URLSearchParams({ export: "true" });
+      if (feedbackRatingFilter && feedbackRatingFilter !== "all") params.set("rating", feedbackRatingFilter);
+      if (feedbackUsernameFilter && feedbackUsernameFilter !== "all") params.set("username", feedbackUsernameFilter);
+      if (feedbackSearch.trim()) params.set("search", feedbackSearch.trim());
+      const res = await fetch(`/api/admin/feedback?${params.toString()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { records: FeedbackRecord[] };
+      const rows = data.records.map((r) => ({
+        Timestamp: formatMalaysiaTimestamp(r.createdAt),
+        Username: r.username,
+        Rating: r.rating,
+        Question: r.question ?? "",
+        Response: r.response ? r.response.slice(0, 200) : "",
+        "AI Provider": r.aiProvider ?? "",
+        Sources: r.sources?.join("; ") ?? "",
+      }));
+      if (format === "csv") {
+        downloadAsCsv(rows as Record<string, unknown>[], "feedback.csv");
+      } else {
+        await downloadAsXlsx(rows as Record<string, unknown>[], "Feedback", "feedback.xlsx");
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setExportingFeedback(false);
+    }
+  }
+
+  function exportUserActivity(format: "csv" | "xlsx") {
+    const rows = filteredUserStats.map((u) => ({
+      Username: u.userId,
+      Conversations: u.conversationCount,
+      Messages: u.messageCount,
+      "Topics Completed": u.topicsCompleted ?? 0,
+      "Good Feedback": u.goodFeedback ?? 0,
+      "Bad Feedback": u.badFeedback ?? 0,
+      "Latest Activity": u.latestActivity ? formatMalaysiaTimestamp(u.latestActivity) : "",
+    }));
+    if (format === "csv") {
+      downloadAsCsv(rows as Record<string, unknown>[], "user-activity.csv");
+    } else {
+      void downloadAsXlsx(rows as Record<string, unknown>[], "User Activity", "user-activity.xlsx");
     }
   }
 
@@ -754,18 +959,21 @@ export default function AdminDashboard() {
                 subtitle="Training questions submitted"
                 value={analytics?.totalQuestionsAsked ?? 0}
                 icon={<HelpCircle className="h-5 w-5" />}
+                trend={analytics?.questionsAskedTrend ?? undefined}
               />
               <SummaryCard
                 title="Topics Completed"
                 subtitle="Completed learning modules"
                 value={analytics?.totalCompletedTopics ?? 0}
                 icon={<BookOpen className="h-5 w-5" />}
+                trend={analytics?.completedTopicsTrend ?? undefined}
               />
               <SummaryCard
                 title="Quick Answers"
                 subtitle="FAQ selections"
                 value={analytics?.totalFaqSelections ?? 0}
                 icon={<Zap className="h-5 w-5" />}
+                trend={analytics?.faqSelectionsTrend ?? undefined}
               />
               <SummaryCard
                 title="Avg Progress"
@@ -835,17 +1043,22 @@ export default function AdminDashboard() {
                         Top Bad Topics
                       </p>
                       {feedbackIntelligence?.topBadTopics && feedbackIntelligence.topBadTopics.length > 0 ? (
-                        <ol className="space-y-1">
+                        <div className="space-y-2">
                           {feedbackIntelligence.topBadTopics.map((t, i) => (
-                            <li key={t.source} className="flex items-center gap-2 text-sm">
-                              <span className="w-4 shrink-0 text-xs text-slate-400">{i + 1}.</span>
-                              <span className="truncate text-slate-700">{t.source}</span>
-                              <span className="ml-auto shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
-                                {t.count}
-                              </span>
-                            </li>
+                            <div key={t.source} className="rounded-md border border-line bg-mist p-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-4 shrink-0 text-xs text-slate-400">{i + 1}.</span>
+                                <span className="flex-1 truncate text-sm font-medium text-slate-700">{t.source}</span>
+                                <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                                  {t.count}
+                                </span>
+                              </div>
+                              <p className="mt-1 pl-6 text-xs text-slate-500">
+                                → {getTopicRecommendation(t.source)}
+                              </p>
+                            </div>
                           ))}
-                        </ol>
+                        </div>
                       ) : (
                         <p className="text-sm text-slate-400">No bad feedback yet.</p>
                       )}
@@ -854,6 +1067,106 @@ export default function AdminDashboard() {
                 )}
               </section>
             )}
+
+            {/* Knowledge Coverage + User Engagement — two-column on large screens */}
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* Knowledge Coverage */}
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-ink">Knowledge Coverage</h2>
+                    <p className="text-sm text-slate-600">Topics accessed vs available.</p>
+                  </div>
+                  {knowledgeCoverage && (
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${knowledgeCoverage.coveragePercent >= 80 ? "bg-green-100 text-green-700" : knowledgeCoverage.coveragePercent >= 50 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-700"}`}>
+                      {knowledgeCoverage.coveragePercent}% Coverage
+                    </span>
+                  )}
+                </div>
+                {knowledgeCoverageLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading…
+                  </div>
+                ) : knowledgeCoverage ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-md border border-line bg-mist p-3 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Available</p>
+                        <p className="mt-1 text-2xl font-semibold text-ink">{knowledgeCoverage.totalTopics}</p>
+                      </div>
+                      <div className="rounded-md border border-line bg-mist p-3 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Accessed</p>
+                        <p className="mt-1 text-2xl font-semibold text-signal">{knowledgeCoverage.topicsAccessed}</p>
+                      </div>
+                      <div className="rounded-md border border-line bg-mist p-3 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Never Used</p>
+                        <p className="mt-1 text-2xl font-semibold text-red-500">{knowledgeCoverage.topicsNeverAccessed}</p>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                      <div className="h-2 rounded-full bg-signal transition-all" style={{ width: `${knowledgeCoverage.coveragePercent}%` }} />
+                    </div>
+                    <div className="grid gap-2 text-sm">
+                      {knowledgeCoverage.mostAccessedTopic && (
+                        <p className="text-slate-600"><span className="font-medium text-ink">Most Accessed:</span> {knowledgeCoverage.mostAccessedTopic}</p>
+                      )}
+                      {knowledgeCoverage.leastAccessedTopic && (
+                        <p className="text-slate-600"><span className="font-medium text-ink">Least Accessed:</span> {knowledgeCoverage.leastAccessedTopic}</p>
+                      )}
+                      {knowledgeCoverage.neverAccessedTopics.length > 0 && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs text-slate-400 hover:text-slate-600">
+                            {knowledgeCoverage.neverAccessedTopics.length} topic{knowledgeCoverage.neverAccessedTopics.length !== 1 ? "s" : ""} never accessed
+                          </summary>
+                          <ul className="mt-2 space-y-1 pl-3">
+                            {knowledgeCoverage.neverAccessedTopics.map((t) => (
+                              <li key={t} className="text-xs text-slate-500">• {t}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No coverage data yet.</p>
+                )}
+              </section>
+
+              {/* User Engagement DAU/WAU/MAU */}
+              <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <div className="mb-4">
+                  <h2 className="font-semibold text-ink">User Engagement</h2>
+                  <p className="text-sm text-slate-600">Active user counts by time window.</p>
+                </div>
+                {analyticsLoading ? (
+                  <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                    Loading…
+                  </div>
+                ) : analytics ? (
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-md border border-line bg-mist p-4 text-center">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">DAU</p>
+                      <p className="mt-1 text-3xl font-semibold text-ink">{analytics.dau ?? 0}</p>
+                      <p className="mt-1 text-xs text-slate-400">Active today</p>
+                    </div>
+                    <div className="rounded-md border border-line bg-mist p-4 text-center">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">WAU</p>
+                      <p className="mt-1 text-3xl font-semibold text-signal">{analytics.wau ?? 0}</p>
+                      <p className="mt-1 text-xs text-slate-400">Last 7 days</p>
+                    </div>
+                    <div className="rounded-md border border-line bg-mist p-4 text-center">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">MAU</p>
+                      <p className="mt-1 text-3xl font-semibold text-ink">{analytics.mau ?? 0}</p>
+                      <p className="mt-1 text-xs text-slate-400">Last 30 days</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No engagement data yet.</p>
+                )}
+              </section>
+            </div>
 
             {/* Conversation Analytics */}
             {analyticsAvailable && (
@@ -1100,6 +1413,24 @@ export default function AdminDashboard() {
                       {feedbackLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
                       Refresh
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => void exportFeedback("csv")}
+                      disabled={exportingFeedback}
+                      className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+                    >
+                      {exportingFeedback ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+                      CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void exportFeedback("xlsx")}
+                      disabled={exportingFeedback}
+                      className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+                    >
+                      {exportingFeedback ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+                      Excel
+                    </button>
                   </div>
                 </div>
 
@@ -1253,6 +1584,7 @@ export default function AdminDashboard() {
                   <table className="min-w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-3 font-semibold">Rank</th>
                         <th className="px-3 py-3 font-semibold">Username</th>
                         <th className="px-3 py-3 font-semibold">Full Name</th>
                         <th className="min-w-[180px] px-3 py-3 font-semibold">Progress</th>
@@ -1260,8 +1592,11 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {userProgressData.map((u) => (
+                      {userProgressData.map((u, idx) => (
                         <tr key={u.username} className="border-b border-line last:border-0">
+                          <td className="px-3 py-3 text-center text-sm font-semibold text-slate-600">
+                            {rankBadge(idx + 1)}
+                          </td>
                           <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
                           <td className="px-3 py-3 text-slate-700">{u.fullName ?? "-"}</td>
                           <td className="min-w-[180px] px-3 py-4">
@@ -1295,6 +1630,23 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Export buttons */}
+                  <button
+                    type="button"
+                    onClick={() => exportUserActivity("csv")}
+                    className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportUserActivity("xlsx")}
+                    className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400"
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Excel
+                  </button>
                   {/* Search input */}
                   <label className="relative block">
                     <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -1387,6 +1739,9 @@ export default function AdminDashboard() {
                         <th className="px-3 py-3 font-semibold">Username</th>
                         <th className="px-3 py-3 font-semibold">Conversations</th>
                         <th className="px-3 py-3 font-semibold">Messages</th>
+                        <th className="px-3 py-3 font-semibold">Topics</th>
+                        <th className="px-3 py-3 font-semibold">👍 Good</th>
+                        <th className="px-3 py-3 font-semibold">👎 Bad</th>
                         <th className="px-3 py-3 font-semibold">Latest Activity</th>
                         <th className="px-3 py-3 font-semibold">Action</th>
                       </tr>
@@ -1397,6 +1752,9 @@ export default function AdminDashboard() {
                           <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
                           <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
                           <td className="px-3 py-3 text-slate-700">{user.messageCount}</td>
+                          <td className="px-3 py-3 text-slate-700">{user.topicsCompleted ?? 0}</td>
+                          <td className="px-3 py-3 text-green-600 font-medium">{user.goodFeedback ?? 0}</td>
+                          <td className="px-3 py-3 text-red-500 font-medium">{user.badFeedback ?? 0}</td>
                           <td className="whitespace-nowrap px-3 py-3 text-slate-600">
                             {user.latestActivity ? formatMalaysiaTimestamp(user.latestActivity) : "-"}
                           </td>
@@ -1664,6 +2022,24 @@ export default function AdminDashboard() {
                       <option value={50}>50</option>
                     </select>
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => void exportTraining("csv")}
+                    disabled={exportingTraining}
+                    className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+                  >
+                    {exportingTraining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+                    CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void exportTraining("xlsx")}
+                    disabled={exportingTraining}
+                    className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+                  >
+                    {exportingTraining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+                    Excel
+                  </button>
                 </div>
               </div>
 
@@ -1766,6 +2142,70 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </>
+              )}
+            </section>
+
+            {/* Search Analytics */}
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Most Searched Questions</h2>
+                  <p className="text-sm text-slate-600">Top 10 questions asked by learners.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadSearchAnalytics}
+                  disabled={searchAnalyticsLoading}
+                  className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {searchAnalyticsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Refresh
+                </button>
+              </div>
+              {searchAnalyticsLoading ? (
+                <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading…
+                </div>
+              ) : searchAnalytics?.topQuestions && searchAnalytics.topQuestions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-line bg-mist text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-2 text-left font-semibold">#</th>
+                        <th className="px-3 py-2 text-left font-semibold">Question</th>
+                        <th className="px-3 py-2 text-right font-semibold">Count</th>
+                        <th className="px-3 py-2 text-right font-semibold">Last Asked</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchAnalytics.topQuestions.map((q, i) => (
+                        <tr key={i} className="border-b border-line last:border-0">
+                          <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                          <td className="max-w-md px-3 py-2 text-slate-700">
+                            <span className="line-clamp-2">{q.question}</span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right">
+                            <span className="inline-flex items-center rounded-full bg-signal/10 px-2 py-0.5 text-xs font-semibold text-signal">
+                              {q.count}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right text-slate-500">
+                            {q.lastAsked ? formatMalaysiaTimestamp(q.lastAsked) : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  No search data yet.
+                </div>
               )}
             </section>
 
@@ -1910,12 +2350,14 @@ function SummaryCard({
   value,
   icon,
   small = false,
+  trend,
 }: {
   title: string;
   subtitle?: string;
   value: string | number;
   icon: ReactNode;
   small?: boolean;
+  trend?: TrendData;
 }) {
   return (
     <article className="group rounded-lg border border-line bg-white p-4 shadow-panel transition hover:border-signal/40 hover:shadow-md">
@@ -1926,6 +2368,23 @@ function SummaryCard({
       <p className={`mt-1 font-semibold text-ink ${small ? "text-base leading-snug" : "text-2xl"}`}>
         {value}
       </p>
+      {trend && (
+        <p
+          className={`mt-1 text-xs font-medium ${
+            trend.direction === "up"
+              ? "text-green-600"
+              : trend.direction === "down"
+              ? "text-red-500"
+              : "text-slate-400"
+          }`}
+        >
+          {trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→"}
+          {trend.direction !== "flat"
+            ? ` ${trend.direction === "up" ? "+" : "-"}${trend.pct}%`
+            : " No change"}{" "}
+          vs last 7 days
+        </p>
+      )}
       {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
     </article>
   );

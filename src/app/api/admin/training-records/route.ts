@@ -35,11 +35,16 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const exportMode = url.searchParams.get("export") === "true";
   const rawPage = parseInt(url.searchParams.get("page") ?? "1", 10);
   const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10);
   const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-  const limit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, rawLimit)) : 50;
-  const offset = (pageNum - 1) * limit;
+  const limit = exportMode
+    ? 9999
+    : Number.isFinite(rawLimit)
+    ? Math.min(100, Math.max(1, rawLimit))
+    : 50;
+  const offset = exportMode ? 0 : (pageNum - 1) * limit;
 
   const usernameParam = (url.searchParams.get("username") ?? "").trim();
   const eventParam = (url.searchParams.get("event") ?? "").trim();

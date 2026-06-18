@@ -35,9 +35,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const exportMode = searchParams.get("export") === "true";
   const pageNum = Math.max(1, Number(searchParams.get("page") ?? "1"));
-  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "50")));
-  const offset = (pageNum - 1) * limit;
+  const limit = exportMode
+    ? 9999
+    : Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "50")));
+  const offset = exportMode ? 0 : (pageNum - 1) * limit;
   const ratingParam = searchParams.get("rating");
   const ratingFilter = ratingParam && ratingParam !== "all" ? ratingParam : null;
   const usernameParam = searchParams.get("username");

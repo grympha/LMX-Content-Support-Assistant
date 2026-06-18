@@ -184,9 +184,80 @@ export function IntakeSidebar({
           </select>
         </label>
       </section>
+
+      <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+        <div className="mb-3">
+          <h2 className="font-semibold text-ink">Workflow Shortcuts</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Common operational workflows that guide users through multi-step tasks.
+          </p>
+        </div>
+        <div className="grid gap-2">
+          {WORKFLOW_SHORTCUTS.map((shortcut) => (
+            <button
+              key={shortcut.label}
+              type="button"
+              onClick={() => {
+                onInputChange(shortcut.prefill);
+                requestAnimationFrame(() => {
+                  askAssistantSectionRef?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  askAssistantInputRef?.current?.focus({ preventScroll: true });
+                });
+              }}
+              className="flex items-center gap-2 rounded-md border border-line bg-mist px-3 py-2 text-left text-sm text-slate-700 transition hover:border-signal hover:bg-signal/5 hover:text-signal"
+            >
+              <span className="shrink-0 text-base leading-none">{shortcut.icon}</span>
+              <span className="font-medium">{shortcut.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
     </aside>
   );
 }
+
+const WORKFLOW_SHORTCUTS = [
+  {
+    label: "Create New Device",
+    icon: "🖥️",
+    prefill: "Guide me through creating and pairing a new device from start to finish.",
+  },
+  {
+    label: "Deploy New Screen",
+    icon: "📺",
+    prefill: "What are the complete steps to deploy a new screen in LMX Content?",
+  },
+  {
+    label: "Troubleshoot Offline Device",
+    icon: "🔧",
+    prefill: "My device is offline. Guide me through troubleshooting.",
+  },
+  {
+    label: "Check Device Compatibility",
+    icon: "✅",
+    prefill: "Check if my device meets LMX Content requirements.",
+  },
+  {
+    label: "Schedule Campaign",
+    icon: "📅",
+    prefill: "Guide me through scheduling content for a campaign.",
+  },
+  {
+    label: "Programmatic Readiness Check",
+    icon: "📡",
+    prefill: "Validate if this device is ready for VAST and Programmatic campaigns.",
+  },
+  {
+    label: "Content Deployment Checklist",
+    icon: "📋",
+    prefill: "Provide the deployment checklist before publishing content.",
+  },
+  {
+    label: "Generate Support Checklist",
+    icon: "🎫",
+    prefill: "What information should I collect before escalating a support ticket?",
+  },
+] as const;
 
 function TopicDetail({ topic }: { topic: KnowledgeTopic }) {
   return (
