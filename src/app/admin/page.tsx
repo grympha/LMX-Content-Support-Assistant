@@ -22,7 +22,7 @@ import { Logo } from "@/components/Logo";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AdminTab = "overview" | "feedback" | "users" | "training";
+type AdminTab = "overview" | "feedback" | "users" | "training" | "learned";
 
 type UserStat = {
   userId: string;
@@ -136,6 +136,26 @@ type SearchAnalyticsData = {
   topQuestions: Array<{ question: string; count: number; lastAsked: string | null }>;
 };
 
+type LearnedAnswerRecord = {
+  id: string;
+  normalizedQuestion: string;
+  originalQuestion: string;
+  response: string;
+  status: string;
+  reusedCount: number;
+  username: string | null;
+  approvedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt: string | null;
+};
+
+type LearnedAnswersSummary = {
+  candidates: number;
+  approved: number;
+  rejected: number;
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EVENT_TYPES = [
@@ -151,6 +171,7 @@ const TABS: { id: AdminTab; label: string }[] = [
   { id: "feedback", label: "Feedback" },
   { id: "users", label: "Users" },
   { id: "training", label: "Training" },
+  { id: "learned", label: "Learned Answers" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -369,6 +390,18 @@ export default function AdminDashboard() {
   const [exportingTraining, setExportingTraining] = useState(false);
   const [exportingFeedback, setExportingFeedback] = useState(false);
 
+  // Learned answers
+  const [learnedRecords, setLearnedRecords] = useState<LearnedAnswerRecord[]>([]);
+  const [learnedSummary, setLearnedSummary] = useState<LearnedAnswersSummary | null>(null);
+  const [learnedLoading, setLearnedLoading] = useState(false);
+  const [learnedTotal, setLearnedTotal] = useState(0);
+  const [learnedTotalPages, setLearnedTotalPages] = useState(1);
+  const [learnedPage, setLearnedPage] = useState(1);
+  const [learnedStatusFilter, setLearnedStatusFilter] = useState("all");
+  const [learnedActingId, setLearnedActingId] = useState<string | null>(null);
+  const [editingLearnedId, setEditingLearnedId] = useState<string | null>(null);
+  const [editingLearnedResponse, setEditingLearnedResponse] = useState("");
+
   useEffect(() => {
     fetch("/api/admin/auth")
       .then((r) => r.json())
@@ -395,6 +428,7 @@ export default function AdminDashboard() {
       void loadFeedbackIntelligence();
       void loadKnowledgeCoverage();
       void loadSearchAnalytics();
+      void loadLearnedAnswers({ page: 1, status: "all" });
     }
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -444,6 +478,7 @@ export default function AdminDashboard() {
     void loadFeedbackIntelligence();
     void loadKnowledgeCoverage();
     void loadSearchAnalytics();
+    void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter });
   }
 
   // ─── Data loaders ───────────────────────────────────────────────────────────
@@ -642,6 +677,89 @@ export default function AdminDashboard() {
       // silently ignore
     } finally {
       setSearchAnalyticsLoading(false);
+    }
+  }
+
+  async function loadLearnedAnswers({ page: targetPage, status }: { page: number; status: string }) {
+    setLearnedLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(targetPage), limit: "20" });
+      if (status && status !== "all") params.set("status", status);
+      const res = await fetch(`/api/admin/learned-answers?${params.toString()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        records: LearnedAnswerRecord[];
+        total: number;
+        totalPages: number;
+        page: number;
+        summary: LearnedAnswersSummary;
+      };
+      setLearnedRecords(data.records);
+      setLearnedTotal(data.total);
+      setLearnedTotalPages(data.totalPages);
+      setLearnedPage(data.page);
+      setLearnedSummary(data.summary);
+    } catch {
+      // silently ignore
+    } finally {
+      setLearnedLoading(false);
+    }
+  }
+
+  async function approveLearnedAnswer(id: string) {
+    setLearnedActingId(id);
+    try {
+      const res = await fetch(`/api/admin/learned-answers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) return;
+      void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter });
+    } finally {
+      setLearnedActingId(null);
+    }
+  }
+
+  async function rejectLearnedAnswer(id: string) {
+    setLearnedActingId(id);
+    try {
+      const res = await fetch(`/api/admin/learned-answers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      });
+      if (!res.ok) return;
+      void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter });
+    } finally {
+      setLearnedActingId(null);
+    }
+  }
+
+  async function deleteLearnedAnswer(id: string) {
+    setLearnedActingId(id);
+    try {
+      const res = await fetch(`/api/admin/learned-answers/${id}`, { method: "DELETE" });
+      if (!res.ok) return;
+      void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter });
+    } finally {
+      setLearnedActingId(null);
+    }
+  }
+
+  async function saveLearnedAnswerEdit(id: string) {
+    setLearnedActingId(id);
+    try {
+      const res = await fetch(`/api/admin/learned-answers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: editingLearnedResponse }),
+      });
+      if (!res.ok) return;
+      setEditingLearnedId(null);
+      void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter });
+    } finally {
+      setLearnedActingId(null);
     }
   }
 
@@ -2341,6 +2459,235 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        {/* ── LEARNED ANSWERS TAB ──────────────────────────────────────────── */}
+        {activeTab === "learned" && (
+          <>
+            {/* Summary cards */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Candidates</p>
+                <p className="mt-1 text-3xl font-semibold text-amber-500">{learnedSummary?.candidates ?? 0}</p>
+                <p className="mt-1 text-xs text-slate-500">Awaiting review</p>
+              </div>
+              <div className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Approved</p>
+                <p className="mt-1 text-3xl font-semibold text-signal">{learnedSummary?.approved ?? 0}</p>
+                <p className="mt-1 text-xs text-slate-500">Active in search</p>
+              </div>
+              <div className="rounded-lg border border-line bg-white p-4 shadow-panel">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Rejected</p>
+                <p className="mt-1 text-3xl font-semibold text-slate-400">{learnedSummary?.rejected ?? 0}</p>
+                <p className="mt-1 text-xs text-slate-500">Not used in search</p>
+              </div>
+            </div>
+
+            <section className="rounded-lg border border-line bg-white p-4 shadow-panel">
+              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="font-semibold text-ink">Learned Answers</h2>
+                  <p className="text-sm text-slate-600">
+                    Answers from good feedback · Approve to use before AI · Reject to skip
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Status
+                    <select
+                      value={learnedStatusFilter}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLearnedStatusFilter(val);
+                        void loadLearnedAnswers({ page: 1, status: val });
+                      }}
+                      className="rounded-md border border-line bg-white px-2 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                    >
+                      <option value="all">All</option>
+                      <option value="candidate">Candidate</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void loadLearnedAnswers({ page: learnedPage, status: learnedStatusFilter })}
+                    disabled={learnedLoading}
+                    className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {learnedLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {learnedLoading ? (
+                <div className="flex items-center gap-3 py-4 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+                  Loading…
+                </div>
+              ) : learnedRecords.length === 0 ? (
+                <div className="rounded-md border border-dashed border-line bg-mist px-4 py-6 text-center text-sm text-slate-500">
+                  No learned answers yet. Good feedback will appear here as candidates.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {learnedRecords.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className={`rounded-md border p-4 ${
+                        rec.status === "approved"
+                          ? "border-signal/30 bg-signal/5"
+                          : rec.status === "rejected"
+                            ? "border-slate-200 bg-slate-50"
+                            : "border-amber-200 bg-amber-50/50"
+                      }`}
+                    >
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              rec.status === "approved"
+                                ? "bg-signal/15 text-signal"
+                                : rec.status === "rejected"
+                                  ? "bg-slate-200 text-slate-500"
+                                  : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {rec.status}
+                          </span>
+                          {rec.status === "approved" && rec.reusedCount > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-700">
+                              <Zap className="h-3 w-3" aria-hidden="true" />
+                              Used {rec.reusedCount}×
+                            </span>
+                          )}
+                          {rec.username && (
+                            <span className="text-xs text-slate-400">by {rec.username}</span>
+                          )}
+                          <span className="text-xs text-slate-400">{formatMalaysiaTimestamp(rec.createdAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {rec.status !== "approved" && (
+                            <button
+                              type="button"
+                              onClick={() => void approveLearnedAnswer(rec.id)}
+                              disabled={learnedActingId === rec.id}
+                              className="flex items-center gap-1 rounded-md border border-signal/30 bg-white px-2.5 py-1.5 text-xs font-medium text-signal transition hover:bg-signal hover:text-white disabled:opacity-50"
+                            >
+                              {learnedActingId === rec.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
+                              Approve
+                            </button>
+                          )}
+                          {rec.status !== "rejected" && (
+                            <button
+                              type="button"
+                              onClick={() => void rejectLearnedAnswer(rec.id)}
+                              disabled={learnedActingId === rec.id}
+                              className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void deleteLearnedAnswer(rec.id)}
+                            disabled={learnedActingId === rec.id}
+                            className="flex items-center gap-1 rounded-md border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="mb-2 text-sm font-semibold text-ink">
+                        Q: {rec.originalQuestion}
+                      </p>
+
+                      {editingLearnedId === rec.id ? (
+                        <div className="mt-2 space-y-2">
+                          <textarea
+                            value={editingLearnedResponse}
+                            onChange={(e) => setEditingLearnedResponse(e.target.value)}
+                            rows={6}
+                            className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-signal focus:ring-2 focus:ring-signal/20"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void saveLearnedAnswerEdit(rec.id)}
+                              disabled={learnedActingId === rec.id}
+                              className="flex items-center gap-1.5 rounded-md bg-signal px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-800 disabled:opacity-60"
+                            >
+                              {learnedActingId === rec.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingLearnedId(null)}
+                              className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group relative">
+                          <p className="whitespace-pre-wrap text-sm text-slate-700">{rec.response}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingLearnedId(rec.id);
+                              setEditingLearnedResponse(rec.response);
+                            }}
+                            className="mt-1 text-xs text-slate-400 underline-offset-2 hover:text-signal hover:underline"
+                          >
+                            Edit response
+                          </button>
+                        </div>
+                      )}
+
+                      {rec.status === "approved" && rec.approvedBy && (
+                        <p className="mt-2 text-xs text-slate-400">
+                          Approved by {rec.approvedBy}
+                          {rec.approvedAt ? ` · ${formatMalaysiaTimestamp(rec.approvedAt)}` : ""}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {learnedTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between gap-2 text-sm">
+                  <span className="text-slate-500">
+                    Page {learnedPage} of {learnedTotalPages} · {learnedTotal} total
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void loadLearnedAnswers({ page: learnedPage - 1, status: learnedStatusFilter })}
+                      disabled={learnedPage <= 1 || learnedLoading}
+                      className="flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void loadLearnedAnswers({ page: learnedPage + 1, status: learnedStatusFilter })}
+                      disabled={learnedPage >= learnedTotalPages || learnedLoading}
+                      className="flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               )}
             </section>

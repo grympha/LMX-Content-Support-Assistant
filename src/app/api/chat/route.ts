@@ -9,6 +9,7 @@ import { conversations, messages as dbMessages } from "@/lib/schema";
 import { generateTitle, truncateMessage } from "@/lib/conversationUtils";
 import { eq, and, count as dbCount } from "drizzle-orm";
 import { isAuthenticated, usernameFromRequest } from "@/lib/apiAuth";
+import { findApprovedLearnedAnswer, incrementLearnedAnswerReuse, normalizeQuestion } from "@/lib/learnedAnswers";
 
 const FAQ_STOP_WORDS = new Set([
   "the","a","an","is","are","do","does","did","how","why","what","when","where","who",
@@ -334,6 +335,29 @@ export async function POST(request: Request) {
         reply: faqMatch.answer,
         source: "knowledge",
         sourceLinks: faqMatch.sourceLinks ?? [],
+        sourceNotes: [],
+        assistantMessageId: validConvId && db ? assistantMsgId : undefined,
+      });
+    }
+  }
+
+  // Check approved learned answers before building local search and calling AI
+  if (!attachmentContext) {
+    const learned = await findApprovedLearnedAnswer(normalizeQuestion(message));
+    if (learned) {
+      await logProgressEvent({
+        eventType: "question_asked",
+        username,
+        fullName: body.intake?.clientTenant,
+        topic: body.intake?.issueCategory || undefined,
+        question: message,
+      });
+      void incrementLearnedAnswerReuse(learned.id);
+      void saveExchange(validConvId, username, message, learned.response, assistantMsgId);
+      return NextResponse.json({
+        reply: learned.response,
+        source: "learned_answer",
+        sourceLinks: [],
         sourceNotes: [],
         assistantMessageId: validConvId && db ? assistantMsgId : undefined,
       });

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, numeric, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, numeric, integer, index } from "drizzle-orm/pg-core";
 
 export const conversations = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -90,3 +90,28 @@ export const assistantFeedback = pgTable(
 
 export type AssistantFeedback = typeof assistantFeedback.$inferSelect;
 export type NewAssistantFeedback = typeof assistantFeedback.$inferInsert;
+
+export const learnedAnswers = pgTable(
+  "learned_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    normalizedQuestion: text("normalized_question").notNull().unique(),
+    originalQuestion: text("original_question").notNull(),
+    response: text("response").notNull(),
+    feedbackId: uuid("feedback_id").references(() => assistantFeedback.id, { onDelete: "set null" }),
+    approvedBy: varchar("approved_by", { length: 255 }),
+    status: varchar("status", { length: 20 }).notNull().default("candidate"),
+    reusedCount: integer("reused_count").notNull().default(0),
+    username: varchar("username", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("idx_learned_answers_status").on(t.status),
+    index("idx_learned_answers_created_at").on(t.createdAt),
+  ]
+);
+
+export type LearnedAnswer = typeof learnedAnswers.$inferSelect;
+export type NewLearnedAnswer = typeof learnedAnswers.$inferInsert;

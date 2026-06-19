@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { assistantFeedback } from "@/lib/schema";
 import { isAuthenticated, usernameFromRequest } from "@/lib/apiAuth";
+import { upsertLearnedAnswerCandidate } from "@/lib/learnedAnswers";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_RATINGS = new Set(["good", "bad"]);
@@ -63,11 +64,19 @@ export async function POST(request: Request) {
           .update(assistantFeedback)
           .set({ rating, updatedAt: new Date() })
           .where(eq(assistantFeedback.id, existing[0].id));
+        if (rating === "good" && question && response) {
+          void upsertLearnedAnswerCandidate({
+            question,
+            response,
+            feedbackId: existing[0].id,
+            username,
+          });
+        }
         return NextResponse.json({ ok: true, action: "updated" });
       }
     }
 
-    await db.insert(assistantFeedback).values({
+    const [inserted] = await db.insert(assistantFeedback).values({
       username,
       conversationId: validConvId ?? undefined,
       messageId: validMsgId ?? undefined,
@@ -76,7 +85,16 @@ export async function POST(request: Request) {
       rating,
       aiProvider: aiProvider?.slice(0, 50) || undefined,
       sources: sources?.map((s) => s.slice(0, 500)).slice(0, 20) || undefined,
-    });
+    }).returning({ id: assistantFeedback.id });
+
+    if (rating === "good" && question && response) {
+      void upsertLearnedAnswerCandidate({
+        question,
+        response,
+        feedbackId: inserted?.id,
+        username,
+      });
+    }
 
     return NextResponse.json({ ok: true, action: "inserted" });
   } catch (err) {
