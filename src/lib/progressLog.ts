@@ -16,12 +16,14 @@ export type ProgressEvent = {
 async function writeToNeon(event: ProgressEvent): Promise<void> {
   if (!db) return;
 
+  // Always store username in lowercase to prevent duplicate records from casing differences
+  const username = (event.username ?? "").toLowerCase();
   const pctStr = event.progressPercent != null ? String(event.progressPercent) : undefined;
 
   try {
     await db.insert(trainingEvents).values({
       eventType: event.eventType,
-      username: event.username ?? "",
+      username,
       fullName: event.fullName,
       topic: event.topic,
       question: event.question,
@@ -35,7 +37,7 @@ async function writeToNeon(event: ProgressEvent): Promise<void> {
     return;
   }
 
-  if (event.eventType !== "topic_completed" || !event.username) return;
+  if (event.eventType !== "topic_completed" || !username) return;
 
   const now = new Date();
   const completedTopics = event.completedTopics ?? [];
@@ -44,7 +46,7 @@ async function writeToNeon(event: ProgressEvent): Promise<void> {
     await db
       .insert(userProgress)
       .values({
-        username: event.username,
+        username,
         fullName: event.fullName,
         completedTopics,
         progressPercent: pctStr ?? "0",

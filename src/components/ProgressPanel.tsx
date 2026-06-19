@@ -39,12 +39,42 @@ export function ProgressPanel({ username, fullName, selectedTopic, topicCount }:
   const lastSelectedTopic = useRef("");
 
   useEffect(() => {
+    if (!username) return;
+
+    // 1. Immediately init from localStorage for a snappy UI
+    let localTopics: string[] = [];
     try {
       const saved = window.localStorage.getItem(storageKey(username));
-      setCompletedTopics(saved ? JSON.parse(saved) : []);
+      localTopics = saved ? (JSON.parse(saved) as string[]) : [];
+      setCompletedTopics(localTopics);
     } catch {
       setCompletedTopics([]);
     }
+
+    // 2. Hydrate from Neon — Neon is the source of truth
+    let cancelled = false;
+    fetch("/api/user/progress")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { completedTopics?: string[] } | null) => {
+        if (cancelled || !data || !Array.isArray(data.completedTopics)) return;
+        const neonTopics = data.completedTopics as string[];
+        // Neon wins when it has at least as many completed topics as localStorage
+        if (neonTopics.length >= localTopics.length) {
+          setCompletedTopics(neonTopics);
+          try {
+            window.localStorage.setItem(storageKey(username), JSON.stringify(neonTopics));
+          } catch {
+            // ignore storage errors
+          }
+        }
+      })
+      .catch(() => {
+        // Stay on localStorage when Neon is unavailable
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [username]);
 
   const progressPercent = useMemo(() => {

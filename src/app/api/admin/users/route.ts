@@ -75,28 +75,29 @@ export async function GET(request: Request) {
         .catch(() => [] as Array<{ username: string; goodFeedback: number; badFeedback: number }>),
     ]);
 
-    const msgByUser = new Map(msgRows.map((r) => [r.userId, parseInt(r.messageCount ?? "0", 10)]));
+    // Normalize all keys to lowercase so mixed-case historical data joins correctly
+    const msgByUser = new Map(msgRows.map((r) => [r.userId.toLowerCase(), parseInt(r.messageCount ?? "0", 10)]));
     const progressByUser = new Map(
       (progressRows as Array<{ username: string; topicsCompleted: number }>).map((r) => [
-        r.username,
+        r.username.toLowerCase(),
         Number(r.topicsCompleted ?? 0),
       ])
     );
     const feedbackByUser = new Map(
       (feedbackRows as Array<{ username: string; goodFeedback: number; badFeedback: number }>).map(
-        (r) => [r.username, { good: Number(r.goodFeedback ?? 0), bad: Number(r.badFeedback ?? 0) }]
+        (r) => [r.username.toLowerCase(), { good: Number(r.goodFeedback ?? 0), bad: Number(r.badFeedback ?? 0) }]
       )
     );
 
     return NextResponse.json(
       convRows.map((r) => ({
-        userId: r.userId,
+        userId: r.userId.toLowerCase(),
         conversationCount: Number(r.conversationCount),
-        messageCount: msgByUser.get(r.userId) ?? 0,
+        messageCount: msgByUser.get(r.userId.toLowerCase()) ?? 0,
         latestActivity: r.latestActivity ? r.latestActivity.toISOString() : null,
-        topicsCompleted: progressByUser.get(r.userId) ?? 0,
-        goodFeedback: feedbackByUser.get(r.userId)?.good ?? 0,
-        badFeedback: feedbackByUser.get(r.userId)?.bad ?? 0,
+        topicsCompleted: progressByUser.get(r.userId.toLowerCase()) ?? 0,
+        goodFeedback: feedbackByUser.get(r.userId.toLowerCase())?.good ?? 0,
+        badFeedback: feedbackByUser.get(r.userId.toLowerCase())?.bad ?? 0,
       }))
     );
   } catch (err) {

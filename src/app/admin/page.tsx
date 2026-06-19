@@ -223,6 +223,15 @@ function getTopicRecommendation(source: string): string {
   return "Review knowledge article and improve response quality";
 }
 
+// Convert stored lowercase username (e.g. "john.smith") to display name ("John Smith")
+function toDisplayName(username: string): string {
+  return username
+    .split(".")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ""))
+    .join(" ")
+    .trim();
+}
+
 function rankBadge(rank: number): string {
   if (rank === 1) return "🥇";
   if (rank === 2) return "🥈";
@@ -1597,7 +1606,7 @@ export default function AdminDashboard() {
                           <td className="px-3 py-3 text-center text-sm font-semibold text-slate-600">
                             {rankBadge(idx + 1)}
                           </td>
-                          <td className="px-3 py-3 font-medium text-ink">{u.username}</td>
+                          <td className="px-3 py-3 font-medium text-ink">{toDisplayName(u.username)}</td>
                           <td className="px-3 py-3 text-slate-700">{u.fullName ?? "-"}</td>
                           <td className="min-w-[180px] px-3 py-4">
                             <ProgressBar
@@ -1667,7 +1676,7 @@ export default function AdminDashboard() {
                       <option value="all">All Users</option>
                       {userStats.map((u) => (
                         <option key={u.userId} value={u.userId}>
-                          {u.userId}
+                          {toDisplayName(u.userId)}
                         </option>
                       ))}
                     </select>
@@ -1699,7 +1708,7 @@ export default function AdminDashboard() {
                 <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
                   <div className="text-green-800">
                     <p className="font-semibold">Deleted user history:</p>
-                    <p>User: <span className="font-medium">{deletedUserInfo.userId}</span></p>
+                    <p>User: <span className="font-medium">{toDisplayName(deletedUserInfo.userId)}</span></p>
                     <p>Conversations removed: <span className="font-medium">{deletedUserInfo.conversations}</span></p>
                     <p>Messages removed: <span className="font-medium">{deletedUserInfo.messages}</span></p>
                   </div>
@@ -1749,7 +1758,7 @@ export default function AdminDashboard() {
                     <tbody>
                       {filteredUserStats.map((user) => (
                         <tr key={user.userId} className="border-b border-line last:border-0">
-                          <td className="px-3 py-3 font-medium text-ink">{user.userId}</td>
+                          <td className="px-3 py-3 font-medium text-ink">{toDisplayName(user.userId)}</td>
                           <td className="px-3 py-3 text-slate-700">{user.conversationCount}</td>
                           <td className="px-3 py-3 text-slate-700">{user.messageCount}</td>
                           <td className="px-3 py-3 text-slate-700">{user.topicsCompleted ?? 0}</td>
