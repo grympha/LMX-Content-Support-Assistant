@@ -1,0 +1,76 @@
+{
+  "event_type": "workflow_started",
+  "storage_table": "training_events",
+  "payload_fields": {
+    "eventType": "workflow_started",
+    "username": "session username (lowercase, from HMAC cookie)",
+    "topic": "shortcut analyticsLabel (e.g. 'Create New Device')",
+    "details": "shortcut id (e.g. 'wf-001')"
+  },
+  "trigger": "shortcut button click in IntakeSidebar",
+  "source_file": "src/components/IntakeSidebar.tsx",
+  "analytics_library": "src/lib/progressLog.ts",
+  "admin_visibility": [
+    {
+      "dashboard": "Training Tab → Search Analytics",
+      "widget": "Top 10 Most-Searched Questions",
+      "note": "workflow_started events with topic field appear alongside question_asked events"
+    },
+    {
+      "dashboard": "Training Tab → Training Records",
+      "widget": "Full event log",
+      "filter": "Filter by event type 'workflow_started' to see all shortcut usage"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "wf-001",
+      "analytics_label": "Create New Device",
+      "shortcut_index": 0,
+      "expected_event": { "eventType": "workflow_started", "topic": "Create New Device", "details": "wf-001" }
+    },
+    {
+      "id": "wf-002",
+      "analytics_label": "Deploy New Screen",
+      "shortcut_index": 1,
+      "expected_event": { "eventType": "workflow_started", "topic": "Deploy New Screen", "details": "wf-002" }
+    },
+    {
+      "id": "wf-003",
+      "analytics_label": "Troubleshoot Offline Device",
+      "shortcut_index": 2,
+      "expected_event": { "eventType": "workflow_started", "topic": "Troubleshoot Offline Device", "details": "wf-003" }
+    },
+    {
+      "id": "wf-004",
+      "analytics_label": "Check Device Compatibility",
+      "shortcut_index": 3,
+      "expected_event": { "eventType": "workflow_started", "topic": "Check Device Compatibility", "details": "wf-004" }
+    },
+    {
+      "id": "wf-005",
+      "analytics_label": "Schedule Campaign",
+      "shortcut_index": 4,
+      "expected_event": { "eventType": "workflow_started", "topic": "Schedule Campaign", "details": "wf-005" }
+    },
+    {
+      "id": "wf-006",
+      "analytics_label": "Programmatic Readiness Check",
+      "shortcut_index": 5,
+      "expected_event": { "eventType": "workflow_started", "topic": "Programmatic Readiness Check", "details": "wf-006" }
+    },
+    {
+      "id": "wf-007",
+      "analytics_label": "Content Deployment Checklist",
+      "shortcut_index": 6,
+      "expected_event": { "eventType": "workflow_started", "topic": "Content Deployment Checklist", "details": "wf-007" }
+    },
+    {
+      "id": "wf-008",
+      "analytics_label": "Generate Support Checklist",
+      "shortcut_index": 7,
+      "expected_event": { "eventType": "workflow_started", "topic": "Generate Support Checklist", "details": "wf-008" }
+    }
+  ],
+  "verification_sql": "SELECT topic, details, COUNT(*) as uses, MAX(logged_at) as last_used FROM training_events WHERE event_type = 'workflow_started' GROUP BY topic, details ORDER BY uses DESC;"
+}

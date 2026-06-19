@@ -6,6 +6,7 @@ import { ProgressPanel } from "@/components/ProgressPanel";
 import { commonQuestions } from "@/lib/commonQuestions";
 import { issueCategories, lmxKnowledge, type IssueIntake } from "@/lib/lmxKnowledge";
 import type { ChatAttachment } from "@/lib/chatTypes";
+import { WORKFLOW_SHORTCUTS } from "@/lib/workflowShortcuts";
 
 type KnowledgeTopic = (typeof lmxKnowledge)[number];
 
@@ -198,6 +199,18 @@ export function IntakeSidebar({
               key={shortcut.label}
               type="button"
               onClick={() => {
+                // Track workflow_started analytics event (fire-and-forget)
+                fetch("/api/progress", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    eventType: "workflow_started",
+                    username,
+                    topic: shortcut.analyticsLabel,
+                    details: shortcut.id,
+                  }),
+                }).catch(() => {});
+
                 onInputChange(shortcut.prefill);
                 requestAnimationFrame(() => {
                   askAssistantSectionRef?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -216,48 +229,7 @@ export function IntakeSidebar({
   );
 }
 
-const WORKFLOW_SHORTCUTS = [
-  {
-    label: "Create New Device",
-    icon: "🖥️",
-    prefill: "Guide me through creating and pairing a new device from start to finish.",
-  },
-  {
-    label: "Deploy New Screen",
-    icon: "📺",
-    prefill: "What are the complete steps to deploy a new screen in LMX Content?",
-  },
-  {
-    label: "Troubleshoot Offline Device",
-    icon: "🔧",
-    prefill: "My device is offline. Guide me through troubleshooting.",
-  },
-  {
-    label: "Check Device Compatibility",
-    icon: "✅",
-    prefill: "Check if my device meets LMX Content requirements.",
-  },
-  {
-    label: "Schedule Campaign",
-    icon: "📅",
-    prefill: "Guide me through scheduling content for a campaign.",
-  },
-  {
-    label: "Programmatic Readiness Check",
-    icon: "📡",
-    prefill: "Validate if this device is ready for VAST and Programmatic campaigns.",
-  },
-  {
-    label: "Content Deployment Checklist",
-    icon: "📋",
-    prefill: "Provide the deployment checklist before publishing content.",
-  },
-  {
-    label: "Generate Support Checklist",
-    icon: "🎫",
-    prefill: "What information should I collect before escalating a support ticket?",
-  },
-] as const;
+// WORKFLOW_SHORTCUTS is imported from @/lib/workflowShortcuts
 
 function TopicDetail({ topic }: { topic: KnowledgeTopic }) {
   return (

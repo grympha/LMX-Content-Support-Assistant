@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { trainingEvents, userProgress } from "@/lib/schema";
 
 export type ProgressEvent = {
-  eventType: "login" | "topic_selected" | "topic_completed" | "question_asked" | "quick_answer_selected";
+  eventType: "login" | "topic_selected" | "topic_completed" | "question_asked" | "quick_answer_selected" | "workflow_started";
   username?: string;
   fullName?: string;
   topic?: string;
